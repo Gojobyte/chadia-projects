@@ -31,15 +31,18 @@ interface DocumentEditorProps {
   onSave?: () => void;
 }
 
-interface TocItem { level: number; text: string; id: string; }
+interface TocItem { level: number; text: string; }
+
+type TabName = "accueil" | "insertion" | "mise-en-page" | "references";
 
 export function DocumentEditor({ documentId, initialContent, projetTitre, bailleurNom, onSave }: DocumentEditorProps) {
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [activeTab, setActiveTab] = useState<TabName>("accueil");
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
-  const [showCoverPage, setShowCoverPage] = useState(false);
-  const [showToc, setShowToc] = useState(false);
+  const [fontSize, setFontSize] = useState("11");
+  const [showCoverForm, setShowCoverForm] = useState(false);
   const [toc, setToc] = useState<TocItem[]>([]);
   const [coverData, setCoverData] = useState({
     titre: projetTitre ?? "", sousTitre: "", bailleur: bailleurNom ?? "",
@@ -50,19 +53,17 @@ export function DocumentEditor({ documentId, initialContent, projetTitre, baille
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3, 4] } }),
-      Placeholder.configure({ placeholder: "Commencez a rediger votre document..." }),
+      StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5] } }),
+      Placeholder.configure({ placeholder: "Commencez a rediger..." }),
       Underline, TextAlign.configure({ types: ["heading", "paragraph"] }),
       TextStyle, Color, Highlight.configure({ multicolor: true }),
-      LinkExt.configure({ openOnClick: false }), Image.configure({ inline: true }),
+      LinkExt.configure({ openOnClick: false }), Image,
       Table.configure({ resizable: true }), TableRow, TableCell, TableHeader,
       Subscript, Superscript, TaskList, TaskItem.configure({ nested: true }),
       Typography, CharacterCount, FontFamily,
     ],
     content: initialContent ?? "",
-    editorProps: {
-      attributes: { class: "document-page focus:outline-none" },
-    },
+    editorProps: { attributes: { class: "document-content" } },
     onUpdate: ({ editor }) => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(() => saveContent(editor.getHTML()), 3000);
@@ -70,15 +71,12 @@ export function DocumentEditor({ documentId, initialContent, projetTitre, baille
     },
   });
 
-  // Extraire le sommaire depuis les headings
   function updateToc(html: string) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
     const headings = doc.querySelectorAll("h1, h2, h3, h4");
     const items: TocItem[] = [];
-    headings.forEach((h, i) => {
-      items.push({ level: Number(h.tagName[1]), text: h.textContent ?? "", id: `heading-${i}` });
-    });
+    headings.forEach(h => { items.push({ level: Number(h.tagName[1]), text: h.textContent ?? "" }); });
     setToc(items);
   }
 
@@ -86,10 +84,7 @@ export function DocumentEditor({ documentId, initialContent, projetTitre, baille
 
   const saveContent = useCallback(async (content: string) => {
     setSaving(true);
-    await fetch(`/api/documents/${documentId}`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contenu: content }),
-    });
+    await fetch(`/api/documents/${documentId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contenu: content }) });
     setSaving(false); setLastSaved(new Date()); onSave?.();
   }, [documentId, onSave]);
 
@@ -97,54 +92,21 @@ export function DocumentEditor({ documentId, initialContent, projetTitre, baille
   function addLink() { if (linkUrl && editor) { editor.chain().focus().setLink({ href: linkUrl }).run(); setLinkUrl(""); setShowLinkInput(false); } }
   function addImage() { const url = prompt("URL de l'image :"); if (url && editor) editor.chain().focus().setImage({ src: url }).run(); }
   function addTable() { if (editor) editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(); }
-  function insertPageBreak() { if (editor) editor.chain().focus().setHardBreak().insertContent('<div class="page-break"></div>').run(); }
+  function insertPageBreak() { if (editor) editor.commands.insertContent('<div class="page-break"></div><p></p>'); }
 
-  // Inserer une page de garde
   function insertCoverPage() {
     if (!editor) return;
-    const cover = `
-      <div class="cover-page">
-        <div class="cover-header">
-          <p class="cover-org">${coverData.organisation}</p>
-          ${coverData.confidentiel ? '<p class="cover-confidentiel">CONFIDENTIEL</p>' : ''}
-        </div>
-        <div class="cover-body">
-          <h1 class="cover-title">${coverData.titre}</h1>
-          ${coverData.sousTitre ? `<p class="cover-subtitle">${coverData.sousTitre}</p>` : ''}
-          <hr class="cover-divider" />
-          ${coverData.bailleur ? `<p class="cover-bailleur">Soumis a : ${coverData.bailleur}</p>` : ''}
-          ${coverData.reference ? `<p class="cover-ref">Reference : ${coverData.reference}</p>` : ''}
-        </div>
-        <div class="cover-footer">
-          <p>${coverData.organisation}</p>
-          <p>${coverData.date} · Version ${coverData.version}</p>
-        </div>
-      </div>
-      <div class="page-break"></div>
-    `;
+    const cover = `<div class="cover-page"><div class="cover-header"><p class="cover-org">${coverData.organisation}</p>${coverData.confidentiel ? '<p class="cover-confidentiel">CONFIDENTIEL</p>' : ''}</div><div class="cover-body"><h1 class="cover-title">${coverData.titre}</h1>${coverData.sousTitre ? `<p class="cover-subtitle">${coverData.sousTitre}</p>` : ''}<hr class="cover-divider" />${coverData.bailleur ? `<p class="cover-bailleur">Soumis a : ${coverData.bailleur}</p>` : ''}${coverData.reference ? `<p class="cover-ref">Reference : ${coverData.reference}</p>` : ''}</div><div class="cover-footer"><p>${coverData.organisation}</p><p>${coverData.date} · Version ${coverData.version}</p></div></div><div class="page-break"></div><p></p>`;
     editor.chain().focus().insertContentAt(0, cover).run();
-    setShowCoverPage(false);
+    setShowCoverForm(false);
   }
 
-  // Inserer un sommaire
   function insertToc() {
     if (!editor || toc.length === 0) return;
-    let tocHtml = '<div class="toc-container"><h2 class="toc-title">Sommaire</h2>';
-    toc.forEach(item => {
-      const indent = (item.level - 1) * 20;
-      tocHtml += `<p class="toc-item" style="padding-left: ${indent}px">${item.text}</p>`;
-    });
-    tocHtml += '</div><div class="page-break"></div>';
-    // Inserer apres la page de garde ou au debut
-    const content = editor.getHTML();
-    const afterCover = content.indexOf('class="page-break"');
-    if (afterCover > -1) {
-      const insertPos = afterCover + 'class="page-break"></div>'.length;
-      editor.commands.insertContentAt(insertPos + 5, tocHtml);
-    } else {
-      editor.chain().focus().insertContentAt(0, tocHtml).run();
-    }
-    setShowToc(false);
+    let html = '<div class="toc-container"><h2 class="toc-title">Table des matieres</h2>';
+    toc.forEach(item => { html += `<p class="toc-item" style="padding-left: ${(item.level - 1) * 20}px">${item.text}</p>`; });
+    html += '</div><div class="page-break"></div><p></p>';
+    editor.commands.insertContent(html);
   }
 
   async function loadTemplate(categorie: string) {
@@ -152,13 +114,16 @@ export function DocumentEditor({ documentId, initialContent, projetTitre, baille
     if (res.ok) {
       const data = await res.json();
       if (data.templates.length > 0 && editor) {
-        const content = data.templates[0].contenu
-          .replace(/^#### (.*$)/gm, "<h4>$1</h4>").replace(/^### (.*$)/gm, "<h3>$1</h3>")
-          .replace(/^## (.*$)/gm, "<h2>$1</h2>").replace(/^# (.*$)/gm, "<h1>$1</h1>")
-          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/\[(.*?)\]/g, "<em>$1</em>")
-          .replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>");
-        editor.commands.setContent(`<p>${content}</p>`);
+        const c = data.templates[0].contenu.replace(/^#### (.*$)/gm, "<h4>$1</h4>").replace(/^### (.*$)/gm, "<h3>$1</h3>").replace(/^## (.*$)/gm, "<h2>$1</h2>").replace(/^# (.*$)/gm, "<h1>$1</h1>").replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>");
+        editor.commands.setContent(`<p>${c}</p>`);
       }
+    }
+  }
+
+  function changeFontSize(size: string) {
+    setFontSize(size);
+    if (editor) {
+      editor.chain().focus().setMark("textStyle", { fontSize: `${size}pt` }).run();
     }
   }
 
@@ -168,29 +133,30 @@ export function DocumentEditor({ documentId, initialContent, projetTitre, baille
   const words = useMemo(() => editor?.storage.characterCount.words() ?? 0, [editor?.state]);
   const pages = useMemo(() => Math.max(1, Math.ceil(words / 300)), [words]);
 
-  if (!editor) return <p className="text-slate-500 p-8">Chargement de l&apos;editeur...</p>;
+  if (!editor) return <p className="text-slate-500 p-8">Chargement...</p>;
 
   return (
     <div className="flex gap-4">
-      {/* Panneau lateral — Sommaire */}
-      <div className="w-56 flex-shrink-0 hidden lg:block">
-        <div className="bg-white rounded-xl shadow-sm p-4 sticky top-4">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">Sommaire</h3>
+      {/* Sidebar — Sommaire */}
+      <div className="w-52 flex-shrink-0 hidden lg:block">
+        <div className="bg-white rounded-lg shadow-sm p-4 sticky top-4 border border-slate-200">
+          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Navigation</h3>
           {toc.length === 0 ? (
-            <p className="text-xs text-slate-400">Ajoutez des titres pour generer le sommaire.</p>
+            <p className="text-xs text-slate-400 italic">Ajoutez des titres...</p>
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-0.5 max-h-[500px] overflow-y-auto">
               {toc.map((item, i) => (
-                <p key={i} className="text-xs text-slate-600 hover:text-indigo-600 cursor-pointer truncate"
-                  style={{ paddingLeft: `${(item.level - 1) * 12}px` }}>
+                <p key={i} className={`text-xs cursor-pointer hover:text-indigo-600 truncate ${item.level === 1 ? "font-semibold text-slate-800" : item.level === 2 ? "text-slate-600" : "text-slate-400"}`}
+                  style={{ paddingLeft: `${(item.level - 1) * 10}px` }}>
                   {item.text}
                 </p>
               ))}
             </div>
           )}
           <hr className="my-3" />
-          <div className="text-xs text-slate-400 space-y-1">
-            <p>{words} mots · {chars} car.</p>
+          <div className="text-xs text-slate-400 space-y-0.5">
+            <p>{words} mots</p>
+            <p>{chars} caracteres</p>
             <p>~{pages} page{pages > 1 ? "s" : ""}</p>
           </div>
         </div>
@@ -198,160 +164,221 @@ export function DocumentEditor({ documentId, initialContent, projetTitre, baille
 
       {/* Editeur principal */}
       <div className="flex-1 min-w-0">
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
-          {/* Toolbar Row 1 — Insertion */}
-          <div className="border-b border-slate-200 px-3 py-1.5 flex items-center gap-1 bg-slate-50 flex-wrap">
-            <button onClick={() => setShowCoverPage(!showCoverPage)} className="px-2 py-1 text-xs text-slate-600 hover:bg-slate-200 rounded">
-              📄 Page de garde
-            </button>
-            <button onClick={() => setShowToc(!showToc)} className="px-2 py-1 text-xs text-slate-600 hover:bg-slate-200 rounded">
-              📑 Sommaire
-            </button>
-            <button onClick={insertPageBreak} className="px-2 py-1 text-xs text-slate-600 hover:bg-slate-200 rounded">
-              📃 Saut de page
-            </button>
-            <div className="relative group">
-              <button className="px-2 py-1 text-xs text-slate-600 hover:bg-slate-200 rounded">📝 Templates ▾</button>
-              <div className="absolute hidden group-hover:block left-0 top-full bg-white border border-slate-200 rounded-lg shadow-lg z-50 w-56">
-                {["PROPOSITION_TECHNIQUE", "CADRE_LOGIQUE", "NOTE_CONCEPTUELLE", "BUDGET_PREVISIONNEL", "PLAN_TRAVAIL"].map(cat => (
-                  <button key={cat} onClick={() => loadTemplate(cat)} className="block w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                    {cat.replace(/_/g, " ").toLowerCase().replace(/^\w/, c => c.toUpperCase())}
-                  </button>
-                ))}
-              </div>
+        {/* Menu tabs style Word */}
+        <div className="bg-white border border-slate-200 rounded-t-lg overflow-hidden">
+          {/* Barre de titre */}
+          <div className="bg-slate-700 text-white px-4 py-1.5 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-3">
+              <span className="font-semibold">CHADIA Projects</span>
+              {saving && <span className="text-indigo-300">Sauvegarde en cours...</span>}
+              {lastSaved && !saving && <span className="text-green-300">Sauvegarde {lastSaved.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>}
             </div>
-            <div className="flex-1" />
-            {saving && <span className="text-xs text-indigo-500">Sauvegarde...</span>}
-            {lastSaved && !saving && <span className="text-xs text-green-600">Sauve {lastSaved.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>}
-            <button onClick={handleManualSave} className="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700">💾 Sauvegarder</button>
+            <button onClick={handleManualSave} className="px-3 py-0.5 bg-indigo-500 rounded hover:bg-indigo-600 text-xs">💾 Sauvegarder</button>
           </div>
 
-          {/* Toolbar Row 2 — Formatage */}
-          <div className="border-b border-slate-200 px-3 py-1.5 flex items-center gap-0.5 flex-wrap bg-white">
-            <select onChange={e => editor.chain().focus().setFontFamily(e.target.value).run()} className="text-xs border border-slate-200 rounded px-1 py-1 mr-1 w-28">
-              <option value="">Police</option>
-              <option value="Inter">Inter</option><option value="Arial">Arial</option>
-              <option value="Times New Roman">Times New Roman</option><option value="Georgia">Georgia</option>
-              <option value="Courier New">Courier New</option>
-            </select>
-            <select onChange={e => { const v = e.target.value; if (v === "p") editor.chain().focus().setParagraph().run(); else editor.chain().focus().toggleHeading({ level: Number(v) as 1|2|3|4 }).run(); e.target.value = ""; }} className="text-xs border border-slate-200 rounded px-1 py-1 mr-1 w-28">
-              <option value="">Style</option><option value="1">Titre 1</option><option value="2">Titre 2</option>
-              <option value="3">Titre 3</option><option value="4">Titre 4</option><option value="p">Paragraphe</option>
-            </select>
-            <div className="w-px h-5 bg-slate-200 mx-1" />
-            <TB a={editor.isActive("bold")} o={() => editor.chain().focus().toggleBold().run()} t="Gras"><strong>B</strong></TB>
-            <TB a={editor.isActive("italic")} o={() => editor.chain().focus().toggleItalic().run()} t="Italique"><em>I</em></TB>
-            <TB a={editor.isActive("underline")} o={() => editor.chain().focus().toggleUnderline().run()} t="Souligne"><span className="underline">U</span></TB>
-            <TB a={editor.isActive("strike")} o={() => editor.chain().focus().toggleStrike().run()} t="Barre"><span className="line-through">S</span></TB>
-            <div className="w-px h-5 bg-slate-200 mx-1" />
-            <TB a={editor.isActive("subscript")} o={() => editor.chain().focus().toggleSubscript().run()} t="Indice">X<sub>2</sub></TB>
-            <TB a={editor.isActive("superscript")} o={() => editor.chain().focus().toggleSuperscript().run()} t="Exposant">X<sup>2</sup></TB>
-            <div className="w-px h-5 bg-slate-200 mx-1" />
-            <label title="Couleur" className="relative cursor-pointer">
-              <span className="px-1.5 py-1 text-xs rounded hover:bg-slate-100 inline-block">A<span className="block h-0.5 bg-red-500 -mt-0.5" /></span>
-              <input type="color" onChange={e => editor.chain().focus().setColor(e.target.value).run()} className="absolute opacity-0 w-0 h-0" />
-            </label>
-            <TB a={editor.isActive("highlight")} o={() => editor.chain().focus().toggleHighlight({ color: "#fef08a" }).run()} t="Surligner"><span className="bg-yellow-200 px-0.5">H</span></TB>
-            <div className="w-px h-5 bg-slate-200 mx-1" />
-            <TB a={editor.isActive({ textAlign: "left" })} o={() => editor.chain().focus().setTextAlign("left").run()} t="Gauche">⫷</TB>
-            <TB a={editor.isActive({ textAlign: "center" })} o={() => editor.chain().focus().setTextAlign("center").run()} t="Centre">☰</TB>
-            <TB a={editor.isActive({ textAlign: "right" })} o={() => editor.chain().focus().setTextAlign("right").run()} t="Droite">⫸</TB>
-            <TB a={editor.isActive({ textAlign: "justify" })} o={() => editor.chain().focus().setTextAlign("justify").run()} t="Justifie">☰</TB>
-            <div className="w-px h-5 bg-slate-200 mx-1" />
-            <TB a={editor.isActive("bulletList")} o={() => editor.chain().focus().toggleBulletList().run()} t="Puces">•</TB>
-            <TB a={editor.isActive("orderedList")} o={() => editor.chain().focus().toggleOrderedList().run()} t="Numerotee">1.</TB>
-            <TB a={editor.isActive("taskList")} o={() => editor.chain().focus().toggleTaskList().run()} t="Checklist">☑</TB>
-            <div className="w-px h-5 bg-slate-200 mx-1" />
-            <TB a={editor.isActive("blockquote")} o={() => editor.chain().focus().toggleBlockquote().run()} t="Citation">❝</TB>
-            <TB a={editor.isActive("codeBlock")} o={() => editor.chain().focus().toggleCodeBlock().run()} t="Code">{"</>"}</TB>
-            <TB a={false} o={() => editor.chain().focus().setHorizontalRule().run()} t="Ligne">—</TB>
-            <div className="w-px h-5 bg-slate-200 mx-1" />
-            <TB a={false} o={addTable} t="Tableau">▦</TB>
-            <TB a={false} o={addImage} t="Image">🖼</TB>
-            <TB a={editor.isActive("link")} o={() => { if (editor.isActive("link")) editor.chain().focus().unsetLink().run(); else setShowLinkInput(!showLinkInput); }} t="Lien">🔗</TB>
+          {/* Onglets */}
+          <div className="flex border-b border-slate-200 bg-slate-50">
+            {(["accueil", "insertion", "mise-en-page", "references"] as const).map(tab => (
+              <button key={tab} onClick={() => setActiveTab(tab)}
+                className={`px-4 py-1.5 text-xs font-medium border-b-2 transition-colors capitalize ${
+                  activeTab === tab ? "border-indigo-600 text-indigo-700 bg-white" : "border-transparent text-slate-500 hover:text-slate-700"
+                }`}>
+                {tab === "mise-en-page" ? "Mise en page" : tab === "references" ? "References" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
           </div>
+
+          {/* Ruban — Accueil */}
+          {activeTab === "accueil" && (
+            <div className="px-3 py-2 flex items-end gap-3 border-b border-slate-200 bg-white flex-wrap">
+              {/* Groupe Police */}
+              <div className="border-r border-slate-200 pr-3">
+                <p className="text-[10px] text-slate-400 mb-1">Police</p>
+                <div className="flex items-center gap-1">
+                  <select onChange={e => editor.chain().focus().setFontFamily(e.target.value).run()} className="text-xs border border-slate-300 rounded px-1 py-1 w-28">
+                    <option value="Inter">Inter</option><option value="Arial">Arial</option>
+                    <option value="Times New Roman">Times New Roman</option><option value="Georgia">Georgia</option>
+                    <option value="Courier New">Courier New</option>
+                  </select>
+                  <select value={fontSize} onChange={e => changeFontSize(e.target.value)} className="text-xs border border-slate-300 rounded px-1 py-1 w-14">
+                    {["8", "9", "10", "11", "12", "14", "16", "18", "20", "24", "28", "36", "48", "72"].map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-center gap-0.5 mt-1">
+                  <RB a={editor.isActive("bold")} o={() => editor.chain().focus().toggleBold().run()}><strong>G</strong></RB>
+                  <RB a={editor.isActive("italic")} o={() => editor.chain().focus().toggleItalic().run()}><em>I</em></RB>
+                  <RB a={editor.isActive("underline")} o={() => editor.chain().focus().toggleUnderline().run()}><span className="underline">S</span></RB>
+                  <RB a={editor.isActive("strike")} o={() => editor.chain().focus().toggleStrike().run()}><span className="line-through">ab</span></RB>
+                  <RB a={editor.isActive("subscript")} o={() => editor.chain().focus().toggleSubscript().run()}>x<sub>2</sub></RB>
+                  <RB a={editor.isActive("superscript")} o={() => editor.chain().focus().toggleSuperscript().run()}>x<sup>2</sup></RB>
+                  <label className="relative cursor-pointer"><span className="px-1.5 py-0.5 text-xs rounded hover:bg-slate-100 inline-flex items-center">A<span className="block w-3 h-1 bg-red-500 ml-0.5" /></span><input type="color" onChange={e => editor.chain().focus().setColor(e.target.value).run()} className="absolute opacity-0 w-0 h-0" /></label>
+                  <RB a={editor.isActive("highlight")} o={() => editor.chain().focus().toggleHighlight({ color: "#fef08a" }).run()}><span className="bg-yellow-200 px-1">ab</span></RB>
+                </div>
+              </div>
+
+              {/* Groupe Paragraphe */}
+              <div className="border-r border-slate-200 pr-3">
+                <p className="text-[10px] text-slate-400 mb-1">Paragraphe</p>
+                <div className="flex items-center gap-0.5">
+                  <RB a={editor.isActive("bulletList")} o={() => editor.chain().focus().toggleBulletList().run()}>☰•</RB>
+                  <RB a={editor.isActive("orderedList")} o={() => editor.chain().focus().toggleOrderedList().run()}>☰1</RB>
+                  <RB a={editor.isActive("taskList")} o={() => editor.chain().focus().toggleTaskList().run()}>☑</RB>
+                </div>
+                <div className="flex items-center gap-0.5 mt-1">
+                  <RB a={editor.isActive({ textAlign: "left" })} o={() => editor.chain().focus().setTextAlign("left").run()}>⫷</RB>
+                  <RB a={editor.isActive({ textAlign: "center" })} o={() => editor.chain().focus().setTextAlign("center").run()}>☰</RB>
+                  <RB a={editor.isActive({ textAlign: "right" })} o={() => editor.chain().focus().setTextAlign("right").run()}>⫸</RB>
+                  <RB a={editor.isActive({ textAlign: "justify" })} o={() => editor.chain().focus().setTextAlign("justify").run()}>≡</RB>
+                </div>
+              </div>
+
+              {/* Groupe Styles */}
+              <div>
+                <p className="text-[10px] text-slate-400 mb-1">Styles</p>
+                <div className="flex items-center gap-1">
+                  <StyleBtn active={editor.isActive("paragraph")} onClick={() => editor.chain().focus().setParagraph().run()} label="Normal" />
+                  <StyleBtn active={editor.isActive("heading", { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} label="Titre 1" className="text-blue-700 text-lg font-bold" />
+                  <StyleBtn active={editor.isActive("heading", { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} label="Titre 2" className="text-blue-600 text-base font-semibold" />
+                  <StyleBtn active={editor.isActive("heading", { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} label="Titre 3" className="text-blue-500 text-sm font-medium" />
+                  <StyleBtn active={editor.isActive("heading", { level: 4 })} onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()} label="Titre 4" className="text-teal-600 text-sm" />
+                  <StyleBtn active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()} label="Citation" className="text-slate-500 italic text-xs" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Ruban — Insertion */}
+          {activeTab === "insertion" && (
+            <div className="px-3 py-2 flex items-end gap-3 border-b border-slate-200 bg-white flex-wrap">
+              <div className="border-r border-slate-200 pr-3">
+                <p className="text-[10px] text-slate-400 mb-1">Pages</p>
+                <div className="flex gap-1">
+                  <BigBtn onClick={() => setShowCoverForm(!showCoverForm)} icon="📄" label="Page de garde" />
+                  <BigBtn onClick={insertPageBreak} icon="📃" label="Saut de page" />
+                </div>
+              </div>
+              <div className="border-r border-slate-200 pr-3">
+                <p className="text-[10px] text-slate-400 mb-1">Elements</p>
+                <div className="flex gap-1">
+                  <BigBtn onClick={addTable} icon="▦" label="Tableau" />
+                  <BigBtn onClick={addImage} icon="🖼" label="Image" />
+                  <BigBtn onClick={() => setShowLinkInput(!showLinkInput)} icon="🔗" label="Lien" />
+                  <BigBtn onClick={() => editor.chain().focus().setHorizontalRule().run()} icon="—" label="Ligne" />
+                  <BigBtn onClick={() => editor.chain().focus().toggleCodeBlock().run()} icon="{ }" label="Code" />
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 mb-1">Templates</p>
+                <div className="flex gap-1 flex-wrap">
+                  {[["PROPOSITION_TECHNIQUE","Proposition"],["CADRE_LOGIQUE","Cadre log."],["NOTE_CONCEPTUELLE","Note conc."],["BUDGET_PREVISIONNEL","Budget"],["PLAN_TRAVAIL","Plan"]].map(([cat, label]) => (
+                    <button key={cat} onClick={() => loadTemplate(cat)} className="px-2 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50">{label}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Ruban — References */}
+          {activeTab === "references" && (
+            <div className="px-3 py-2 flex items-end gap-3 border-b border-slate-200 bg-white">
+              <div>
+                <p className="text-[10px] text-slate-400 mb-1">Table des matieres</p>
+                <div className="flex gap-1">
+                  <BigBtn onClick={insertToc} icon="📑" label="Inserer sommaire" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Ruban — Mise en page */}
+          {activeTab === "mise-en-page" && (
+            <div className="px-3 py-2 flex items-end gap-3 border-b border-slate-200 bg-white">
+              <div>
+                <p className="text-[10px] text-slate-400 mb-1">Mise en page</p>
+                <p className="text-xs text-slate-500">Format A4 · Marges normales (2.5cm)</p>
+              </div>
+            </div>
+          )}
 
           {/* Table toolbar */}
           {editor.isActive("table") && (
-            <div className="border-b border-slate-200 px-3 py-1 flex items-center gap-1 bg-blue-50">
-              <span className="text-xs text-blue-600 mr-2">Tableau :</span>
-              <button onClick={() => editor.chain().focus().addColumnAfter().run()} className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">+ Col</button>
-              <button onClick={() => editor.chain().focus().addRowAfter().run()} className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">+ Ligne</button>
-              <button onClick={() => editor.chain().focus().deleteColumn().run()} className="text-xs px-2 py-1 rounded bg-red-100 text-red-700">- Col</button>
-              <button onClick={() => editor.chain().focus().deleteRow().run()} className="text-xs px-2 py-1 rounded bg-red-100 text-red-700">- Ligne</button>
-              <button onClick={() => editor.chain().focus().deleteTable().run()} className="text-xs px-2 py-1 rounded bg-red-100 text-red-700">Supprimer</button>
+            <div className="px-3 py-1 flex items-center gap-1 bg-blue-50 border-b border-slate-200">
+              <span className="text-xs text-blue-600 font-medium mr-2">Tableau :</span>
+              <button onClick={() => editor.chain().focus().addColumnAfter().run()} className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200">+ Colonne</button>
+              <button onClick={() => editor.chain().focus().addRowAfter().run()} className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200">+ Ligne</button>
+              <button onClick={() => editor.chain().focus().deleteColumn().run()} className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200">- Colonne</button>
+              <button onClick={() => editor.chain().focus().deleteRow().run()} className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200">- Ligne</button>
+              <button onClick={() => editor.chain().focus().deleteTable().run()} className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200">Supprimer</button>
             </div>
           )}
 
           {/* Link input */}
           {showLinkInput && (
-            <div className="border-b border-slate-200 px-3 py-2 flex items-center gap-2 bg-yellow-50">
+            <div className="px-3 py-2 flex items-center gap-2 bg-yellow-50 border-b border-slate-200">
               <input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="https://..." className="flex-1 text-sm px-2 py-1 border border-slate-300 rounded" onKeyDown={e => e.key === "Enter" && addLink()} />
               <button onClick={addLink} className="text-xs px-3 py-1 bg-indigo-600 text-white rounded">OK</button>
-              <button onClick={() => setShowLinkInput(false)} className="text-xs px-2 py-1 text-slate-500">✕</button>
+              <button onClick={() => setShowLinkInput(false)} className="text-xs text-slate-500">✕</button>
             </div>
           )}
 
           {/* Cover page form */}
-          {showCoverPage && (
-            <div className="border-b border-slate-200 p-4 bg-indigo-50 space-y-3">
+          {showCoverForm && (
+            <div className="p-4 bg-indigo-50 border-b border-slate-200 space-y-3">
               <h3 className="text-sm font-semibold text-indigo-800">Page de garde</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <input value={coverData.titre} onChange={e => setCoverData({...coverData, titre: e.target.value})} placeholder="Titre du document" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
-                <input value={coverData.sousTitre} onChange={e => setCoverData({...coverData, sousTitre: e.target.value})} placeholder="Sous-titre (optionnel)" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
-                <input value={coverData.bailleur} onChange={e => setCoverData({...coverData, bailleur: e.target.value})} placeholder="Bailleur (ex: PNUD)" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
-                <input value={coverData.reference} onChange={e => setCoverData({...coverData, reference: e.target.value})} placeholder="Reference (optionnel)" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
+              <div className="grid grid-cols-2 gap-2">
+                <input value={coverData.titre} onChange={e => setCoverData({...coverData, titre: e.target.value})} placeholder="Titre" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
+                <input value={coverData.sousTitre} onChange={e => setCoverData({...coverData, sousTitre: e.target.value})} placeholder="Sous-titre" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
+                <input value={coverData.bailleur} onChange={e => setCoverData({...coverData, bailleur: e.target.value})} placeholder="Bailleur" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
+                <input value={coverData.reference} onChange={e => setCoverData({...coverData, reference: e.target.value})} placeholder="Reference" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
                 <input value={coverData.date} onChange={e => setCoverData({...coverData, date: e.target.value})} placeholder="Date" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
                 <input value={coverData.version} onChange={e => setCoverData({...coverData, version: e.target.value})} placeholder="Version" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
               </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" checked={coverData.confidentiel} onChange={e => setCoverData({...coverData, confidentiel: e.target.checked})} />
-                <label className="text-xs text-slate-600">Document confidentiel</label>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={insertCoverPage} className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded">Inserer la page de garde</button>
-                <button onClick={() => setShowCoverPage(false)} className="px-3 py-1.5 text-xs text-slate-500">Annuler</button>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={coverData.confidentiel} onChange={e => setCoverData({...coverData, confidentiel: e.target.checked})} /> Confidentiel</label>
+                <button onClick={insertCoverPage} className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded">Inserer</button>
+                <button onClick={() => setShowCoverForm(false)} className="text-xs text-slate-500">Annuler</button>
               </div>
             </div>
           )}
+        </div>
 
-          {/* TOC form */}
-          {showToc && (
-            <div className="border-b border-slate-200 p-4 bg-green-50">
-              <h3 className="text-sm font-semibold text-green-800 mb-2">Sommaire automatique ({toc.length} titres detectes)</h3>
-              {toc.length === 0 ? (
-                <p className="text-xs text-slate-500">Ajoutez des titres (H1, H2, H3) dans votre document pour generer le sommaire.</p>
-              ) : (
-                <div className="flex gap-2">
-                  <button onClick={insertToc} className="px-3 py-1.5 text-xs bg-green-600 text-white rounded">Inserer le sommaire</button>
-                  <button onClick={() => setShowToc(false)} className="px-3 py-1.5 text-xs text-slate-500">Annuler</button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Editor Content — Style A4 */}
-          <div className="bg-slate-100 p-8 flex justify-center">
-            <div className="bg-white shadow-lg w-full max-w-[816px] min-h-[1056px] px-[72px] py-[72px]">
-              <EditorContent editor={editor} />
-            </div>
+        {/* Zone d'edition — Pages A4 avec separation */}
+        <div className="bg-slate-300 py-8 px-4 flex flex-col items-center gap-8 rounded-b-lg min-h-[800px]">
+          <div className="bg-white shadow-xl w-full max-w-[794px] min-h-[1123px] relative" style={{ padding: "96px 72px" }}>
+            <EditorContent editor={editor} />
           </div>
+        </div>
 
-          {/* Footer — Page info */}
-          <div className="border-t border-slate-200 px-4 py-2 bg-slate-50 flex justify-between text-xs text-slate-400">
-            <span>{words} mots · {chars} caracteres</span>
-            <span>~{pages} page{pages > 1 ? "s" : ""} (estimation)</span>
-          </div>
+        {/* Barre de statut */}
+        <div className="bg-slate-700 text-white px-4 py-1 flex justify-between text-xs rounded-b-lg">
+          <span>Page 1 sur {pages}</span>
+          <span>{words} mots · {chars} caracteres · {toc.length} titres</span>
         </div>
       </div>
     </div>
   );
 }
 
-function TB({ a, o, t, children }: { a: boolean; o: () => void; t: string; children: React.ReactNode }) {
+// Bouton ruban petit
+function RB({ a, o, children }: { a: boolean; o: () => void; children: React.ReactNode }) {
+  return <button onClick={o} className={`px-1.5 py-0.5 text-xs rounded ${a ? "bg-indigo-100 text-indigo-700 ring-1 ring-indigo-300" : "hover:bg-slate-100 text-slate-600"}`}>{children}</button>;
+}
+
+// Bouton style (Titre 1, Titre 2, etc.)
+function StyleBtn({ active, onClick, label, className }: { active: boolean; onClick: () => void; label: string; className?: string }) {
   return (
-    <button onClick={o} title={t} className={`px-1.5 py-1 text-xs rounded transition-colors ${a ? "bg-indigo-100 text-indigo-700" : "text-slate-600 hover:bg-slate-100"}`}>
-      {children}
+    <button onClick={onClick} className={`px-2 py-1 border rounded text-left min-w-[70px] transition-all ${active ? "border-indigo-500 bg-indigo-50 ring-1 ring-indigo-300" : "border-slate-300 hover:border-slate-400 hover:bg-slate-50"}`}>
+      <span className={className ?? "text-xs text-slate-700"}>{label}</span>
+    </button>
+  );
+}
+
+// Gros bouton insertion
+function BigBtn({ onClick, icon, label }: { onClick: () => void; icon: string; label: string }) {
+  return (
+    <button onClick={onClick} className="flex flex-col items-center gap-1 px-3 py-2 border border-slate-300 rounded hover:bg-slate-50 min-w-[60px]">
+      <span className="text-lg">{icon}</span>
+      <span className="text-[10px] text-slate-600">{label}</span>
     </button>
   );
 }
