@@ -106,11 +106,16 @@ export default function ProjetDetailPage() {
               <div className="bg-slate-50 rounded-b-lg p-2 space-y-2 min-h-[200px]">
                 {projet.documents.filter(d => d.statut === col).map(doc => (
                   <div key={doc.id} className="bg-white rounded-lg p-3 shadow-sm border border-slate-100">
-                    <p className="text-sm font-medium text-slate-900">{doc.titre}</p>
+                    <Link href={`/projets/${id}/docs/${doc.id}`} className="block hover:text-indigo-600">
+                      <p className="text-sm font-medium">{doc.titre}</p>
+                    </Link>
                     <p className="text-xs text-slate-400 mt-1">{categorieLabels[doc.categorie] ?? doc.categorie}</p>
                     {doc.assigneA && <p className="text-xs text-indigo-600 mt-1">{doc.assigneA.name}</p>}
-                    {/* Boutons pour deplacer */}
-                    <div className="flex gap-1 mt-2">
+                    <div className="flex gap-1 mt-2 flex-wrap">
+                      <Link href={`/projets/${id}/docs/${doc.id}`}
+                        className="text-xs px-2 py-1 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200">
+                        Editer
+                      </Link>
                       {statutColumns.filter(s => s !== col).map(s => (
                         <button key={s} onClick={() => moveDocument(doc.id, s)}
                           className="text-xs px-2 py-1 rounded bg-slate-100 text-slate-600 hover:bg-slate-200">
