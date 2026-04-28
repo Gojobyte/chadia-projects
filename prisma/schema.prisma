@@ -198,8 +198,17 @@ model Document {
 // TACHES
 // ============================================================
 
-enum TachePriorite { HAUTE MOYENNE BASSE }
-enum TacheStatut { A_FAIRE EN_COURS TERMINE }
+enum TachePriorite {
+  HAUTE
+  MOYENNE
+  BASSE
+}
+
+enum TacheStatut {
+  A_FAIRE
+  EN_COURS
+  TERMINE
+}
 
 model Tache {
   id          String        @id @default(cuid())
