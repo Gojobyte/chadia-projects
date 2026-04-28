@@ -71,3 +71,35 @@ body {
 /* Selection */
 .tiptap .is-active { background: #e0e7ff; }
 .tiptap .selectedCell { background: #eef2ff; }
+
+/* Page de garde */
+.tiptap .cover-page {
+  min-height: 800px; display: flex; flex-direction: column;
+  justify-content: space-between; padding: 60px 40px;
+  border: 2px solid #e2e8f0; border-radius: 8px;
+  background: linear-gradient(to bottom right, #f8fafc, #eef2ff);
+  margin-bottom: 2em; page-break-after: always;
+}
+.tiptap .cover-header { text-align: right; }
+.tiptap .cover-org { font-size: 1.1em; font-weight: 700; color: #4f46e5; }
+.tiptap .cover-confidentiel { font-size: 0.75em; color: #dc2626; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; margin-top: 4px; }
+.tiptap .cover-body { text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.tiptap .cover-title { font-size: 2.2em !important; font-weight: 800; color: #1e293b; margin-bottom: 16px; line-height: 1.2; }
+.tiptap .cover-subtitle { font-size: 1.2em; color: #475569; margin-bottom: 24px; }
+.tiptap .cover-divider { border: none; height: 3px; background: linear-gradient(to right, transparent, #4f46e5, transparent); margin: 24px auto; width: 200px; }
+.tiptap .cover-bailleur { font-size: 1em; color: #334155; margin-top: 24px; }
+.tiptap .cover-ref { font-size: 0.9em; color: #64748b; margin-top: 8px; }
+.tiptap .cover-footer { text-align: center; font-size: 0.85em; color: #94a3b8; }
+
+/* Sommaire */
+.tiptap .toc-container { padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fafafa; margin-bottom: 2em; }
+.tiptap .toc-title { font-size: 1.5em !important; font-weight: 700; color: #1e293b; margin-bottom: 16px; text-align: center; }
+.tiptap .toc-item { font-size: 0.95em; color: #334155; padding: 4px 0; border-bottom: 1px dotted #e2e8f0; }
+.tiptap .toc-item:hover { color: #4f46e5; }
+
+/* Saut de page */
+.tiptap .page-break { border: none; border-top: 2px dashed #94a3b8; margin: 3em 0; position: relative; }
+.tiptap .page-break::after { content: "— Saut de page —"; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: white; padding: 0 12px; font-size: 0.7em; color: #94a3b8; }
+
+/* Document page style */
+.document-page { min-height: 900px; line-height: 1.8; font-size: 14px; }
