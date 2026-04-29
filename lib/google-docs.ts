@@ -60,7 +60,7 @@ export async function createGoogleDoc(params: {
     requestBody: {
       name: params.title,
       mimeType: "application/vnd.google-apps.document",
-      parents: params.folderId ? [params.folderId] : undefined,
+      parents: [params.folderId ?? process.env.GOOGLE_DRIVE_FOLDER_ID ?? ""].filter(Boolean),
     },
     fields: "id, webViewLink",
   });
