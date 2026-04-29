@@ -19,11 +19,21 @@ function getAuth() {
   if (authClient) return authClient;
 
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const key = process.env.GOOGLE_SERVICE_ACCOUNT_KEY?.replace(/\\n/g, "\n");
+  let key = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 
   if (!email || !key) {
     throw new Error("Google Service Account non configure (GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_SERVICE_ACCOUNT_KEY)");
   }
+
+  // Gerer les differents formats de cle privee
+  // Railway peut stocker avec des \n litteraux ou des vrais retours a la ligne
+  if (key.includes("\\n")) {
+    key = key.replace(/\\n/g, "\n");
+  }
+
+  console.log("Google Auth — email:", email);
+  console.log("Google Auth — key starts with:", key.substring(0, 30));
+  console.log("Google Auth — key length:", key.length);
 
   authClient = new google.auth.JWT({
     email,

@@ -60,8 +60,11 @@ export async function POST(
 
     return success({ url });
   } catch (err) {
-    console.error("Google Docs error:", err);
+    console.error("Google Docs error details:", JSON.stringify(err, null, 2));
     const message = err instanceof Error ? err.message : String(err);
-    return error(`Erreur Google Docs: ${message}`, 500);
+    // Essayer d'extraire plus de details
+    const details = (err as { response?: { data?: { error?: { message?: string; status?: string } } } })?.response?.data?.error;
+    const fullMessage = details ? `${details.status}: ${details.message}` : message;
+    return error(`Erreur Google Docs: ${fullMessage}`, 500);
   }
 }
