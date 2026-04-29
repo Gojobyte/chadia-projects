@@ -33,29 +33,35 @@ export async function POST(
     where: { categorie: doc.categorie },
   });
 
-  // Creer le Google Doc
-  const title = `${doc.projet.titre} — ${doc.titre}`;
-  const { url } = await createGoogleDoc({
-    title,
-    shareWithEmail: result.user.email ?? undefined,
-    templateContent: template?.contenu ?? undefined,
-  });
+  try {
+    // Creer le Google Doc
+    const title = `${doc.projet.titre} — ${doc.titre}`;
+    const { url } = await createGoogleDoc({
+      title,
+      shareWithEmail: result.user.email ?? undefined,
+      templateContent: template?.contenu ?? undefined,
+    });
 
-  // Sauvegarder l'URL dans la BDD
-  await prisma.document.update({
-    where: { id },
-    data: { fichierUrl: url, statut: doc.statut === "A_FAIRE" ? "EN_COURS" : doc.statut },
-  });
+    // Sauvegarder l'URL dans la BDD
+    await prisma.document.update({
+      where: { id },
+      data: { fichierUrl: url, statut: doc.statut === "A_FAIRE" ? "EN_COURS" : doc.statut },
+    });
 
-  // Logger
-  await prisma.activite.create({
-    data: {
-      projetId: doc.projetId,
-      userId: result.user.id,
-      action: "CREATION_GDOC",
-      description: `Google Doc cree pour "${doc.titre}"`,
-    },
-  });
+    // Logger
+    await prisma.activite.create({
+      data: {
+        projetId: doc.projetId,
+        userId: result.user.id,
+        action: "CREATION_GDOC",
+        description: `Google Doc cree pour "${doc.titre}"`,
+      },
+    });
 
-  return success({ url });
+    return success({ url });
+  } catch (err) {
+    console.error("Google Docs error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return error(`Erreur Google Docs: ${message}`, 500);
+  }
 }
