@@ -1,20 +1,21 @@
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/auth-guard";
+import { auth } from "@/lib/auth";
 import { success, error, notFound } from "@/lib/utils/api-response";
-import { createGoogleDoc, isGoogleDocsConfigured } from "@/lib/google-docs";
+import { createGoogleDoc } from "@/lib/google-docs";
 
 // POST /api/documents/:id/create-google-doc
-// Cree un Google Doc pour ce document et stocke l'URL
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const result = await requireRole("MEMBRE");
-  if (result.error) return result.error;
+  const session = await auth();
+  if (!session?.user) return error("Non autorise.", 401);
   const { id } = await params;
 
-  if (!isGoogleDocsConfigured()) {
-    return error("Google Docs n'est pas configure. Ajoutez GOOGLE_SERVICE_ACCOUNT_EMAIL et GOOGLE_SERVICE_ACCOUNT_KEY.", 500);
+  // Verifier le token Google
+  const googleToken = (session as { googleAccessToken?: string }).googleAccessToken;
+  if (!googleToken) {
+    return error("Connectez votre compte Google pour creer des documents. Allez dans Parametres > Connecter Google Drive.", 403);
   }
 
   const doc = await prisma.document.findUnique({
@@ -23,48 +24,31 @@ export async function POST(
   });
   if (!doc) return notFound("Document");
 
-  // Si un Google Doc existe deja, le retourner
   if (doc.fichierUrl?.includes("docs.google.com")) {
     return success({ url: doc.fichierUrl });
   }
 
-  // Chercher le template correspondant a la categorie
-  const template = await prisma.template.findFirst({
-    where: { categorie: doc.categorie },
-  });
+  const template = await prisma.template.findFirst({ where: { categorie: doc.categorie } });
 
   try {
-    // Creer le Google Doc
-    const title = `${doc.projet.titre} — ${doc.titre}`;
     const { url } = await createGoogleDoc({
-      title,
-      shareWithEmail: result.user.email ?? undefined,
+      accessToken: googleToken,
+      title: `${doc.projet.titre} — ${doc.titre}`,
       templateContent: template?.contenu ?? undefined,
     });
 
-    // Sauvegarder l'URL dans la BDD
     await prisma.document.update({
       where: { id },
       data: { fichierUrl: url, statut: doc.statut === "A_FAIRE" ? "EN_COURS" : doc.statut },
     });
 
-    // Logger
     await prisma.activite.create({
-      data: {
-        projetId: doc.projetId,
-        userId: result.user.id,
-        action: "CREATION_GDOC",
-        description: `Google Doc cree pour "${doc.titre}"`,
-      },
+      data: { projetId: doc.projetId, userId: session.user.id, action: "CREATION_GDOC", description: `Google Doc cree pour "${doc.titre}"` },
     });
 
     return success({ url });
   } catch (err) {
-    console.error("Google Docs error details:", JSON.stringify(err, null, 2));
-    const message = err instanceof Error ? err.message : String(err);
-    // Essayer d'extraire plus de details
-    const details = (err as { response?: { data?: { error?: { message?: string; status?: string } } } })?.response?.data?.error;
-    const fullMessage = details ? `${details.status}: ${details.message}` : message;
-    return error(`Erreur Google Docs: ${fullMessage}`, 500);
+    console.error("Google Docs error:", err);
+    return error(`Erreur: ${err instanceof Error ? err.message : String(err)}`, 500);
   }
 }

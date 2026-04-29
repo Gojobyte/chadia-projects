@@ -36,6 +36,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: {
+        params: {
+          // Demander l'acces a Google Drive pour creer des docs
+          scope: "openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/documents",
+          access_type: "offline", // Pour obtenir un refresh_token
+          prompt: "consent",      // Forcer le consentement pour avoir le refresh_token
+        },
+      },
     }),
   ],
 
@@ -50,18 +58,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return true;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
         token.role = (user as { role: UserRole }).role;
-      } else if (token.email) {
+      }
+      // Stocker le Google access token dans le JWT
+      if (account?.provider === "google") {
+        token.googleAccessToken = account.access_token;
+        token.googleRefreshToken = account.refresh_token;
+      }
+      if (!token.id && token.email) {
         const dbUser = await prisma.user.findUnique({ where: { email: token.email }, select: { id: true, role: true } });
         if (dbUser) { token.id = dbUser.id; token.role = dbUser.role; }
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) { session.user.id = token.id as string; session.user.role = token.role as UserRole; }
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.role = token.role as UserRole;
+        // Exposer le token Google dans la session (pour l'API Drive)
+        (session as { googleAccessToken?: string }).googleAccessToken = token.googleAccessToken as string | undefined;
+      }
       return session;
     },
   },
