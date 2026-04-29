@@ -56,13 +56,15 @@ export async function createGoogleDoc(params: {
   const drive = google.drive({ version: "v3", auth });
 
   // 1. Creer le document via Drive API (MIME type Google Doc)
+  const parentFolder = params.folderId ?? process.env.GOOGLE_DRIVE_FOLDER_ID;
   const file = await drive.files.create({
     requestBody: {
       name: params.title,
       mimeType: "application/vnd.google-apps.document",
-      parents: [params.folderId ?? process.env.GOOGLE_DRIVE_FOLDER_ID ?? ""].filter(Boolean),
+      ...(parentFolder ? { parents: [parentFolder] } : {}),
     },
     fields: "id, webViewLink",
+    supportsAllDrives: true,
   });
 
   const docId = file.data.id!;
