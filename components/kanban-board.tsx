@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -21,6 +21,12 @@ interface Document {
   id: string; categorie: string; titre: string; statut: string;
   fichierUrl: string | null;
   assigneA: { id: string; name: string } | null;
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
 }
 
 interface KanbanBoardProps {
@@ -46,6 +52,25 @@ const categorieLabels: Record<string, string> = {
 export function KanbanBoard({ projetId, documents, onMoveDocument }: KanbanBoardProps) {
   const [activeCard, setActiveCard] = useState<Document | null>(null);
   const [items, setItems] = useState(documents);
+  const [users, setUsers] = useState<User[]>([]);
+
+  // Charger les utilisateurs pour le menu d'assignation
+  useEffect(() => {
+    fetch("/api/users").then(r => r.json()).then(d => setUsers(d.users ?? []));
+  }, []);
+
+  async function assignDocument(documentId: string, userId: string | null) {
+    await fetch(`/api/projets/${projetId}/documents`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ documentId, assigneAId: userId }),
+    });
+    // Mettre a jour localement
+    const user = users.find(u => u.id === userId);
+    setItems(prev => prev.map(d =>
+      d.id === documentId ? { ...d, assigneA: userId && user ? { id: userId, name: user.name } : null } : d
+    ));
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -90,7 +115,7 @@ export function KanbanBoard({ projetId, documents, onMoveDocument }: KanbanBoard
       <div className="grid grid-cols-4 gap-3 h-full">
         {columns.map(col => {
           const colItems = items.filter(d => d.statut === col.id);
-          return <DroppableColumn key={col.id} column={col} items={colItems} projetId={projetId} />;
+          return <DroppableColumn key={col.id} column={col} items={colItems} projetId={projetId} users={users} onAssign={assignDocument} />;
         })}
       </div>
 
@@ -102,8 +127,9 @@ export function KanbanBoard({ projetId, documents, onMoveDocument }: KanbanBoard
 }
 
 // Colonne droppable
-function DroppableColumn({ column, items, projetId }: {
+function DroppableColumn({ column, items, projetId, users, onAssign }: {
   column: typeof columns[0]; items: Document[]; projetId: string;
+  users: User[]; onAssign: (docId: string, userId: string | null) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
@@ -128,7 +154,7 @@ function DroppableColumn({ column, items, projetId }: {
         }`}
       >
         {items.map(doc => (
-          <DraggableCard key={doc.id} doc={doc} projetId={projetId} />
+          <DraggableCard key={doc.id} doc={doc} projetId={projetId} users={users} onAssign={onAssign} />
         ))}
         {items.length === 0 && (
           <div className={`flex items-center justify-center h-32 rounded-lg border-2 border-dashed ${
@@ -143,10 +169,14 @@ function DroppableColumn({ column, items, projetId }: {
 }
 
 // Carte draggable
-function DraggableCard({ doc, projetId }: { doc: Document; projetId: string }) {
+function DraggableCard({ doc, projetId, users, onAssign }: {
+  doc: Document; projetId: string; users: User[];
+  onAssign: (docId: string, userId: string | null) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: doc.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1 };
   const hasGDoc = doc.fichierUrl?.includes("docs.google.com");
+  const [showAssign, setShowAssign] = useState(false);
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}
@@ -158,23 +188,59 @@ function DraggableCard({ doc, projetId }: { doc: Document; projetId: string }) {
 
       {/* Titre */}
       <Link href={`/projets/${projetId}/docs/${doc.id}`}
-        className="block text-sm font-semibold text-slate-900 hover:text-blue-600 mb-2 leading-snug">
+        className="block text-sm font-semibold text-slate-900 hover:text-blue-600 mb-2 leading-snug"
+        onPointerDown={e => e.stopPropagation()}>
         {doc.titre}
       </Link>
 
       {/* Footer carte */}
       <div className="flex items-center justify-between mt-2">
-        {doc.assigneA ? (
-          <div className="flex items-center gap-1.5">
-            <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-[11px] font-bold text-white">
-              {doc.assigneA.name.charAt(0)}
+        {/* Assignation */}
+        <div className="relative" onPointerDown={e => e.stopPropagation()}>
+          <button onClick={() => setShowAssign(!showAssign)}
+            className="flex items-center gap-1.5 hover:bg-slate-50 rounded px-1 py-0.5 -ml-1">
+            {doc.assigneA ? (
+              <>
+                <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-[11px] font-bold text-white">
+                  {doc.assigneA.name.charAt(0)}
+                </div>
+                <span className="text-xs text-slate-500">{doc.assigneA.name}</span>
+              </>
+            ) : (
+              <>
+                <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[11px] text-slate-400">+</div>
+                <span className="text-xs text-slate-400">Assigner</span>
+              </>
+            )}
+          </button>
+
+          {/* Menu d'assignation */}
+          {showAssign && (
+            <div className="absolute bottom-full left-0 mb-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 w-48 py-1">
+              <p className="text-[10px] text-slate-400 px-3 py-1 uppercase font-semibold">Assigner a</p>
+              {doc.assigneA && (
+                <button onClick={() => { onAssign(doc.id, null); setShowAssign(false); }}
+                  className="w-full text-left px-3 py-1.5 text-xs text-red-600 hover:bg-red-50">
+                  Retirer l&apos;assignation
+                </button>
+              )}
+              {users.map(u => (
+                <button key={u.id} onClick={() => { onAssign(doc.id, u.id); setShowAssign(false); }}
+                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 flex items-center gap-2 ${
+                    doc.assigneA?.id === u.id ? "bg-indigo-50 text-indigo-700" : "text-slate-700"
+                  }`}>
+                  <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white">
+                    {u.name.charAt(0)}
+                  </div>
+                  {u.name}
+                </button>
+              ))}
+              {users.length === 0 && <p className="px-3 py-2 text-xs text-slate-400">Aucun utilisateur</p>}
             </div>
-            <span className="text-xs text-slate-500">{doc.assigneA.name}</span>
-          </div>
-        ) : (
-          <span className="text-xs text-slate-300">Non assigne</span>
-        )}
-        <div className="flex items-center gap-1">
+          )}
+        </div>
+
+        <div className="flex items-center gap-1" onPointerDown={e => e.stopPropagation()}>
           {hasGDoc && <span className="text-sm" title="Google Doc lie">📄</span>}
           <Link href={`/projets/${projetId}/docs/${doc.id}`}
             className="text-xs px-2 py-1 rounded bg-slate-100 text-slate-600 hover:bg-slate-200">
