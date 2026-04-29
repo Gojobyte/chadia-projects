@@ -48,6 +48,7 @@ export function DocumentEditor({ documentId, initialContent, projetTitre, baille
     titre: projetTitre ?? "", sousTitre: "", bailleur: bailleurNom ?? "",
     organisation: "ONG CHADIA", date: new Date().toLocaleDateString("fr-FR"),
     reference: "", version: "1.0", confidentiel: false,
+    zonesIntervention: "", siegeSocial: "N'Djamena, Republique du Tchad",
   });
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
 
@@ -96,15 +97,70 @@ export function DocumentEditor({ documentId, initialContent, projetTitre, baille
 
   function insertCoverPage() {
     if (!editor) return;
-    const cover = `<div class="cover-page"><div class="cover-header"><p class="cover-org">${coverData.organisation}</p>${coverData.confidentiel ? '<p class="cover-confidentiel">CONFIDENTIEL</p>' : ''}</div><div class="cover-body"><h1 class="cover-title">${coverData.titre}</h1>${coverData.sousTitre ? `<p class="cover-subtitle">${coverData.sousTitre}</p>` : ''}<hr class="cover-divider" />${coverData.bailleur ? `<p class="cover-bailleur">Soumis a : ${coverData.bailleur}</p>` : ''}${coverData.reference ? `<p class="cover-ref">Reference : ${coverData.reference}</p>` : ''}</div><div class="cover-footer"><p>${coverData.organisation}</p><p>${coverData.date} · Version ${coverData.version}</p></div></div><div class="page-break"></div><p></p>`;
+    const labelStyle = 'color: #2c5f9e; font-style: italic; font-weight: bold;';
+    const cover = `
+<div class="doc-header">PROPOSITION TECHNIQUE | ${coverData.bailleur}</div>
+<div class="cover-page">
+  <div class="cover-body">
+    <h1 class="cover-title">${coverData.titre}</h1>
+    ${coverData.sousTitre ? `<p class="cover-subtitle">${coverData.sousTitre}</p>` : ''}
+    ${coverData.zonesIntervention ? `<p class="cover-subtitle">${coverData.zonesIntervention}</p>` : ''}
+    <div style="margin: 40px 0; text-align: center;">
+      <p><span class="cover-label" style="${labelStyle}">Appel a Propositions :</span> ${coverData.reference}</p>
+      <p><span class="cover-label" style="${labelStyle}">Soumissionnaire :</span> ${coverData.organisation}</p>
+      <p><span class="cover-label" style="${labelStyle}">Siege social :</span> ${coverData.siegeSocial}</p>
+      <p><span class="cover-label" style="${labelStyle}">Date de soumission :</span> ${coverData.date}</p>
+      <p><span class="cover-label" style="${labelStyle}">Version :</span> ${coverData.version}</p>
+    </div>
+  </div>
+  <div class="doc-footer">Dossier 1 : Methodologie | ${coverData.organisation}</div>
+</div>
+<div class="page-break"></div>
+<p></p>`;
     editor.chain().focus().insertContentAt(0, cover).run();
     setShowCoverForm(false);
   }
 
   function insertToc() {
     if (!editor || toc.length === 0) return;
-    let html = '<div class="toc-container"><h2 class="toc-title">Table des matieres</h2>';
-    toc.forEach(item => { html += `<p class="toc-item" style="padding-left: ${(item.level - 1) * 20}px">${item.text}</p>`; });
+
+    const toRoman = (n: number): string => {
+      const vals = [1000,900,500,400,100,90,50,40,10,9,5,4,1];
+      const syms = ["M","CM","D","CD","C","XC","L","XL","X","IX","V","IV","I"];
+      let result = "";
+      let num = n;
+      for (let i = 0; i < vals.length; i++) {
+        while (num >= vals[i]) { result += syms[i]; num -= vals[i]; }
+      }
+      return result;
+    };
+
+    const toLetter = (n: number): string =>
+      String.fromCharCode(64 + n); // A=65, donc 1→A, 2→B...
+
+    let h1Count = 0;
+    let h2Count = 0;
+    let h3Count = 0;
+
+    let html = `<div class="doc-header">PROPOSITION TECHNIQUE | ${coverData.bailleur}</div>`;
+    html += '<div class="toc-container"><h1 class="toc-title">TABLE DES MATIERES</h1>';
+
+    toc.forEach(item => {
+      if (item.level === 1) {
+        h1Count++;
+        h2Count = 0;
+        h3Count = 0;
+        html += `<p class="toc-item toc-h1"><span class="toc-num">${toRoman(h1Count)}.</span> ${item.text}</p>`;
+      } else if (item.level === 2) {
+        h2Count++;
+        h3Count = 0;
+        html += `<p class="toc-item toc-h2"><span class="toc-num">${toLetter(h2Count)}.</span> ${item.text}</p>`;
+      } else if (item.level === 3) {
+        h3Count++;
+        html += `<p class="toc-item toc-h3"><span class="toc-num">${h3Count}.</span> ${item.text}</p>`;
+      }
+    });
+
     html += '</div><div class="page-break"></div><p></p>';
     editor.commands.insertContent(html);
   }
@@ -326,15 +382,16 @@ export function DocumentEditor({ documentId, initialContent, projetTitre, baille
             <div className="p-4 bg-indigo-50 border-b border-slate-200 space-y-3">
               <h3 className="text-sm font-semibold text-indigo-800">Page de garde</h3>
               <div className="grid grid-cols-2 gap-2">
-                <input value={coverData.titre} onChange={e => setCoverData({...coverData, titre: e.target.value})} placeholder="Titre" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
+                <input value={coverData.titre} onChange={e => setCoverData({...coverData, titre: e.target.value})} placeholder="Titre du projet" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
                 <input value={coverData.sousTitre} onChange={e => setCoverData({...coverData, sousTitre: e.target.value})} placeholder="Sous-titre" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
-                <input value={coverData.bailleur} onChange={e => setCoverData({...coverData, bailleur: e.target.value})} placeholder="Bailleur" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
-                <input value={coverData.reference} onChange={e => setCoverData({...coverData, reference: e.target.value})} placeholder="Reference" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
-                <input value={coverData.date} onChange={e => setCoverData({...coverData, date: e.target.value})} placeholder="Date" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
+                <input value={coverData.bailleur} onChange={e => setCoverData({...coverData, bailleur: e.target.value})} placeholder="Bailleur (ex: UNICEF, UNHCR...)" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
+                <input value={coverData.reference} onChange={e => setCoverData({...coverData, reference: e.target.value})} placeholder="Reference appel a propositions" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
+                <input value={coverData.zonesIntervention} onChange={e => setCoverData({...coverData, zonesIntervention: e.target.value})} placeholder="Zones d'intervention (ex: Lac, Batha...)" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
+                <input value={coverData.siegeSocial} onChange={e => setCoverData({...coverData, siegeSocial: e.target.value})} placeholder="Siege social" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
+                <input value={coverData.date} onChange={e => setCoverData({...coverData, date: e.target.value})} placeholder="Date de soumission" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
                 <input value={coverData.version} onChange={e => setCoverData({...coverData, version: e.target.value})} placeholder="Version" className="text-sm px-2 py-1.5 border border-slate-300 rounded" />
               </div>
               <div className="flex items-center gap-4">
-                <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={coverData.confidentiel} onChange={e => setCoverData({...coverData, confidentiel: e.target.checked})} /> Confidentiel</label>
                 <button onClick={insertCoverPage} className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded">Inserer</button>
                 <button onClick={() => setShowCoverForm(false)} className="text-xs text-slate-500">Annuler</button>
               </div>
