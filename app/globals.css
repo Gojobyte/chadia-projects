@@ -97,35 +97,18 @@ body {
 .tiptap .toc-item { font-size: 0.95em; color: #334155; padding: 4px 0; border-bottom: 1px dotted #e2e8f0; }
 .tiptap .toc-item:hover { color: #4f46e5; }
 
-/* Saut de page — Simulation Word */
+/* Saut de page — Style Word exact */
 .tiptap .page-break {
   border: none;
-  margin: 0 -72px; /* Deborder sur les marges de la page */
+  margin: 0 -72px;
   padding: 0;
-  height: 40px;
+  height: 12px;
   position: relative;
-  background:
-    linear-gradient(to bottom,
-      #ffffff 0px,        /* Fin de la page precedente */
-      #d1d5db 1px,        /* Ombre bas de page */
-      #c4c8cc 3px,
-      #9ca3af 4px,        /* Fond gris entre les pages */
-      #9ca3af 36px,
-      #c4c8cc 37px,       /* Ombre haut page suivante */
-      #d1d5db 39px,
-      #ffffff 40px         /* Debut de la page suivante */
-    );
+  background: #e8e8e8;
   pointer-events: none;
-}
-/* Numero de page en bas */
-.tiptap .page-break::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: #e5e7eb;
+  box-shadow:
+    inset 0 2px 3px rgba(0,0,0,0.06),
+    inset 0 -2px 3px rgba(0,0,0,0.06);
 }
 
 /* Document page style */
@@ -137,10 +120,10 @@ body {
   min-height: 1000px;
 }
 
-/* Zone d'edition A4 */
+/* Zone d'edition A4 — Style Word */
 .editor-page-container {
-  background: #808080;
-  padding: 30px 0;
+  background: #e8e8e8;
+  padding: 20px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -149,13 +132,12 @@ body {
 
 .editor-page {
   background: white;
-  width: 794px; /* A4 width at 96dpi */
-  min-height: 1123px; /* A4 height at 96dpi */
+  width: 794px;
+  min-height: 1123px;
   box-shadow:
-    0 0 0 1px rgba(0,0,0,0.08),
-    0 2px 8px rgba(0,0,0,0.12),
-    0 8px 24px rgba(0,0,0,0.08);
-  padding: 96px 72px; /* Marges 2.54cm = ~96px top/bottom, ~72px left/right */
+    0 1px 3px rgba(0,0,0,0.1),
+    0 0 0 1px rgba(0,0,0,0.05);
+  padding: 96px 72px;
   position: relative;
 }
 
