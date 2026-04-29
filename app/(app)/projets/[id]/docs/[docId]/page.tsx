@@ -26,6 +26,8 @@ export default function DocumentPage() {
   const docId = params.docId as string;
   const [doc, setDoc] = useState<Doc | null>(null);
   const [loading, setLoading] = useState(true);
+  const [creatingGDoc, setCreatingGDoc] = useState(false);
+  const [gdocError, setGdocError] = useState("");
 
   useEffect(() => {
     fetch(`/api/documents/${docId}`)
@@ -41,8 +43,24 @@ export default function DocumentPage() {
     setDoc(prev => prev ? { ...prev, statut } : null);
   }
 
-  if (loading) return <p className="text-slate-500">Chargement...</p>;
-  if (!doc) return <p className="text-red-500">Document introuvable.</p>;
+  async function createGoogleDoc() {
+    setCreatingGDoc(true); setGdocError("");
+    try {
+      const res = await fetch(`/api/documents/${docId}/create-google-doc`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setGdocError(data.error ?? "Erreur"); return; }
+      setDoc(prev => prev ? { ...prev, fichierUrl: data.url } : null);
+    } catch {
+      setGdocError("Erreur de connexion.");
+    } finally {
+      setCreatingGDoc(false);
+    }
+  }
+
+  if (loading) return <p className="text-slate-500 p-8">Chargement...</p>;
+  if (!doc) return <p className="text-red-500 p-8">Document introuvable.</p>;
+
+  const hasGoogleDoc = doc.fichierUrl?.includes("docs.google.com");
 
   return (
     <div>
@@ -72,15 +90,60 @@ export default function DocumentPage() {
         {doc.assigneA && <p className="text-sm text-indigo-600 mt-1">Assigne a : {doc.assigneA.name}</p>}
       </div>
 
-      {/* Editeur */}
-      <DocumentEditor documentId={doc.id} initialContent={doc.contenu ?? ""} />
+      {/* Google Doc ou Editeur TipTap */}
+      {hasGoogleDoc ? (
+        /* Google Docs integre */
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <a href={doc.fichierUrl!} target="_blank" rel="noopener noreferrer"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M14.727 6.727H14V0H4.91c-.905 0-1.637.732-1.637 1.636v20.728c0 .904.732 1.636 1.636 1.636h14.182c.904 0 1.636-.732 1.636-1.636V6.727h-6z"/><path d="M16.364 0v5.091h5.091L16.364 0z" opacity=".5"/></svg>
+              Ouvrir dans Google Docs
+            </a>
+            <span className="text-xs text-slate-400">Toutes les modifications sont sauvegardees automatiquement dans Google Docs</span>
+          </div>
 
-      {/* Fichier attache */}
-      {doc.fichierUrl && (
-        <div className="mt-4 bg-white rounded-xl shadow-sm p-4">
-          <p className="text-sm text-slate-500 mb-2">Fichier attache :</p>
-          <a href={doc.fichierUrl} target="_blank" rel="noopener noreferrer"
-            className="text-indigo-600 hover:underline text-sm">{doc.fichierUrl}</a>
+          {/* Iframe Google Docs */}
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+            <iframe
+              src={doc.fichierUrl!.replace("/edit", "/edit?embedded=true")}
+              className="w-full border-0"
+              style={{ height: "85vh", minHeight: "800px" }}
+              title={doc.titre}
+              allow="clipboard-read; clipboard-write"
+            />
+          </div>
+        </div>
+      ) : (
+        /* Pas de Google Doc — proposer de le creer ou utiliser TipTap */
+        <div>
+          {/* Bouton creer Google Doc */}
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-4 border border-slate-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-800">Choisir l&apos;editeur</h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  Utilisez Google Docs pour une experience complete (styles, pagination, collaboration) ou l&apos;editeur integre.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={createGoogleDoc} disabled={creatingGDoc}
+                  className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M14.727 6.727H14V0H4.91c-.905 0-1.637.732-1.637 1.636v20.728c0 .904.732 1.636 1.636 1.636h14.182c.904 0 1.636-.732 1.636-1.636V6.727h-6z"/><path d="M16.364 0v5.091h5.091L16.364 0z" opacity=".5"/></svg>
+                  {creatingGDoc ? "Creation..." : "Creer un Google Doc"}
+                </button>
+              </div>
+            </div>
+            {gdocError && <p className="text-red-600 text-sm mt-3">{gdocError}</p>}
+          </div>
+
+          {/* Editeur TipTap (fallback) */}
+          <details className="mb-4">
+            <summary className="text-sm text-slate-500 cursor-pointer hover:text-slate-700 mb-2">
+              Ou utiliser l&apos;editeur integre (basique)
+            </summary>
+            <DocumentEditor documentId={doc.id} initialContent={doc.contenu ?? ""} />
+          </details>
         </div>
       )}
     </div>
