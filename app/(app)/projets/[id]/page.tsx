@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { KanbanBoard } from "@/components/kanban-board";
 
 interface Document { id: string; categorie: string; titre: string; statut: string; fichierUrl: string | null; assigneA: { id: string; name: string } | null; }
 interface Tache { id: string; titre: string; statut: string; priorite: string; assigneA: { id: string; name: string } | null; }
@@ -94,41 +95,9 @@ export default function ProjetDetailPage() {
         ))}
       </div>
 
-      {/* Tab: Kanban Documents */}
+      {/* Tab: Kanban Documents — Style Trello avec drag & drop */}
       {tab === "kanban" && (
-        <div className="grid grid-cols-4 gap-4">
-          {statutColumns.map(col => (
-            <div key={col}>
-              <div className={`${statutColors[col]} rounded-t-lg px-3 py-2`}>
-                <h3 className="text-sm font-semibold text-slate-700">{statutLabels[col]}</h3>
-                <span className="text-xs text-slate-500">{projet.documents.filter(d => d.statut === col).length}</span>
-              </div>
-              <div className="bg-slate-50 rounded-b-lg p-2 space-y-2 min-h-[200px]">
-                {projet.documents.filter(d => d.statut === col).map(doc => (
-                  <div key={doc.id} className="bg-white rounded-lg p-3 shadow-sm border border-slate-100">
-                    <Link href={`/projets/${id}/docs/${doc.id}`} className="block hover:text-indigo-600">
-                      <p className="text-sm font-medium">{doc.titre}</p>
-                    </Link>
-                    <p className="text-xs text-slate-400 mt-1">{categorieLabels[doc.categorie] ?? doc.categorie}</p>
-                    {doc.assigneA && <p className="text-xs text-indigo-600 mt-1">{doc.assigneA.name}</p>}
-                    <div className="flex gap-1 mt-2 flex-wrap">
-                      <Link href={`/projets/${id}/docs/${doc.id}`}
-                        className="text-xs px-2 py-1 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200">
-                        Editer
-                      </Link>
-                      {statutColumns.filter(s => s !== col).map(s => (
-                        <button key={s} onClick={() => moveDocument(doc.id, s)}
-                          className="text-xs px-2 py-1 rounded bg-slate-100 text-slate-600 hover:bg-slate-200">
-                          → {statutLabels[s]}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        <KanbanBoard projetId={id} documents={projet.documents} onMoveDocument={moveDocument} />
       )}
 
       {/* Tab: Taches */}
