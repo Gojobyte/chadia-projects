@@ -97,9 +97,71 @@ body {
 .tiptap .toc-item { font-size: 0.95em; color: #334155; padding: 4px 0; border-bottom: 1px dotted #e2e8f0; }
 .tiptap .toc-item:hover { color: #4f46e5; }
 
-/* Saut de page */
-.tiptap .page-break { border: none; border-top: 2px dashed #94a3b8; margin: 3em 0; position: relative; }
-.tiptap .page-break::after { content: "— Saut de page —"; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: white; padding: 0 12px; font-size: 0.7em; color: #94a3b8; }
+/* Saut de page — Simulation Word */
+.tiptap .page-break {
+  border: none;
+  margin: 0 -72px; /* Deborder sur les marges de la page */
+  padding: 0;
+  height: 40px;
+  position: relative;
+  background:
+    linear-gradient(to bottom,
+      #ffffff 0px,        /* Fin de la page precedente */
+      #d1d5db 1px,        /* Ombre bas de page */
+      #c4c8cc 3px,
+      #9ca3af 4px,        /* Fond gris entre les pages */
+      #9ca3af 36px,
+      #c4c8cc 37px,       /* Ombre haut page suivante */
+      #d1d5db 39px,
+      #ffffff 40px         /* Debut de la page suivante */
+    );
+  pointer-events: none;
+}
+/* Numero de page en bas */
+.tiptap .page-break::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #e5e7eb;
+}
 
 /* Document page style */
-.document-page { min-height: 900px; line-height: 1.8; font-size: 14px; }
+.document-content {
+  line-height: 1.8;
+  font-size: 12pt;
+  font-family: "Times New Roman", Georgia, serif;
+  color: #1a1a1a;
+  min-height: 1000px;
+}
+
+/* Zone d'edition A4 */
+.editor-page-container {
+  background: #808080;
+  padding: 30px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 600px;
+}
+
+.editor-page {
+  background: white;
+  width: 794px; /* A4 width at 96dpi */
+  min-height: 1123px; /* A4 height at 96dpi */
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.08),
+    0 2px 8px rgba(0,0,0,0.12),
+    0 8px 24px rgba(0,0,0,0.08);
+  padding: 96px 72px; /* Marges 2.54cm = ~96px top/bottom, ~72px left/right */
+  position: relative;
+}
+
+/* Style impression */
+@media print {
+  .editor-page-container { background: white; padding: 0; }
+  .editor-page { box-shadow: none; width: 100%; }
+  .tiptap .page-break { page-break-after: always; height: 0; background: none; margin: 0; }
+}

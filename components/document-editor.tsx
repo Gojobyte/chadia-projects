@@ -342,9 +342,9 @@ export function DocumentEditor({ documentId, initialContent, projetTitre, baille
           )}
         </div>
 
-        {/* Zone d'edition — Pages A4 avec separation */}
-        <div className="bg-slate-300 py-8 px-4 flex flex-col items-center gap-8 rounded-b-lg min-h-[800px]">
-          <div className="bg-white shadow-xl w-full max-w-[794px] min-h-[1123px] relative" style={{ padding: "96px 72px" }}>
+        {/* Zone d'edition — Pages A4 avec separation style Word */}
+        <div className="editor-page-container rounded-b-lg">
+          <div className="editor-page">
             <EditorContent editor={editor} />
           </div>
         </div>
