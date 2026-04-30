@@ -91,19 +91,24 @@ export default function ProjetDetailPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-slate-200">
-        {(["kanban", "taches", "equipe", "activite"] as const).map(t => (
+        {(["kanban", "ia", "taches", "equipe", "activite"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              tab === t ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700"
+              tab === t ? "border-[#0468b1] text-[#0468b1]" : "border-transparent text-[#64748b] hover:text-[#1e293b]"
             }`}>
-            {t === "kanban" ? "Documents" : t === "taches" ? "Taches" : t === "equipe" ? "Equipe" : "Activite"}
+            {t === "kanban" ? "Documents" : t === "ia" ? "🧠 IA" : t === "taches" ? "Taches" : t === "equipe" ? "Equipe" : "Activite"}
           </button>
         ))}
       </div>
 
-      {/* Tab: Kanban Documents — Style Trello avec drag & drop */}
+      {/* Tab: Kanban */}
       {tab === "kanban" && (
         <KanbanBoard projetId={id} documents={projet.documents} onMoveDocument={moveDocument} />
+      )}
+
+      {/* Tab: IA */}
+      {tab === "ia" && (
+        <IAPanel projetId={id} documents={projet.documents} bailleur={projet.bailleur.sigle} titreProjet={projet.titre} description={projet.description} onReload={load} />
       )}
 
       {/* Tab: Taches */}
@@ -290,6 +295,82 @@ function TachesPanel({ projetId, taches: initialTaches, membres, onReload }: {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// Panneau IA
+function IAPanel({ projetId, documents, onReload }: {
+  projetId: string; documents: Document[]; bailleur: string; titreProjet: string; description: string; onReload: () => void;
+}) {
+  const [appelTexte, setAppelTexte] = useState("");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyse, setAnalyse] = useState<{ criteres: string; exigences: string; documentsRequis: string; budgetEstime: string; recommandations: string } | null>(null);
+  const [generating, setGenerating] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  async function analyser() {
+    if (appelTexte.length < 50) { setError("Collez le texte (min 50 caracteres)."); return; }
+    setAnalyzing(true); setError("");
+    const res = await fetch(`/api/projets/${projetId}/analyser`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texte: appelTexte }),
+    });
+    const data = await res.json(); setAnalyzing(false);
+    if (!res.ok) { setError(data.error ?? "Erreur"); return; }
+    setAnalyse(data.analyse);
+  }
+
+  async function genererDoc(docId: string) {
+    setGenerating(docId);
+    const res = await fetch(`/api/documents/${docId}/generer`, { method: "POST" });
+    setGenerating(null);
+    if (res.ok) { onReload(); } else { const d = await res.json(); alert(d.error ?? "Erreur"); }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="card p-0 overflow-hidden">
+        <div className="px-5 py-3 border-b border-[#e2e8f0]" style={{ background: "#0468b1" }}>
+          <h2 className="text-[14px] font-bold text-white">🧠 Analyse IA de l&apos;appel d&apos;offres</h2>
+          <p className="text-[11px] text-white/70 mt-0.5">Collez le texte — l&apos;IA extractra criteres, exigences et recommandations.</p>
+        </div>
+        <div className="p-5">
+          <textarea value={appelTexte} onChange={e => setAppelTexte(e.target.value)} rows={6}
+            placeholder="Collez ici le texte de l'appel d'offres..." className="w-full px-3 py-2 border border-[#e2e8f0] rounded text-[13px] mb-3" />
+          {error && <p className="text-[#dc2626] text-[12px] mb-3">{error}</p>}
+          <button onClick={analyser} disabled={analyzing}
+            className="px-5 py-2.5 rounded text-[13px] font-semibold text-white disabled:opacity-50" style={{ background: "#0468b1" }}>
+            {analyzing ? "Analyse en cours..." : "🧠 Analyser"}
+          </button>
+        </div>
+      </div>
+
+      {analyse && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="card p-5"><h3 className="text-[13px] font-bold text-[#1a365d] mb-3">📋 Criteres</h3><pre className="text-[12px] text-[#1e293b] whitespace-pre-wrap">{analyse.criteres}</pre></div>
+          <div className="card p-5"><h3 className="text-[13px] font-bold text-[#1a365d] mb-3">📌 Exigences</h3><pre className="text-[12px] text-[#1e293b] whitespace-pre-wrap">{analyse.exigences}</pre></div>
+          <div className="card p-5"><h3 className="text-[13px] font-bold text-[#1a365d] mb-3">📄 Documents requis</h3><pre className="text-[12px] text-[#1e293b] whitespace-pre-wrap">{analyse.documentsRequis}</pre></div>
+          <div className="card p-5"><h3 className="text-[13px] font-bold text-[#1a365d] mb-3">💡 Recommandations</h3><pre className="text-[12px] text-[#1e293b] whitespace-pre-wrap">{analyse.recommandations}</pre></div>
+        </div>
+      )}
+
+      <div className="card p-0 overflow-hidden">
+        <div className="px-5 py-3 border-b border-[#e2e8f0]">
+          <h2 className="text-[13px] font-bold text-[#1a365d] uppercase tracking-wider">Generer du contenu</h2>
+        </div>
+        <div className="divide-y divide-[#f1f5f9]">
+          {documents.map(doc => (
+            <div key={doc.id} className="flex items-center justify-between px-5 py-3 hover:bg-[#f8fafc]">
+              <div><p className="text-[13px] font-medium text-[#1e293b]">{doc.titre}</p></div>
+              <button onClick={() => genererDoc(doc.id)} disabled={generating === doc.id}
+                className="px-3 py-1.5 rounded text-[11px] font-semibold text-white disabled:opacity-50" style={{ background: "#0468b1" }}>
+                {generating === doc.id ? "..." : "🧠 Generer"}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

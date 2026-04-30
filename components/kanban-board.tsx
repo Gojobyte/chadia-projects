@@ -36,9 +36,11 @@ interface KanbanBoardProps {
 }
 
 const columns = [
-  { id: "A_FAIRE", label: "A faire", color: "bg-slate-600", lightColor: "bg-slate-50", borderColor: "border-slate-300", emoji: "📋" },
-  { id: "EN_COURS", label: "En cours", color: "bg-blue-600", lightColor: "bg-blue-50", borderColor: "border-blue-200", emoji: "✏️" },
-  { id: "EN_REVISION", label: "En revision", color: "bg-amber-500", lightColor: "bg-amber-50", borderColor: "border-amber-200", emoji: "👀" },
+  { id: "BROUILLON", label: "Brouillon", color: "bg-slate-500", lightColor: "bg-slate-50", borderColor: "border-slate-300", emoji: "📝" },
+  { id: "REDACTION", label: "Redaction", color: "bg-blue-600", lightColor: "bg-blue-50", borderColor: "border-blue-200", emoji: "✏️" },
+  { id: "RELECTURE", label: "Relecture", color: "bg-amber-500", lightColor: "bg-amber-50", borderColor: "border-amber-200", emoji: "👀" },
+  { id: "VALIDATION", label: "Validation", color: "bg-purple-600", lightColor: "bg-purple-50", borderColor: "border-purple-200", emoji: "✔️" },
+  { id: "FINALISATION", label: "Finalisation", color: "bg-indigo-600", lightColor: "bg-indigo-50", borderColor: "border-indigo-200", emoji: "📋" },
   { id: "VALIDE", label: "Valide", color: "bg-green-600", lightColor: "bg-green-50", borderColor: "border-green-200", emoji: "✅" },
 ];
 
@@ -112,7 +114,7 @@ export function KanbanBoard({ projetId, documents, onMoveDocument }: KanbanBoard
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid grid-cols-4 gap-3 h-full">
+      <div className="grid grid-cols-6 gap-2 h-full">
         {columns.map(col => {
           const colItems = items.filter(d => d.statut === col.id);
           return <DroppableColumn key={col.id} column={col} items={colItems} projetId={projetId} users={users} onAssign={assignDocument} />;

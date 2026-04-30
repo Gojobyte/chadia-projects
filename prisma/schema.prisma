@@ -38,6 +38,7 @@ model User {
   documentsAssignes Document[]     @relation("DocumentAssigne")
   activites         Activite[]
   notifications     Notification[]
+  commentaires      Commentaire[]
   accounts          Account[]
   sessions          Session[]
 
@@ -117,10 +118,12 @@ model Projet {
   createdBy   User   @relation("ProjetCreatedBy", fields: [createdById], references: [id])
   createdById String
 
-  documents  Document[]
-  taches     Tache[]
-  membres    ProjetMembre[]
-  activites  Activite[]
+  documents    Document[]
+  taches       Tache[]
+  membres      ProjetMembre[]
+  activites    Activite[]
+  commentaires Commentaire[]
+  analyseIA    AnalyseIA?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -165,9 +168,11 @@ enum DocumentCategorie {
 }
 
 enum DocumentStatut {
-  A_FAIRE
-  EN_COURS
-  EN_REVISION
+  BROUILLON
+  REDACTION
+  RELECTURE
+  VALIDATION
+  FINALISATION
   VALIDE
 }
 
@@ -179,14 +184,15 @@ model Document {
   description String?
   contenu     String?            @db.Text
   fichierUrl  String?
-  statut      DocumentStatut     @default(A_FAIRE)
+  statut      DocumentStatut     @default(BROUILLON)
   ordre       Int                @default(0)
   assigneAId  String?
   dateLimite  DateTime?
 
-  projet    Projet  @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  assigneA  User?   @relation("DocumentAssigne", fields: [assigneAId], references: [id])
-  taches    Tache[]
+  projet       Projet        @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  assigneA     User?         @relation("DocumentAssigne", fields: [assigneAId], references: [id])
+  taches       Tache[]
+  commentaires Commentaire[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -230,6 +236,50 @@ model Tache {
   @@index([projetId])
   @@index([assigneAId])
   @@map("taches")
+}
+
+// ============================================================
+// COMMENTAIRES
+// ============================================================
+
+model Commentaire {
+  id          String  @id @default(cuid())
+  contenu     String  @db.Text
+  documentId  String?
+  tacheId     String?
+  projetId    String
+  userId      String
+
+  document Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  projet   Projet    @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  @@index([documentId])
+  @@index([projetId])
+  @@map("commentaires")
+}
+
+// ============================================================
+// ANALYSE IA
+// ============================================================
+
+model AnalyseIA {
+  id        String @id @default(cuid())
+  projetId  String @unique
+  appelOffreTexte String? @db.Text
+  criteres  String? @db.Text
+  exigences String? @db.Text
+  documentsRequis String? @db.Text
+  budgetEstime String?
+  recommandations String? @db.Text
+  scoreConformite Int?
+
+  projet Projet @relation(fields: [projetId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("analyses_ia")
 }
 
 // ============================================================
