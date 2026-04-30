@@ -27,7 +27,7 @@ export default async function Dashboard() {
 
   const [projetsEnCours, deadlinesProches, mesTaches, activiteRecente, totalProjets] = await Promise.all([
     prisma.projet.findMany({
-      where: { statut: { in: ["REDACTION", "BROUILLON", "RELECTURE"] } },
+      where: { statut: { in: ["EN_COURS", "BROUILLON", "EN_REVISION"] } },
       include: { bailleur: { select: { sigle: true } }, documents: { select: { statut: true } } },
       orderBy: { dateLimite: "asc" }, take: 8,
     }),
