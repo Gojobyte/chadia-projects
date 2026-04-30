@@ -53,9 +53,14 @@ export default function NouveauProjetPage() {
   }
 
   return (
-    <div className="max-w-3xl">
-      <h1 className="text-2xl font-bold text-slate-900 mb-6">Nouveau projet</h1>
-      {error && <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">{error}</div>}
+    <div style={{ maxWidth: 720 }}>
+      <div className="page-header">
+        <div>
+          <div className="page-title">Nouveau projet</div>
+          <div className="page-subtitle">Creer un projet pour repondre a un appel d&apos;offres</div>
+        </div>
+      </div>
+      {error && <div style={{ padding: "10px 14px", background: "var(--danger-soft)", color: "var(--danger)", borderRadius: "var(--radius)", fontSize: 13, marginBottom: 16 }}>{error}</div>}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Infos generales */}

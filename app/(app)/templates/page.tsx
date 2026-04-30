@@ -57,13 +57,12 @@ export default function TemplatesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="page-header">
         <div>
-          <h1 className="text-[22px] font-bold text-[#1a365d]">Templates de documents</h1>
-          <p className="text-[12px] text-[#94a3b8] mt-0.5">{templates.length} modeles disponibles</p>
+          <div className="page-title">Templates</div>
+          <div className="page-subtitle">{templates.length} modeles disponibles</div>
         </div>
-        <button onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 rounded text-[13px] font-semibold text-white" style={{ background: "#0468b1" }}>
+        <button onClick={() => setShowForm(!showForm)} className="btn btn-primary">
           {showForm ? "Annuler" : "+ Nouveau template"}
         </button>
       </div>
