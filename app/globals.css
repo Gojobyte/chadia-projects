@@ -109,6 +109,19 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', system-u
 .pill-rejete { background: color-mix(in oklch, var(--st-rejete) 12%, transparent); color: var(--st-rejete); }
 .pill-rejete .dot { background: var(--st-rejete); }
 
+/* Table */
+.table-wrap { overflow: auto; }
+table.t { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.t th {
+  text-align: left; font-weight: 500; font-size: 11.5px; color: var(--text-3);
+  letter-spacing: 0.02em; text-transform: uppercase;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  background: var(--surface-2); position: sticky; top: 0;
+}
+table.t td { padding: 12px 14px; border-bottom: 1px solid var(--border); color: var(--text-2); vertical-align: middle; }
+table.t tr:hover td { background: var(--surface-2); }
+table.t tr:last-child td { border-bottom: none; }
+
 /* Progress */
 .progress-bar { height: 4px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
 .progress-bar > span { display: block; height: 100%; background: var(--primary); border-radius: 99px; transition: width 0.4s; }
