@@ -187,6 +187,9 @@ export default function DocumentPage() {
       if (e.key === "b") { e.preventDefault(); document.execCommand("bold"); }
       if (e.key === "i") { e.preventDefault(); document.execCommand("italic"); }
       if (e.key === "u") { e.preventDefault(); document.execCommand("underline"); }
+      if (e.key === "z") { /* undo — natif */ }
+      if (e.key === "y") { e.preventDefault(); document.execCommand("redo"); }
+      if (e.key === "k") { e.preventDefault(); insertLink(); }
     }
     // Détecter "/" pour ouvrir le menu IA
     if (e.key === "/" && !e.ctrlKey && !e.metaKey) {
@@ -369,6 +372,68 @@ export default function DocumentPage() {
     }
   }
 
+  // Insérer un séparateur horizontal
+  function insertHR() {
+    document.execCommand("insertHTML", false, '<hr style="border:none;border-top:2px solid var(--border);margin:24px 0" /><p><br></p>');
+    editorRef.current?.focus();
+  }
+
+  // Insérer une citation/blockquote
+  function insertBlockquote() {
+    const html = `<blockquote style="border-left:3px solid var(--primary);padding:8px 16px;margin:12px 0;background:var(--primary-soft);border-radius:0 6px 6px 0"><p>Citation ou remarque importante...</p></blockquote><p><br></p>`;
+    document.execCommand("insertHTML", false, html);
+    editorRef.current?.focus();
+  }
+
+  // Insérer un bloc de code
+  function insertCodeBlock() {
+    const html = `<pre style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-family:ui-monospace,monospace;font-size:13px;overflow-x:auto;margin:12px 0"><code>// Code ici...</code></pre><p><br></p>`;
+    document.execCommand("insertHTML", false, html);
+    editorRef.current?.focus();
+  }
+
+  // Insérer un lien
+  function insertLink() {
+    const url = prompt("URL du lien :");
+    if (url) {
+      document.execCommand("createLink", false, url);
+    }
+    editorRef.current?.focus();
+  }
+
+  // Insérer une image depuis une URL
+  function insertImage() {
+    const url = prompt("URL de l'image :");
+    if (url) {
+      const html = `<img src="${url}" style="max-width:100%;height:auto;border-radius:6px;margin:12px 0" /><p><br></p>`;
+      document.execCommand("insertHTML", false, html);
+    }
+    editorRef.current?.focus();
+  }
+
+  // Insérer un encadré coloré (warning, info, success)
+  function insertCalloutType(type: "info" | "warning" | "success" | "danger") {
+    const colors = {
+      info: { bg: "var(--info-soft)", border: "var(--info)", label: "INFORMATION" },
+      warning: { bg: "var(--warning-soft)", border: "var(--warning)", label: "ATTENTION" },
+      success: { bg: "var(--success-soft)", border: "var(--success)", label: "POINT CLÉ" },
+      danger: { bg: "var(--danger-soft)", border: "var(--danger)", label: "IMPORTANT" },
+    };
+    const c = colors[type];
+    const html = `<div style="background:${c.bg};border-left:4px solid ${c.border};border-radius:0 8px 8px 0;padding:14px 16px;margin:16px 0">
+      <div style="font-size:11.5px;font-weight:700;color:${c.border};text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px">${c.label}</div>
+      <p style="margin:0;color:var(--text-2)">Écrivez ici...</p>
+    </div><p><br></p>`;
+    document.execCommand("insertHTML", false, html);
+    editorRef.current?.focus();
+  }
+
+  // Texte normal (supprimer le formatage de bloc)
+  function execNormal() {
+    document.execCommand("formatBlock", false, "<p>");
+    editorRef.current?.focus();
+  }
+
   async function changeStatut(statut: string) {
     setStatutOpen(false);
     await fetch(`/api/documents/${docId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ statut }) });
@@ -467,44 +532,83 @@ export default function DocumentPage() {
         <div style={{ position: "relative" }}>
           {hasContent ? (
             <>
-              {/* Barre d'outils de formatage */}
+              {/* Barre d'outils de formatage — complète */}
               <div style={{
-                display: "flex", alignItems: "center", gap: 2, padding: "6px 8px",
+                display: "flex", alignItems: "center", gap: 1, padding: "4px 8px",
                 background: "var(--surface)", border: "1px solid var(--border)",
                 borderRadius: "var(--radius) var(--radius) 0 0", borderBottom: "none",
                 flexWrap: "wrap", position: "sticky", top: 52, zIndex: 10,
               }}>
-                {/* Bloc de titres */}
-                <ToolbarBtn label="H1" title="Titre principal (section)" onClick={() => execBlock("h2")} />
-                <ToolbarBtn label="H2" title="Sous-titre (sous-section)" onClick={() => execBlock("h3")} />
+                {/* Annuler / Refaire */}
+                <ToolbarBtn label="↩" title="Annuler (Ctrl+Z)" onClick={() => document.execCommand("undo")} />
+                <ToolbarBtn label="↪" title="Refaire (Ctrl+Y)" onClick={() => document.execCommand("redo")} />
+                <ToolbarSep />
+
+                {/* Blocs */}
+                <ToolbarBtn label="¶" title="Texte normal" onClick={execNormal} />
+                <ToolbarBtn label="H1" title="Titre principal" onClick={() => execBlock("h2")} />
+                <ToolbarBtn label="H2" title="Sous-titre" onClick={() => execBlock("h3")} />
                 <ToolbarBtn label="H3" title="Sous-sous-titre" onClick={() => execBlock("h4")} />
                 <ToolbarSep />
+
                 {/* Formatage inline */}
                 <ToolbarBtn label="G" title="Gras (Ctrl+B)" onClick={() => document.execCommand("bold")} bold />
                 <ToolbarBtn label="I" title="Italique (Ctrl+I)" onClick={() => document.execCommand("italic")} italic />
                 <ToolbarBtn label="S" title="Souligné (Ctrl+U)" onClick={() => document.execCommand("underline")} underline />
-                <ToolbarBtn label="ab" title="Surligner" onClick={() => document.execCommand("hiliteColor", false, "#fef9c3")} highlight />
+                <ToolbarBtn label="S̶" title="Barré" onClick={() => document.execCommand("strikeThrough")} />
+                <ToolbarBtn label="x²" title="Exposant" onClick={() => document.execCommand("superscript")} />
+                <ToolbarBtn label="x₂" title="Indice" onClick={() => document.execCommand("subscript")} />
                 <ToolbarSep />
-                {/* Listes */}
+
+                {/* Surlignage et couleurs */}
+                <ToolbarBtn label="ab" title="Surligner jaune" onClick={() => document.execCommand("hiliteColor", false, "#fef9c3")} highlight />
+                <ToolbarBtn label="A" title="Texte rouge" onClick={() => document.execCommand("foreColor", false, "#dc2626")} style={{ color: "#dc2626" }} />
+                <ToolbarBtn label="A" title="Texte bleu" onClick={() => document.execCommand("foreColor", false, "#2563eb")} style={{ color: "#2563eb" }} />
+                <ToolbarBtn label="A" title="Texte vert" onClick={() => document.execCommand("foreColor", false, "#059669")} style={{ color: "#059669" }} />
+                <ToolbarBtn label="Aa" title="Couleur par défaut" onClick={() => document.execCommand("removeFormat")} />
+                <ToolbarSep />
+
+                {/* Alignement */}
+                <ToolbarBtn label="≡" title="Aligner à gauche" onClick={() => document.execCommand("justifyLeft")} />
+                <ToolbarBtn label="≡" title="Centrer" onClick={() => document.execCommand("justifyCenter")} style={{ textAlign: "center" }} />
+                <ToolbarBtn label="≡" title="Aligner à droite" onClick={() => document.execCommand("justifyRight")} style={{ textAlign: "right" }} />
+                <ToolbarBtn label="⊞" title="Justifier" onClick={() => document.execCommand("justifyFull")} />
+                <ToolbarSep />
+
+                {/* Listes et indentation */}
                 <ToolbarBtn label="1." title="Liste numérotée" onClick={() => document.execCommand("insertOrderedList")} />
                 <ToolbarBtn label="•" title="Liste à puces" onClick={() => document.execCommand("insertUnorderedList")} />
+                <ToolbarBtn label="→" title="Augmenter l'indentation" onClick={() => document.execCommand("indent")} />
+                <ToolbarBtn label="←" title="Diminuer l'indentation" onClick={() => document.execCommand("outdent")} />
                 <ToolbarSep />
-                {/* Blocs spéciaux */}
-                <ToolbarBtn label="▤" title="Insérer un tableau" onClick={() => insertTable()} />
-                <ToolbarBtn label="☐" title="Insérer un encadré" onClick={() => insertCallout()} />
+
+                {/* Insertions */}
+                <ToolbarBtn label="▤" title="Insérer un tableau" onClick={insertTable} />
+                <ToolbarBtn label="—" title="Séparateur horizontal" onClick={insertHR} />
+                <ToolbarBtn label="❝" title="Citation / Blockquote" onClick={insertBlockquote} />
+                <ToolbarBtn label="{ }" title="Bloc de code" onClick={insertCodeBlock} />
+                <ToolbarBtn label="🔗" title="Insérer un lien" onClick={insertLink} />
+                <ToolbarBtn label="🖼" title="Insérer une image (URL)" onClick={insertImage} />
                 <ToolbarSep />
-                {/* IA */}
-                {/* Import fichier */}
+
+                {/* Encadrés colorés */}
+                <ToolbarBtn label="☐" title="Encadré vert (Point clé)" onClick={() => insertCalloutType("success")} style={{ color: "var(--success)" }} />
+                <ToolbarBtn label="☐" title="Encadré bleu (Information)" onClick={() => insertCalloutType("info")} style={{ color: "var(--info)" }} />
+                <ToolbarBtn label="☐" title="Encadré orange (Attention)" onClick={() => insertCalloutType("warning")} style={{ color: "var(--warning)" }} />
+                <ToolbarBtn label="☐" title="Encadré rouge (Important)" onClick={() => insertCalloutType("danger")} style={{ color: "var(--danger)" }} />
+                <ToolbarSep />
+
+                {/* Import */}
                 <button onClick={() => fileInputRef.current?.click()} disabled={importing}
-                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 4, border: "none", background: "transparent", color: "var(--text-2)", fontSize: 11.5, fontWeight: 500, cursor: "pointer" }}>
-                  <Icons.Download size={12} style={{ transform: "rotate(180deg)" }} /> {importing ? "Import..." : "Importer"}
+                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 4, border: "none", background: "transparent", color: "var(--text-2)", fontSize: 11, fontWeight: 500, cursor: "pointer" }}>
+                  <Icons.Download size={11} style={{ transform: "rotate(180deg)" }} /> {importing ? "..." : "Importer"}
                 </button>
                 <input ref={fileInputRef} type="file" accept=".docx,.html,.htm,.txt,.md" onChange={handleImport} style={{ display: "none" }} />
-                <ToolbarSep />
+
                 {/* IA */}
                 <button onClick={() => setShowChat(!showChat)}
-                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 4, border: "none", background: showChat ? "var(--primary)" : "var(--primary-soft)", color: showChat ? "white" : "var(--primary)", fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
-                  <Icons.Sparkles size={12} /> Co-pilote IA
+                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 4, border: "none", background: showChat ? "var(--primary)" : "var(--primary-soft)", color: showChat ? "white" : "var(--primary)", fontSize: 11, fontWeight: 600, cursor: "pointer", marginLeft: "auto" }}>
+                  <Icons.Sparkles size={11} /> IA
                 </button>
               </div>
 
@@ -847,19 +951,21 @@ export default function DocumentPage() {
 }
 
 /* ─── Toolbar components ─── */
-function ToolbarBtn({ label, title, onClick, bold, italic, underline, highlight }: {
+function ToolbarBtn({ label, title, onClick, bold, italic, underline, highlight, style: extraStyle }: {
   label: string; title: string; onClick: () => void;
   bold?: boolean; italic?: boolean; underline?: boolean; highlight?: boolean;
+  style?: React.CSSProperties;
 }) {
   return (
-    <button onClick={onClick} title={title} style={{
-      width: 28, height: 28, borderRadius: 4, border: "none", cursor: "pointer",
+    <button onClick={e => { e.preventDefault(); onClick(); }} title={title} style={{
+      width: 26, height: 26, borderRadius: 4, border: "none", cursor: "pointer",
       display: "flex", alignItems: "center", justifyContent: "center",
-      background: "transparent", color: "var(--text-2)", fontSize: 12,
+      background: "transparent", color: "var(--text-2)", fontSize: 11.5,
       fontWeight: bold ? 700 : 500,
       fontStyle: italic ? "italic" : "normal",
       textDecoration: underline ? "underline" : "none",
       ...(highlight ? { background: "#fef9c3" } : {}),
+      ...extraStyle,
     }}
       onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-2)"; }}
       onMouseLeave={e => { e.currentTarget.style.background = highlight ? "#fef9c3" : "transparent"; }}
@@ -870,5 +976,5 @@ function ToolbarBtn({ label, title, onClick, bold, italic, underline, highlight 
 }
 
 function ToolbarSep() {
-  return <div style={{ width: 1, height: 18, background: "var(--border)", margin: "0 4px" }} />;
+  return <div style={{ width: 1, height: 16, background: "var(--border)", margin: "0 3px" }} />;
 }
