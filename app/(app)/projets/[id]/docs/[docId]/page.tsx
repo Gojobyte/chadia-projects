@@ -33,39 +33,26 @@ const avatarColors = [
   "oklch(0.6 0.13 245)", "oklch(0.62 0.13 25)",
 ];
 
-// Rendu markdown simplifie → HTML
-function renderMarkdown(md: string): string {
-  return md
-    .split("\n\n")
-    .map(block => {
-      block = block.trim();
-      if (!block) return "";
-      // H1
-      if (block.startsWith("# ")) return `<h2 style="font-size:22px;font-weight:600;color:var(--text);letter-spacing:-0.015em;margin:24px 0 12px">${block.slice(2)}</h2>`;
-      // H2
-      if (block.startsWith("## ")) return `<h3 style="font-size:18px;font-weight:600;color:var(--text);margin:20px 0 10px">${block.slice(3)}</h3>`;
-      // Ordered list
-      if (/^\d+\.\s/.test(block)) {
-        const items = block.split("\n").map(l => `<li style="margin-bottom:6px;color:var(--text-2)">${formatInline(l.replace(/^\d+\.\s*/, ""))}</li>`).join("");
-        return `<ol style="padding-left:22px;margin-bottom:16px">${items}</ol>`;
-      }
-      // Unordered list
-      if (block.startsWith("- ")) {
-        const items = block.split("\n").map(l => `<li style="margin-bottom:6px;color:var(--text-2)">${formatInline(l.replace(/^-\s*/, ""))}</li>`).join("");
-        return `<ul style="padding-left:22px;margin-bottom:16px">${items}</ul>`;
-      }
-      // Paragraph
-      return `<p style="margin-bottom:14px;color:var(--text-2)">${formatInline(block)}</p>`;
-    })
-    .join("");
-}
-
-function formatInline(text: string): string {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text)">$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/==(.+?)==/g, '<mark style="background:color-mix(in oklch, var(--warning) 18%, transparent);color:var(--text);padding:1px 4px;border-radius:3px">$1</mark>');
-}
+const TEMPLATE_CONTENT = `<h2>1. Contexte et justification</h2>
+<p>La région du Sahel — englobant le Mali, le Burkina Faso et le Niger — fait face à une crise climatique aiguë : hausse des températures de 1,5 °C depuis 1970, raréfaction des ressources en eau, et insécurité alimentaire chronique touchant <mark>plus de 18 millions de personnes</mark>.</p>
+<p>Ce projet propose une approche intégrée de renforcement des capacités d'adaptation des communautés rurales sur 24 mois, articulée autour de trois piliers : agriculture résiliente, gestion participative de l'eau, et systèmes d'alerte précoce.</p>
+<h2>2. Objectifs spécifiques</h2>
+<ol>
+<li>Diffuser des pratiques agroécologiques auprès de <strong>15 000 producteurs</strong></li>
+<li>Réhabiliter <strong>120 points d'eau</strong> et 8 ouvrages de retenue</li>
+<li>Former <strong>240 relais communautaires</strong> aux systèmes d'alerte précoce</li>
+<li>Mettre en place un <strong>fonds résilience</strong> géré par les coopératives locales</li>
+</ol>
+<h2>3. Cadre logique synthétique</h2>
+<p>Complétez le cadre logique ici...</p>
+<h2>4. Méthodologie d'intervention</h2>
+<p></p>
+<h2>5. Plan de travail</h2>
+<p></p>
+<h2>6. Budget</h2>
+<p></p>
+<h2>7. Équipe &amp; expertise</h2>
+<p></p>`;
 
 export default function DocumentPage() {
   const params = useParams();
@@ -73,41 +60,45 @@ export default function DocumentPage() {
   const docId = params.docId as string;
   const [doc, setDoc] = useState<Doc | null>(null);
   const [loading, setLoading] = useState(true);
-  const [contenu, setContenu] = useState("");
-  const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [statutOpen, setStatutOpen] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetch(`/api/documents/${docId}`)
       .then(r => r.json())
-      .then(d => {
-        setDoc(d.document);
-        setContenu(d.document?.contenu ?? "");
-        setLoading(false);
-      });
+      .then(d => { setDoc(d.document); setLoading(false); });
   }, [docId]);
 
-  const saveContent = useCallback(async (text: string) => {
+  const saveContent = useCallback(async (html: string) => {
     setSaving(true);
     await fetch(`/api/documents/${docId}`, {
       method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contenu: text }),
+      body: JSON.stringify({ contenu: html }),
     });
     setSaving(false);
     setLastSaved(new Date());
   }, [docId]);
 
-  // Auto-save en mode edition
-  useEffect(() => {
-    if (!doc || !editing) return;
-    const timer = setTimeout(() => {
-      if (contenu !== (doc.contenu ?? "")) saveContent(contenu);
+  // Auto-save quand l'utilisateur tape
+  function handleInput() {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      const html = editorRef.current?.innerHTML ?? "";
+      saveContent(html);
     }, 2000);
-    return () => clearTimeout(timer);
-  }, [contenu, doc, editing, saveContent]);
+  }
+
+  // Commandes clavier pour formater
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === "b") { e.preventDefault(); document.execCommand("bold"); }
+      if (e.key === "i") { e.preventDefault(); document.execCommand("italic"); }
+      if (e.key === "u") { e.preventDefault(); document.execCommand("underline"); }
+    }
+  }
 
   async function changeStatut(statut: string) {
     setStatutOpen(false);
@@ -115,19 +106,30 @@ export default function DocumentPage() {
     setDoc(prev => prev ? { ...prev, statut } : null);
   }
 
+  function startWithTemplate() {
+    if (editorRef.current) {
+      editorRef.current.innerHTML = TEMPLATE_CONTENT;
+      editorRef.current.focus();
+      saveContent(TEMPLATE_CONTENT);
+      setDoc(prev => prev ? { ...prev, contenu: TEMPLATE_CONTENT } : null);
+    }
+  }
+
   if (loading) return <p style={{ color: "var(--text-3)", padding: 32 }}>Chargement...</p>;
   if (!doc) return <p style={{ color: "var(--danger)", padding: 32 }}>Document introuvable.</p>;
 
   const initials = doc.assigneA?.name?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() ?? "?";
   const saveLabel = saving ? "Sauvegarde..." : lastSaved ? `Sauvegardé · il y a ${Math.max(1, Math.round((Date.now() - lastSaved.getTime()) / 1000))}s` : "Sauvegardé";
+  const hasContent = (doc.contenu ?? "").trim().length > 0;
 
-  // Sections pour le plan
-  const sections = contenu.split("\n").filter(l => l.startsWith("# ") || l.startsWith("## ")).map(l => ({
-    level: l.startsWith("## ") ? 1 : 0,
-    text: l.replace(/^#+\s*/, ""),
-  }));
-
-  const hasContent = contenu.trim().length > 0;
+  // Extraire les titres pour le plan
+  const headings: { level: number; text: string }[] = [];
+  const htmlContent = doc.contenu ?? "";
+  const headingRegex = /<h([23])[^>]*>(.*?)<\/h[23]>/gi;
+  let match;
+  while ((match = headingRegex.exec(htmlContent)) !== null) {
+    headings.push({ level: parseInt(match[1]) - 2, text: match[2].replace(/<[^>]+>/g, "") });
+  }
 
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 32px 80px" }}>
@@ -147,7 +149,7 @@ export default function DocumentPage() {
         </div>
       </div>
 
-      {/* Doc title area */}
+      {/* Doc title */}
       <div style={{ marginBottom: 28 }}>
         <div className="row" style={{ gap: 8, marginBottom: 6 }}>
           <span style={{ fontSize: 11, color: "var(--text-3)", textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.04em" }}>
@@ -193,60 +195,23 @@ export default function DocumentPage() {
 
       {/* Two-column layout */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 32 }}>
-        {/* ─── Left: Document body ─── */}
-        <div style={{ fontSize: 15, lineHeight: 1.7, color: "var(--text-2)" }}>
-
-          {/* Mode rendu (vue normale) */}
-          {!editing && hasContent && (
-            <>
-              <div
-                onClick={() => setEditing(true)}
-                style={{ cursor: "text", minHeight: 400 }}
-                dangerouslySetInnerHTML={{ __html: renderMarkdown(contenu) }}
-              />
-              {/* AI suggestion — en bas du contenu */}
-              <div style={{ border: "1px dashed color-mix(in oklch, var(--primary) 40%, transparent)", borderRadius: 8, padding: 14, background: "color-mix(in oklch, var(--primary) 4%, transparent)", marginTop: 20 }}>
-                <div className="row" style={{ gap: 6, marginBottom: 8 }}>
-                  <Icons.Sparkles size={14} style={{ color: "var(--primary)" }} />
-                  <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--primary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Suggestion IA</span>
-                </div>
-                <p style={{ fontSize: 13, color: "var(--text-2)", margin: 0 }}>
-                  L&apos;appel d&apos;offre demande une section &quot;Théorie du changement&quot; avec diagramme. Voulez-vous que je génère un brouillon ?
-                </p>
-                <div className="row" style={{ gap: 6, marginTop: 10 }}>
-                  <button className="btn btn-primary btn-sm">Générer le brouillon</button>
-                  <button className="btn btn-ghost btn-sm">Ignorer</button>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Mode édition */}
-          {editing && (
-            <>
-              <div style={{ marginBottom: 8, display: "flex", justifyContent: "flex-end" }}>
-                <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(false); saveContent(contenu); }}>
-                  <Icons.Eye size={14} /> Aperçu
-                </button>
-              </div>
-              <textarea
-                ref={editorRef as unknown as React.RefObject<HTMLTextAreaElement>}
-                value={contenu}
-                onChange={e => setContenu(e.target.value)}
-                autoFocus
-                style={{
-                  width: "100%", minHeight: 600, padding: "24px 28px",
-                  background: "var(--surface)", border: "1px solid var(--border)",
-                  borderRadius: "var(--radius-lg)", fontSize: 15, lineHeight: 1.7,
-                  color: "var(--text)", fontFamily: "inherit", resize: "vertical",
-                  outline: "none",
-                }}
-              />
-            </>
-          )}
-
-          {/* Vide — page de démarrage */}
-          {!editing && !hasContent && (
+        {/* ─── Left: Éditeur contentEditable ─── */}
+        <div>
+          {hasContent ? (
+            <div
+              ref={editorRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={handleInput}
+              onKeyDown={handleKeyDown}
+              dangerouslySetInnerHTML={{ __html: doc.contenu! }}
+              style={{
+                outline: "none", minHeight: 500, fontSize: 15, lineHeight: 1.7, color: "var(--text-2)",
+                cursor: "text",
+              }}
+            />
+          ) : (
+            /* État vide — page de démarrage */
             <div style={{ textAlign: "center", padding: "60px 0" }}>
               <div style={{
                 width: 56, height: 56, borderRadius: 14, background: "var(--primary-soft)",
@@ -258,19 +223,33 @@ export default function DocumentPage() {
               <h2 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>
                 Commencer la rédaction
               </h2>
-              <p style={{ fontSize: 13, color: "var(--text-3)", marginBottom: 24, maxWidth: 400, margin: "0 auto 24px" }}>
-                Rédigez directement ou laissez l&apos;IA générer un brouillon basé sur l&apos;appel d&apos;offre.
+              <p style={{ fontSize: 13, color: "var(--text-3)", maxWidth: 400, margin: "0 auto 24px" }}>
+                Rédigez directement comme dans Notion — ou laissez l&apos;IA générer un brouillon.
               </p>
               <div className="row" style={{ gap: 8, justifyContent: "center" }}>
-                <button className="btn btn-primary" onClick={() => {
-                  setContenu("# 1. Contexte et justification\n\nLa région du Sahel fait face à une crise climatique aiguë...\n\n# 2. Objectifs spécifiques\n\n1. Diffuser des pratiques agroécologiques\n2. Réhabiliter les points d'eau\n3. Former des relais communautaires\n\n# 3. Cadre logique synthétique\n\n# 4. Méthodologie d'intervention\n\n# 5. Plan de travail\n\n# 6. Budget\n\n# 7. Équipe & expertise");
-                  setEditing(true);
-                }}>
+                <button className="btn btn-primary" onClick={startWithTemplate}>
                   <Icons.Edit size={14} /> Commencer à écrire
                 </button>
                 <button className="btn btn-secondary">
                   <Icons.Sparkles size={14} /> Générer avec l&apos;IA
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* AI suggestion block — affiché sous le contenu */}
+          {hasContent && (
+            <div style={{ border: "1px dashed color-mix(in oklch, var(--primary) 40%, transparent)", borderRadius: 8, padding: 14, background: "color-mix(in oklch, var(--primary) 4%, transparent)", marginTop: 24 }}>
+              <div className="row" style={{ gap: 6, marginBottom: 8 }}>
+                <Icons.Sparkles size={14} style={{ color: "var(--primary)" }} />
+                <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--primary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Suggestion IA</span>
+              </div>
+              <p style={{ fontSize: 13, color: "var(--text-2)", margin: 0 }}>
+                L&apos;appel d&apos;offre demande une section &quot;Théorie du changement&quot;. Voulez-vous que je génère un brouillon basé sur les objectifs ci-dessus ?
+              </p>
+              <div className="row" style={{ gap: 6, marginTop: 10 }}>
+                <button className="btn btn-primary btn-sm">Générer le brouillon</button>
+                <button className="btn btn-ghost btn-sm">Ignorer</button>
               </div>
             </div>
           )}
@@ -281,7 +260,7 @@ export default function DocumentPage() {
           {/* Plan */}
           <div style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Plan</div>
           <div style={{ borderLeft: "1px solid var(--border)", paddingLeft: 12, marginBottom: 24 }}>
-            {sections.length > 0 ? sections.map((s, i) => (
+            {headings.length > 0 ? headings.map((s, i) => (
               <div key={i} style={{
                 fontSize: 12.5, padding: "5px 0", paddingLeft: s.level * 12,
                 color: i === 0 ? "var(--primary)" : "var(--text-3)",
@@ -300,7 +279,7 @@ export default function DocumentPage() {
           <div style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>
             Commentaires · {doc.commentaires?.length ?? 0}
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {(doc.commentaires ?? []).length > 0 ? (
               doc.commentaires!.map((c, ci) => {
                 const cInit = c.user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
