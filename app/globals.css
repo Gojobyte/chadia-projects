@@ -177,6 +177,28 @@ table.t tr:last-child td { border-bottom: none; }
 [contenteditable] a { color: var(--primary); text-decoration: underline; }
 [contenteditable] img { max-width: 100%; height: auto; border-radius: 6px; margin: 12px 0; }
 [contenteditable] hr { border: none; border-top: 2px solid var(--border); margin: 24px 0; }
+
+/* Pages A4 style Word — sauts de page visuels */
+.doc-pages [style*="page-break"] {
+  margin: 0 -30mm !important;
+  padding: 0 !important;
+  border: none !important;
+  height: 24px;
+  background: #e8e8e8;
+  position: relative;
+}
+.doc-pages [style*="page-break"]::before {
+  content: "";
+  position: absolute;
+  bottom: 0; left: 0; right: 0; height: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+.doc-pages [style*="page-break"]::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 0;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.12);
+}
 [contenteditable] *::selection { background: color-mix(in oklch, var(--primary) 20%, transparent); }
 
 /* Document preview — print-ready styles */

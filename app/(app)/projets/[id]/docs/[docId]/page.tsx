@@ -763,20 +763,33 @@ export default function DocumentPage() {
                 </div>
               </div>
 
-              <div
-                ref={editorRef}
-                contentEditable
-                suppressContentEditableWarning
-                onInput={handleInput}
-                onKeyDown={handleKeyDown}
-                onClick={() => setShowSlashMenu(false)}
-                style={{
-                  outline: "none", minHeight: 700, fontSize: 15, lineHeight: 1.7, color: "var(--text-2)",
-                  cursor: "text", padding: "28px 32px",
-                  border: "1px solid var(--border)", borderRadius: "0 0 var(--radius) var(--radius)",
-                  background: "var(--surface)",
-                }}
-              />
+              {/* Fond gris type Word avec pages A4 blanches */}
+              <div style={{
+                background: "#e8e8e8", border: "1px solid var(--border)", borderRadius: "0 0 var(--radius) var(--radius)",
+                padding: "24px 0", minHeight: 700, overflowY: "auto",
+                display: "flex", flexDirection: "column", alignItems: "center",
+              }}>
+                <div
+                  ref={editorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  onInput={handleInput}
+                  onKeyDown={handleKeyDown}
+                  onClick={() => setShowSlashMenu(false)}
+                  className="doc-pages"
+                  style={{
+                    outline: "none", fontSize: 15, lineHeight: 1.7, color: "var(--text-2)",
+                    cursor: "text",
+                    /* Dimensions A4 proportionnelles */
+                    width: "210mm", minHeight: "297mm",
+                    padding: "25mm 30mm",
+                    background: "white",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05)",
+                    borderRadius: 2,
+                    marginBottom: 24,
+                  }}
+                />
+              </div>
 
               {/* Menu "/" — commandes IA */}
               {showSlashMenu && (
