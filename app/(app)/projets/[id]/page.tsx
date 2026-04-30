@@ -20,7 +20,7 @@ interface Activite { id: string; action: string; description: string; createdAt:
 interface Projet {
   id: string; titre: string; reference: string | null; description: string; statut: string;
   budget: number | null; devise: string; dateLimite: string; appelOffreUrl: string | null;
-  pays: string | null;
+  pays: string | null; starred: boolean;
   bailleur: { nom: string; sigle: string };
   documents: Document[]; taches: Tache[]; membres: Membre[]; activites: Activite[];
   createdBy: { name: string };
@@ -125,7 +125,16 @@ export default function ProjetDetailPage() {
               <div>
                 <div className="row" style={{ gap: 8 }}>
                   <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.015em", color: "var(--text)" }}>{projet.titre}</h1>
-                  <Icons.Star size={16} style={{ color: "var(--warning)", fill: "var(--warning)" }} />
+                  <button onClick={async () => {
+                    const res = await fetch(`/api/projets/${id}/star`, { method: "POST" });
+                    if (res.ok) {
+                      const data = await res.json();
+                      setProjet(prev => prev ? { ...prev, starred: data.projet.starred } : null);
+                      window.dispatchEvent(new Event("star-changed"));
+                    }
+                  }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                    <Icons.Star size={16} style={projet.starred ? { color: "var(--warning)", fill: "var(--warning)" } : { color: "var(--text-4)" }} />
+                  </button>
                 </div>
                 <div className="row" style={{ gap: 10, marginTop: 4, fontSize: 12.5, color: "var(--text-3)" }}>
                   <span className="mono">{projet.reference ?? projet.bailleur.sigle}</span>

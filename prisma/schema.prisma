@@ -113,6 +113,7 @@ model Projet {
   dateLimite      DateTime
   pays            String?
   statut          ProjetStatut @default(BROUILLON)
+  starred         Boolean      @default(false)
 
   appelOffreUrl String?
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -7,7 +8,7 @@ import { Icons } from "@/components/icons";
 
 const navItems = [
   { label: "Tableau de bord", href: "/", icon: Icons.Dashboard },
-  { label: "Projets", href: "/projets", icon: Icons.Folder, count: true },
+  { label: "Projets", href: "/projets", icon: Icons.Folder },
   { label: "Boîte de réception", href: "/inbox", icon: Icons.Inbox, countValue: 3 },
   { label: "Calendrier", href: "/calendrier", icon: Icons.Calendar },
   { label: "Analytics", href: "/analytics", icon: Icons.Chart },
@@ -19,16 +20,40 @@ const workspaceItems = [
   { label: "Paramètres", href: "/settings", icon: Icons.Settings },
 ];
 
+const pinColors = [
+  "oklch(0.55 0.18 270)", "oklch(0.55 0.18 245)", "oklch(0.55 0.15 30)",
+  "oklch(0.55 0.15 0)", "oklch(0.55 0.15 165)",
+];
+
+interface StarredProjet { id: string; titre: string; bailleur: { sigle: string }; }
 interface SidebarProps { userName: string; userRole: string; }
 
 export function Sidebar({ userName, userRole }: SidebarProps) {
   const pathname = usePathname();
   const roleLabels: Record<string, string> = { DIRECTEUR: "Directrice des programmes", ADMIN: "Administrateur", FINANCIER: "Financier", MEMBRE: "Membre" };
   const initials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  const [starred, setStarred] = useState<StarredProjet[]>([]);
+
+  // Charger les projets epingles
+  useEffect(() => {
+    fetch("/api/projets/starred")
+      .then(r => r.ok ? r.json() : { projets: [] })
+      .then(d => setStarred(d.projets ?? []));
+  }, []);
+
+  // Ecouter les changements d'etoile (custom event)
+  useEffect(() => {
+    function onStarChange() {
+      fetch("/api/projets/starred")
+        .then(r => r.ok ? r.json() : { projets: [] })
+        .then(d => setStarred(d.projets ?? []));
+    }
+    window.addEventListener("star-changed", onStarChange);
+    return () => window.removeEventListener("star-changed", onStarChange);
+  }, []);
 
   return (
     <aside className="sidebar">
-      {/* Header — Logo + brand */}
       <div className="sidebar-header">
         <svg width="32" height="32" viewBox="0 0 28 28">
           <rect width="28" height="28" rx="8" fill="var(--primary)" />
@@ -40,7 +65,6 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
         </div>
       </div>
 
-      {/* Navigation principale */}
       <div className="sidebar-section">
         {navItems.map((item) => {
           const Ic = item.icon;
@@ -55,24 +79,24 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
         })}
       </div>
 
-      {/* Épinglés */}
-      <div className="sidebar-section">
-        <div className="sidebar-section-title">Épinglés</div>
-        <Link href="/projets" className={`nav-item`}>
-          <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: "oklch(0.55 0.18 270)" }} />
-          </span>
-          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Santé maternelle Sénégal</span>
-        </Link>
-        <Link href="/projets" className={`nav-item`}>
-          <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: "oklch(0.55 0.18 245)" }} />
-          </span>
-          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Résilience climatique Sahel</span>
-        </Link>
-      </div>
+      {/* Épinglés — dynamique */}
+      {starred.length > 0 && (
+        <div className="sidebar-section">
+          <div className="sidebar-section-title">Épinglés</div>
+          {starred.map((p, i) => {
+            const isActive = pathname === `/projets/${p.id}`;
+            return (
+              <Link key={p.id} href={`/projets/${p.id}`} className={`nav-item ${isActive ? "active" : ""}`}>
+                <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: pinColors[i % pinColors.length] }} />
+                </span>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.titre}</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
 
-      {/* Espace de travail */}
       <div className="sidebar-section" style={{ marginTop: "auto" }}>
         <div className="sidebar-section-title">Espace de travail</div>
         {workspaceItems.map((item) => {
@@ -87,7 +111,6 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
         })}
       </div>
 
-      {/* Footer — User chip */}
       <div className="sidebar-footer">
         <div className="user-chip">
           <div className="avatar" style={{ background: "oklch(0.6 0.15 165)" }}>{initials}</div>

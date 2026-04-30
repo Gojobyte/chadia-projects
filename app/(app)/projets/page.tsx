@@ -167,12 +167,22 @@ export default function ProjetsPage() {
 
                     return (
                       <tr key={p.id} style={{ cursor: "pointer" }} onClick={() => window.location.href = `/projets/${p.id}`}>
-                        {/* Étoile — remplie si starred, sinon outline */}
+                        {/* Étoile — cliquable pour épingler */}
                         <td>
-                          {p.starred
-                            ? <Icons.Star size={13} style={{ color: "var(--warning)", fill: "var(--warning)" }} />
-                            : <Icons.Star size={13} style={{ color: "var(--text-4)" }} />
-                          }
+                          <button onClick={async (e) => {
+                            e.stopPropagation();
+                            const res = await fetch(`/api/projets/${p.id}/star`, { method: "POST" });
+                            if (res.ok) {
+                              const data = await res.json();
+                              setProjets(prev => prev.map(pp => pp.id === p.id ? { ...pp, starred: data.projet.starred } : pp));
+                              window.dispatchEvent(new Event("star-changed"));
+                            }
+                          }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
+                            {p.starred
+                              ? <Icons.Star size={13} style={{ color: "var(--warning)", fill: "var(--warning)" }} />
+                              : <Icons.Star size={13} style={{ color: "var(--text-4)" }} />
+                            }
+                          </button>
                         </td>
                         {/* Projet + référence */}
                         <td>
