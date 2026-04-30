@@ -7,41 +7,53 @@ import { Icons } from "@/components/icons";
 interface Projet {
   id: string; titre: string; reference: string | null; statut: string;
   budget: number | null; devise: string; dateLimite: string; progression: number;
-  pays?: string | null; scoreIA?: number | null;
+  pays?: string | null; scoreIA?: number | null; starred?: boolean;
   bailleur: { sigle: string };
   _count: { documents: number; taches: number; membres: number };
   membres?: { user: { id: string; name: string } }[];
 }
 
-const sPill: Record<string, string> = {
-  BROUILLON: "pill-brouillon", EN_COURS: "pill-redaction", EN_REVISION: "pill-relecture",
-  SOUMIS: "pill-soumis", ACCEPTE: "pill-accepte", REJETE: "pill-rejete",
-};
-const sLabel: Record<string, string> = {
+const statusLabels: Record<string, string> = {
   BROUILLON: "Brouillon", EN_COURS: "Rédaction", EN_REVISION: "Relecture",
   SOUMIS: "Soumis", ACCEPTE: "Accepté", REJETE: "Rejeté",
+  REDACTION: "Rédaction", RELECTURE: "Relecture", VALIDATION: "Validation",
+  FINALISATION: "Finalisation",
 };
 
-// Couleurs des badges bailleur
+const statusKeys: Record<string, string> = {
+  BROUILLON: "brouillon", EN_COURS: "redaction", EN_REVISION: "relecture",
+  REDACTION: "redaction", RELECTURE: "relecture", VALIDATION: "validation",
+  FINALISATION: "finalisation", SOUMIS: "soumis", ACCEPTE: "accepte", REJETE: "rejete",
+};
+
+// Couleurs bailleur en oklch — comme dans le design
 const bailleurColors: Record<string, string> = {
-  PNUD: "#059669", UE: "#2563eb", AFD: "#dc2626", BM: "#1e40af",
-  USAID: "#0284c7", UNICEF: "#0ea5e9", OMS: "#0369a1",
-  BAD: "#7c3aed", ASDV: "#7c3aed", GLAAS: "#2563eb",
-  PAM: "#d97706", FAO: "#15803d", FIDA: "#0d9488",
+  PNUD: "oklch(0.55 0.18 245)", UE: "oklch(0.55 0.18 270)",
+  BADEA: "oklch(0.55 0.15 30)", AFD: "oklch(0.55 0.15 0)",
+  USAID: "oklch(0.55 0.15 240)", BM: "oklch(0.5 0.15 200)",
+  UNICEF: "oklch(0.55 0.15 240)", OMS: "oklch(0.5 0.15 200)",
+  PAM: "oklch(0.55 0.15 50)", FAO: "oklch(0.55 0.15 150)",
+  FIDA: "oklch(0.55 0.15 180)", GLAAS: "oklch(0.55 0.15 240)",
 };
 
-// Couleurs pour les avatars (rotation)
-const avatarColors = ["#059669", "#d97706", "#dc2626", "#2563eb", "#7c3aed", "#0ea5e9", "#0d9488", "#c026d3"];
+// Couleurs avatars en oklch comme dans le design (par user)
+const avatarColorList = [
+  "oklch(0.6 0.15 165)", "oklch(0.6 0.16 290)", "oklch(0.65 0.15 75)",
+  "oklch(0.6 0.13 245)", "oklch(0.62 0.13 25)", "oklch(0.55 0.1 200)",
+];
 
-// Symboles devise
 const deviseSymbol: Record<string, string> = { EUR: "€", USD: "$", FCFA: "FCFA", GBP: "£" };
 
-function formatBudget(n: number, cur = "FCFA"): string {
+function fmtMoney(n: number, cur = "FCFA"): string {
   const sym = deviseSymbol[cur] ?? cur;
-  return `${n.toLocaleString("fr-FR")} ${sym}`;
+  return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n)} ${sym}`;
 }
 
 function daysUntil(d: string): number { return Math.ceil((new Date(d).getTime() - Date.now()) / 864e5); }
+
+function fmtDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+}
 
 export default function ProjetsPage() {
   const [projets, setProjets] = useState<Projet[]>([]);
@@ -73,7 +85,7 @@ export default function ProjetsPage() {
       <div className="page-header">
         <div>
           <div className="page-title">Projets</div>
-          <div className="page-subtitle">{filtered.length} projets · pipeline total {formatBudget(totalBudget, "EUR")}</div>
+          <div className="page-subtitle">{filtered.length} projets · pipeline total {fmtMoney(totalBudget, "EUR")}</div>
         </div>
         <div className="page-actions" style={{ display: "flex", gap: 8 }}>
           <button className="btn btn-secondary"><Icons.Filter size={14} /> Filtres</button>
@@ -99,8 +111,6 @@ export default function ProjetsPage() {
             {t.label} <span style={{ fontSize: 11, color: "var(--text-4)", marginLeft: 4 }}>{t.count}</span>
           </button>
         ))}
-
-        {/* View toggle */}
         <div style={{ marginLeft: "auto", display: "flex", gap: 2, padding: 6 }}>
           {([
             { id: "table" as const, icon: Icons.Table, label: "Tableau" },
@@ -145,89 +155,90 @@ export default function ProjetsPage() {
                 </thead>
                 <tbody>
                   {filtered.map(p => {
-                    const bColor = bailleurColors[p.bailleur.sigle] ?? "var(--primary)";
+                    const days = daysUntil(p.dateLimite);
+                    const bColor = bailleurColors[p.bailleur.sigle] ?? "oklch(0.55 0.13 200)";
+                    // DeadlineLabel logic from design
+                    let dlColor = "var(--text-3)";
+                    let dlPrefix = "";
+                    if (days < 0) { dlColor = "var(--danger)"; dlPrefix = "Dépassée · "; }
+                    else if (days === 0) { dlColor = "var(--danger)"; dlPrefix = "Aujourd'hui · "; }
+                    else if (days <= 3) { dlColor = "var(--warning)"; dlPrefix = `J-${days} · `; }
+                    else if (days <= 14) { dlColor = "var(--text-2)"; dlPrefix = `J-${days} · `; }
+
                     return (
                       <tr key={p.id} style={{ cursor: "pointer" }} onClick={() => window.location.href = `/projets/${p.id}`}>
-                        {/* Étoile favori */}
+                        {/* Étoile — remplie si starred, sinon outline */}
                         <td>
-                          <Icons.Star size={13} style={{ color: "var(--warning)", fill: "var(--warning)" }} />
+                          {p.starred
+                            ? <Icons.Star size={13} style={{ color: "var(--warning)", fill: "var(--warning)" }} />
+                            : <Icons.Star size={13} style={{ color: "var(--text-4)" }} />
+                          }
                         </td>
                         {/* Projet + référence */}
                         <td>
-                          <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text)" }}>{p.titre}</div>
-                          <div style={{ fontSize: 11, color: "var(--text-4)", marginTop: 2 }} className="mono">{p.reference ?? "—"}</div>
+                          <div style={{ fontWeight: 600, color: "var(--text)", fontSize: 13 }}>{p.titre}</div>
+                          <div className="mono" style={{ fontSize: 11, color: "var(--text-4)", marginTop: 2 }}>{p.reference ?? "—"}</div>
                         </td>
-                        {/* Bailleur — badge rond coloré */}
+                        {/* Bailleur — carré arrondi avec effet 3D comme le design */}
                         <td>
                           <div style={{
-                            width: 28, height: 28, borderRadius: "50%", background: bColor,
+                            width: 26, height: 26, borderRadius: 6, background: bColor, color: "white",
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 8, fontWeight: 700, color: "#fff", letterSpacing: "0.02em",
+                            fontWeight: 700, fontSize: 9, letterSpacing: "0.02em",
+                            boxShadow: "inset 0 -6px 12px rgba(0,0,0,0.15)",
                           }}>
-                            {p.bailleur.sigle.slice(0, 4)}
+                            {p.bailleur.sigle}
                           </div>
                         </td>
                         {/* Pays */}
                         <td style={{ fontSize: 12.5 }}>{p.pays ?? "—"}</td>
-                        {/* Budget — formaté avec séparateurs et symbole devise */}
+                        {/* Budget */}
+                        <td className="tnum" style={{ fontWeight: 500, color: "var(--text)" }}>
+                          {p.budget ? fmtMoney(p.budget, p.devise) : "—"}
+                        </td>
+                        {/* Statut — pill avec dot */}
                         <td>
-                          <span className="tnum" style={{ fontWeight: 500, color: "var(--text)" }}>
-                            {p.budget ? formatBudget(p.budget, p.devise) : "—"}
+                          <span className={`pill pill-${statusKeys[p.statut] ?? "brouillon"}`}>
+                            <span className="dot" />
+                            {statusLabels[p.statut] ?? p.statut}
                           </span>
                         </td>
-                        {/* Statut pill */}
-                        <td>
-                          <span className={`pill ${sPill[p.statut] ?? "pill-brouillon"}`}>
-                            <span className="dot" />{sLabel[p.statut] ?? p.statut}
-                          </span>
-                        </td>
-                        {/* Avancement — barre + pourcentage */}
+                        {/* Avancement — progress bar */}
                         <td style={{ width: 140 }}>
                           <div className="row" style={{ gap: 8 }}>
-                            <div style={{ flex: 1, height: 6, background: "var(--surface-3)", borderRadius: 3, overflow: "hidden" }}>
-                              <div style={{ width: `${p.progression}%`, height: "100%", background: "var(--primary)", borderRadius: 3 }} />
+                            <div className="progress" style={{ width: "100%" }}>
+                              <span style={{ width: `${p.progression}%` }} />
                             </div>
                             <span className="tnum" style={{ fontSize: 11.5, color: "var(--text-3)", minWidth: 28 }}>{p.progression}%</span>
                           </div>
                         </td>
-                        {/* Échéance — date complète */}
+                        {/* Échéance — DeadlineLabel style */}
                         <td>
-                          {(() => {
-                            const days = daysUntil(p.dateLimite);
-                            const dateStr = new Date(p.dateLimite).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
-                            if (days < 0) {
-                              return <span style={{ fontSize: 12, fontWeight: 500, color: "var(--danger)" }}>Dépassée · {dateStr}</span>;
-                            }
-                            if (days === 0) {
-                              return <span style={{ fontSize: 12, fontWeight: 500, color: "var(--warning)" }}>Aujourd&apos;hui · {dateStr}</span>;
-                            }
-                            return <span style={{ fontSize: 12, color: days <= 7 ? "var(--warning)" : "var(--text-2)" }}>{dateStr}</span>;
-                          })()}
+                          <span className="tnum" style={{ color: dlColor, fontSize: 12.5 }}>
+                            {dlPrefix}{fmtDate(p.dateLimite)}
+                          </span>
                         </td>
-                        {/* Équipe — avatars 2 lettres initiales colorées */}
+                        {/* Équipe — AvatarStack */}
                         <td>
-                          <div style={{ display: "flex" }}>
+                          <div className="avatar-stack">
                             {(p.membres ?? []).slice(0, 3).map((m, i) => {
                               const initials = m.user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
                               return (
-                                <div key={m.user.id} className="avatar" style={{
-                                  width: 26, height: 26, fontSize: 9, fontWeight: 700,
-                                  background: avatarColors[i % avatarColors.length],
-                                  marginLeft: i > 0 ? -6 : 0, border: "2px solid var(--surface)",
-                                  position: "relative", zIndex: 3 - i,
+                                <span key={m.user.id} className="avatar avatar-sm" style={{
+                                  background: avatarColorList[i % avatarColorList.length],
+                                  width: 22, height: 22, fontSize: 9,
                                 }}>
                                   {initials}
-                                </div>
+                                </span>
                               );
                             })}
                             {(p._count.membres ?? 0) > 3 && (
-                              <div className="avatar" style={{
-                                width: 26, height: 26, fontSize: 9, fontWeight: 700,
-                                background: "var(--surface-3)", color: "var(--text-3)",
-                                marginLeft: -6, border: "2px solid var(--surface)",
+                              <span className="avatar avatar-sm" style={{
+                                background: "var(--surface-3)", color: "var(--text-2)",
+                                width: 22, height: 22, fontSize: 9,
                               }}>
                                 +{p._count.membres - 3}
-                              </div>
+                              </span>
                             )}
                           </div>
                         </td>
@@ -235,7 +246,7 @@ export default function ProjetsPage() {
                         <td>
                           {p.scoreIA != null ? (
                             <span className="tnum" style={{
-                              fontWeight: 600, fontSize: 13,
+                              fontWeight: 600, fontSize: 12.5,
                               color: p.scoreIA >= 85 ? "var(--success)" : p.scoreIA >= 70 ? "var(--warning)" : "var(--danger)",
                             }}>
                               {p.scoreIA}
@@ -260,40 +271,37 @@ export default function ProjetsPage() {
             return (
               <div key={s} className="card" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
                 <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span className={`pill ${sPill[s] ?? "pill-brouillon"}`}><span className="dot" />{sLabel[s] ?? s}</span>
+                  <span className={`pill pill-${statusKeys[s] ?? "brouillon"}`}><span className="dot" />{statusLabels[s] ?? s}</span>
                   <span className="tag">{items.length}</span>
                 </div>
                 <div style={{ padding: 8, display: "flex", flexDirection: "column", gap: 8, minHeight: 200 }}>
                   {items.map(p => {
-                    const bColor = bailleurColors[p.bailleur.sigle] ?? "var(--primary)";
+                    const bColor = bailleurColors[p.bailleur.sigle] ?? "oklch(0.55 0.13 200)";
                     return (
                       <Link key={p.id} href={`/projets/${p.id}`} style={{ textDecoration: "none" }}>
                         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: 10, cursor: "pointer" }}>
                           <div className="row" style={{ gap: 6, marginBottom: 6 }}>
-                            <div style={{ width: 20, height: 20, borderRadius: "50%", background: bColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 6, fontWeight: 700, color: "#fff" }}>
-                              {p.bailleur.sigle.slice(0, 4)}
+                            <div style={{ width: 20, height: 20, borderRadius: 4, background: bColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 6, fontWeight: 700, color: "#fff", boxShadow: "inset 0 -4px 8px rgba(0,0,0,0.15)" }}>
+                              {p.bailleur.sigle}
                             </div>
                             <span className="mono" style={{ fontSize: 10.5, color: "var(--text-4)" }}>{p.reference ?? "—"}</span>
                           </div>
                           <div style={{ fontWeight: 600, fontSize: 12.5, color: "var(--text)", lineHeight: 1.35, marginBottom: 8 }}>{p.titre}</div>
-                          <div style={{ height: 4, background: "var(--surface-3)", borderRadius: 2, overflow: "hidden" }}>
-                            <div style={{ width: `${p.progression}%`, height: "100%", background: "var(--primary)", borderRadius: 2 }} />
-                          </div>
+                          <div className="progress"><span style={{ width: `${p.progression}%` }} /></div>
                           <div className="row" style={{ marginTop: 8, gap: 6, fontSize: 11 }}>
-                            <span style={{ color: daysUntil(p.dateLimite) <= 7 ? "var(--warning)" : "var(--text-3)" }}>
-                              {daysUntil(p.dateLimite) <= 0 ? "Expiré" : `${daysUntil(p.dateLimite)}j`}
+                            <span className="tnum" style={{ color: daysUntil(p.dateLimite) <= 7 ? "var(--warning)" : "var(--text-3)", fontSize: 12.5 }}>
+                              {daysUntil(p.dateLimite) <= 0 ? "Expiré" : `J-${daysUntil(p.dateLimite)}`} · {fmtDate(p.dateLimite)}
                             </span>
-                            <div style={{ marginLeft: "auto", display: "flex" }}>
+                            <div className="avatar-stack" style={{ marginLeft: "auto" }}>
                               {(p.membres ?? []).slice(0, 2).map((m, i) => {
                                 const initials = m.user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
                                 return (
-                                  <div key={m.user.id} className="avatar" style={{
-                                    width: 20, height: 20, fontSize: 7, fontWeight: 700,
-                                    background: avatarColors[i % avatarColors.length],
-                                    marginLeft: i > 0 ? -4 : 0, border: "2px solid var(--surface)",
+                                  <span key={m.user.id} className="avatar avatar-sm" style={{
+                                    background: avatarColorList[i % avatarColorList.length],
+                                    width: 20, height: 20, fontSize: 8,
                                   }}>
                                     {initials}
-                                  </div>
+                                  </span>
                                 );
                               })}
                             </div>
@@ -321,54 +329,38 @@ function ProjectsTimeline({ projects }: { projects: Projet[] }) {
     return <div className="card" style={{ padding: 48, textAlign: "center" }}><p style={{ color: "var(--text-4)", fontSize: 13 }}>Aucun projet</p></div>;
   }
 
-  const deadlines = projects.map(p => new Date(p.dateLimite).getTime());
-  const now = Date.now();
-  const startMs = Math.min(now - 30 * 864e5, ...deadlines.map(d => d - 60 * 864e5));
-  const endMs = Math.max(now + 30 * 864e5, ...deadlines.map(d => d + 14 * 864e5));
+  // Fixed months like in the design: Avr–Juil 2026
+  const months = ["Avr 2026", "Mai 2026", "Juin 2026", "Juil 2026"];
+  const startMs = new Date("2026-04-01").getTime();
+  const endMs = new Date("2026-08-01").getTime();
   const span = endMs - startMs;
-
-  const months: { label: string; pos: number }[] = [];
-  const d = new Date(startMs);
-  d.setDate(1);
-  d.setMonth(d.getMonth() + 1);
-  while (d.getTime() <= endMs) {
-    months.push({
-      label: d.toLocaleDateString("fr-FR", { month: "short", year: "numeric" }),
-      pos: ((d.getTime() - startMs) / span) * 100,
-    });
-    d.setMonth(d.getMonth() + 1);
-  }
-
-  const todayPct = ((now - startMs) / span) * 100;
+  const todayPct = ((Date.now() - startMs) / span) * 100;
 
   return (
     <div className="card" style={{ overflow: "hidden" }}>
       <div style={{ display: "grid", gridTemplateColumns: "240px 1fr" }}>
         <div style={{ borderRight: "1px solid var(--border)", background: "var(--surface-2)", padding: "10px 14px", fontSize: 11.5, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Projet</div>
-        <div style={{ background: "var(--surface-2)", position: "relative", height: 38 }}>
-          {months.map(m => (
-            <div key={m.label} style={{ position: "absolute", left: `${m.pos}%`, padding: "10px 8px", fontSize: 11.5, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>
-              {m.label}
-            </div>
-          ))}
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${months.length}, 1fr)`, background: "var(--surface-2)" }}>
+          {months.map(m => <div key={m} style={{ padding: "10px 14px", fontSize: 11.5, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", borderRight: "1px solid var(--border)" }}>{m}</div>)}
         </div>
       </div>
 
       {projects.map(p => {
         const dlEnd = new Date(p.dateLimite).getTime();
-        const dlStart = dlEnd - 30 * 864e5;
+        // Estimer le debut a 45j avant la deadline
+        const dlStart = dlEnd - 45 * 864e5;
         const left = Math.max(0, ((dlStart - startMs) / span) * 100);
         const width = Math.min(100 - left, ((dlEnd - dlStart) / span) * 100);
         const color = p.statut === "ACCEPTE" ? "var(--success)" : p.statut === "SOUMIS" ? "var(--st-soumis)" : "var(--primary)";
-        const bColor = bailleurColors[p.bailleur.sigle] ?? "var(--primary)";
+        const bColor = bailleurColors[p.bailleur.sigle] ?? "oklch(0.55 0.13 200)";
 
         return (
           <Link key={p.id} href={`/projets/${p.id}`} style={{ textDecoration: "none" }}>
             <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", borderTop: "1px solid var(--border)", cursor: "pointer", minHeight: 52 }}>
               <div style={{ padding: "12px 14px", borderRight: "1px solid var(--border)" }}>
                 <div className="row" style={{ gap: 6 }}>
-                  <div style={{ width: 20, height: 20, borderRadius: "50%", background: bColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 6, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
-                    {p.bailleur.sigle.slice(0, 4)}
+                  <div style={{ width: 20, height: 20, borderRadius: 4, background: bColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 6, fontWeight: 700, color: "#fff", flexShrink: 0, boxShadow: "inset 0 -4px 8px rgba(0,0,0,0.15)" }}>
+                    {p.bailleur.sigle}
                   </div>
                   <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.titre}</div>
                 </div>

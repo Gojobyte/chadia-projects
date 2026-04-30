@@ -112,9 +112,16 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', system-u
 /* Progress */
 .progress-bar { height: 4px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
 .progress-bar > span { display: block; height: 100%; background: var(--primary); border-radius: 99px; transition: width 0.4s; }
+.progress { height: 4px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
+.progress > span { display: block; height: 100%; background: var(--primary); border-radius: 99px; transition: width 0.4s; }
 
 /* Avatar */
-.avatar { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 11px; flex-shrink: 0; }
+.avatar { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 11px; flex-shrink: 0; }
+.avatar-sm { width: 22px; height: 22px; font-size: 10px; }
+.avatar-lg { width: 32px; height: 32px; font-size: 12px; }
+.avatar-stack { display: inline-flex; }
+.avatar-stack .avatar { border: 2px solid var(--surface); margin-left: -6px; }
+.avatar-stack .avatar:first-child { margin-left: 0; }
 
 /* Utils */
 .row { display: flex; align-items: center; gap: 8px; }
