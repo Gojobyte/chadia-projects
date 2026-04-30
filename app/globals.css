@@ -178,26 +178,71 @@ table.t tr:last-child td { border-bottom: none; }
 [contenteditable] img { max-width: 100%; height: auto; border-radius: 6px; margin: 12px 0; }
 [contenteditable] hr { border: none; border-top: 2px solid var(--border); margin: 24px 0; }
 
-/* Pages A4 style Word — sauts de page visuels */
+/* ═══════ Éditeur Word-style : pages A4 séparées ═══════ */
+
+/* Conteneur gris (le "bureau" derrière les pages) */
+.doc-wrapper {
+  background: #dadce0;
+  border: 1px solid var(--border);
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: 20px 0;
+  min-height: 600px;
+  display: flex;
+  justify-content: center;
+}
+
+/* La zone éditable — une page A4 blanche avec ombre */
+.doc-pages {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 20mm 25mm;
+  background: white;
+  color: var(--text-2);
+  font-size: 15px;
+  line-height: 1.7;
+  outline: none;
+  cursor: text;
+  /* Ombre sur les côtés et en bas comme une feuille posée */
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.06),
+    0 2px 6px rgba(0,0,0,0.1),
+    0 8px 24px rgba(0,0,0,0.06);
+  /* Fond avec bande grise toutes les 297mm pour simuler les pages */
+  background-image:
+    linear-gradient(
+      to bottom,
+      white 0mm,
+      white calc(297mm - 20mm),
+      /* Ombre du bas de page */
+      #f0f0f0 calc(297mm - 20mm),
+      #e0e0e0 calc(297mm - 15mm),
+      /* Bande grise = espace entre les pages */
+      #dadce0 calc(297mm - 15mm),
+      #dadce0 calc(297mm + 5mm),
+      /* Ombre du haut de la page suivante */
+      #e0e0e0 calc(297mm + 5mm),
+      #f0f0f0 calc(297mm + 10mm),
+      white calc(297mm + 10mm)
+    );
+  background-size: 100% calc(297mm + 10mm);
+  background-repeat: repeat-y;
+}
+
+/* Saut de page explicite */
 .doc-pages [style*="page-break"] {
-  margin: 0 -30mm !important;
+  margin: 0 -25mm !important;
   padding: 0 !important;
   border: none !important;
-  height: 24px;
-  background: #e8e8e8;
-  position: relative;
+  height: 30px;
+  background: #dadce0 !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  box-shadow: inset 0 3px 6px rgba(0,0,0,0.08), inset 0 -3px 6px rgba(0,0,0,0.08);
 }
-.doc-pages [style*="page-break"]::before {
-  content: "";
-  position: absolute;
-  bottom: 0; left: 0; right: 0; height: 0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-}
-.doc-pages [style*="page-break"]::after {
-  content: "";
-  position: absolute;
-  top: 0; left: 0; right: 0; height: 0;
-  box-shadow: 0 -2px 8px rgba(0,0,0,0.12);
+
+@media (max-width: 900px) {
+  .doc-pages { width: 100%; padding: 15mm 15mm; }
+  .doc-pages [style*="page-break"] { margin: 0 -15mm !important; }
 }
 [contenteditable] *::selection { background: color-mix(in oklch, var(--primary) 20%, transparent); }
 
