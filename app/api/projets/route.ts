@@ -27,6 +27,7 @@ export async function GET() {
       bailleur: { select: { nom: true, sigle: true } },
       _count: { select: { documents: true, taches: true, membres: true } },
       documents: { select: { statut: true } },
+      membres: { select: { user: { select: { id: true, name: true } } }, take: 4 },
     },
     orderBy: { updatedAt: "desc" },
   });
