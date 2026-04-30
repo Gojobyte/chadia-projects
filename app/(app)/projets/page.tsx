@@ -18,11 +18,11 @@ const sPill: Record<string, string> = {
   SOUMIS: "pill-soumis", ACCEPTE: "pill-accepte", REJETE: "pill-rejete",
 };
 const sLabel: Record<string, string> = {
-  BROUILLON: "Brouillon", EN_COURS: "En cours", EN_REVISION: "Revision",
-  SOUMIS: "Soumis", ACCEPTE: "Accepte", REJETE: "Rejete",
+  BROUILLON: "Brouillon", EN_COURS: "Rédaction", EN_REVISION: "Relecture",
+  SOUMIS: "Soumis", ACCEPTE: "Accepté", REJETE: "Rejeté",
 };
 
-// Couleurs des badges bailleur — comme dans le design
+// Couleurs des badges bailleur
 const bailleurColors: Record<string, string> = {
   PNUD: "#059669", UE: "#2563eb", AFD: "#dc2626", BM: "#1e40af",
   USAID: "#0284c7", UNICEF: "#0ea5e9", OMS: "#0369a1",
@@ -31,16 +31,14 @@ const bailleurColors: Record<string, string> = {
 };
 
 // Couleurs pour les avatars (rotation)
-const avatarColors = ["#059669", "#2563eb", "#d97706", "#dc2626", "#7c3aed", "#0ea5e9", "#0d9488", "#c026d3"];
+const avatarColors = ["#059669", "#d97706", "#dc2626", "#2563eb", "#7c3aed", "#0ea5e9", "#0d9488", "#c026d3"];
 
-function fmtMoney(n: number, cur = "FCFA"): string {
-  return n >= 1e6 ? `${(n / 1e6).toFixed(0).replace(/\.0$/, "")} ${n % 1e6 === 0 ? "" : ""}${(n / 1e6).toFixed(n % 1e6 === 0 ? 0 : 1).replace(/\.0$/, "")}M ${cur}`.replace(/\s+/g, " ").trim()
-    : n >= 1e3 ? `${(n / 1e3).toFixed(0)}K ${cur}`.trim()
-    : `${n.toLocaleString()} ${cur}`;
-}
-// Simplifie
+// Symboles devise
+const deviseSymbol: Record<string, string> = { EUR: "€", USD: "$", FCFA: "FCFA", GBP: "£" };
+
 function formatBudget(n: number, cur = "FCFA"): string {
-  return `${n.toLocaleString("fr-FR")} ${cur}`;
+  const sym = deviseSymbol[cur] ?? cur;
+  return `${n.toLocaleString("fr-FR")} ${sym}`;
 }
 
 function daysUntil(d: string): number { return Math.ceil((new Date(d).getTime() - Date.now()) / 864e5); }
@@ -90,7 +88,7 @@ export default function ProjetsPage() {
           { id: "all", label: "Tous", count: projets.length },
           { id: "active", label: "En cours", count: projets.filter(p => !["ACCEPTE", "REJETE", "SOUMIS"].includes(p.statut)).length },
           { id: "submitted", label: "Soumis", count: projets.filter(p => p.statut === "SOUMIS").length },
-          { id: "won", label: "Gagnes", count: projets.filter(p => p.statut === "ACCEPTE").length },
+          { id: "won", label: "Gagnés", count: projets.filter(p => p.statut === "ACCEPTE").length },
         ].map(t => (
           <button key={t.id} onClick={() => setFilter(t.id)} style={{
             padding: "8px 14px", fontSize: 13, fontWeight: 500, background: "none", border: "none", cursor: "pointer",
@@ -125,7 +123,7 @@ export default function ProjetsPage() {
         filtered.length === 0 ? (
           <div className="card" style={{ padding: "48px 18px", textAlign: "center" }}>
             <div style={{ color: "var(--text-3)", fontSize: 13 }}>Aucun projet.</div>
-            <Link href="/projets/nouveau" className="btn btn-primary" style={{ marginTop: 12 }}>Creer un projet</Link>
+            <Link href="/projets/nouveau" className="btn btn-primary" style={{ marginTop: 12 }}>Créer un projet</Link>
           </div>
         ) : (
           <div className="card">
@@ -140,27 +138,26 @@ export default function ProjetsPage() {
                     <th>Budget</th>
                     <th>Statut</th>
                     <th>Avancement</th>
-                    <th>Echeance</th>
-                    <th>Equipe</th>
+                    <th>Échéance</th>
+                    <th>Équipe</th>
                     <th>Score IA</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map(p => {
-                    const days = daysUntil(p.dateLimite);
                     const bColor = bailleurColors[p.bailleur.sigle] ?? "var(--primary)";
                     return (
                       <tr key={p.id} style={{ cursor: "pointer" }} onClick={() => window.location.href = `/projets/${p.id}`}>
-                        {/* Etoile */}
+                        {/* Étoile favori */}
                         <td>
-                          <Icons.Star size={13} style={{ color: "var(--text-4)" }} />
+                          <Icons.Star size={13} style={{ color: "var(--warning)", fill: "var(--warning)" }} />
                         </td>
-                        {/* Projet + reference */}
+                        {/* Projet + référence */}
                         <td>
                           <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text)" }}>{p.titre}</div>
                           <div style={{ fontSize: 11, color: "var(--text-4)", marginTop: 2 }} className="mono">{p.reference ?? "—"}</div>
                         </td>
-                        {/* Bailleur — badge rond colore */}
+                        {/* Bailleur — badge rond coloré */}
                         <td>
                           <div style={{
                             width: 28, height: 28, borderRadius: "50%", background: bColor,
@@ -172,7 +169,7 @@ export default function ProjetsPage() {
                         </td>
                         {/* Pays */}
                         <td style={{ fontSize: 12.5 }}>{p.pays ?? "—"}</td>
-                        {/* Budget */}
+                        {/* Budget — formaté avec séparateurs et symbole devise */}
                         <td>
                           <span className="tnum" style={{ fontWeight: 500, color: "var(--text)" }}>
                             {p.budget ? formatBudget(p.budget, p.devise) : "—"}
@@ -184,46 +181,49 @@ export default function ProjetsPage() {
                             <span className="dot" />{sLabel[p.statut] ?? p.statut}
                           </span>
                         </td>
-                        {/* Avancement */}
+                        {/* Avancement — barre + pourcentage */}
                         <td style={{ width: 140 }}>
                           <div className="row" style={{ gap: 8 }}>
-                            <div style={{ flex: 1, height: 4, background: "var(--surface-3)", borderRadius: 2, overflow: "hidden" }}>
-                              <div style={{ width: `${p.progression}%`, height: "100%", background: "var(--primary)", borderRadius: 2 }} />
+                            <div style={{ flex: 1, height: 6, background: "var(--surface-3)", borderRadius: 3, overflow: "hidden" }}>
+                              <div style={{ width: `${p.progression}%`, height: "100%", background: "var(--primary)", borderRadius: 3 }} />
                             </div>
                             <span className="tnum" style={{ fontSize: 11.5, color: "var(--text-3)", minWidth: 28 }}>{p.progression}%</span>
                           </div>
                         </td>
-                        {/* Echeance — date complete + texte colore */}
+                        {/* Échéance — date complète */}
                         <td>
-                          {days <= 0 ? (
-                            <span style={{ fontSize: 12, fontWeight: 500, color: "var(--danger)" }}>
-                              Depassee · {new Date(p.dateLimite).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
-                            </span>
-                          ) : days === 0 ? (
-                            <span style={{ fontSize: 12, fontWeight: 500, color: "var(--warning)" }}>
-                              Aujourd&apos;hui · {new Date(p.dateLimite).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
-                            </span>
-                          ) : (
-                            <span style={{ fontSize: 12, color: days <= 7 ? "var(--warning)" : "var(--text-3)" }}>
-                              {new Date(p.dateLimite).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
-                            </span>
-                          )}
+                          {(() => {
+                            const days = daysUntil(p.dateLimite);
+                            const dateStr = new Date(p.dateLimite).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+                            if (days < 0) {
+                              return <span style={{ fontSize: 12, fontWeight: 500, color: "var(--danger)" }}>Dépassée · {dateStr}</span>;
+                            }
+                            if (days === 0) {
+                              return <span style={{ fontSize: 12, fontWeight: 500, color: "var(--warning)" }}>Aujourd&apos;hui · {dateStr}</span>;
+                            }
+                            return <span style={{ fontSize: 12, color: days <= 7 ? "var(--warning)" : "var(--text-2)" }}>{dateStr}</span>;
+                          })()}
                         </td>
-                        {/* Equipe avatars */}
+                        {/* Équipe — avatars 2 lettres initiales colorées */}
                         <td>
                           <div style={{ display: "flex" }}>
-                            {(p.membres ?? []).slice(0, 3).map((m, i) => (
-                              <div key={m.user.id} className="avatar" style={{
-                                width: 24, height: 24, fontSize: 9, background: avatarColors[i % avatarColors.length],
-                                marginLeft: i > 0 ? -6 : 0, border: "2px solid var(--surface)",
-                                position: "relative", zIndex: 3 - i,
-                              }}>
-                                {m.user.name.charAt(0)}
-                              </div>
-                            ))}
+                            {(p.membres ?? []).slice(0, 3).map((m, i) => {
+                              const initials = m.user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+                              return (
+                                <div key={m.user.id} className="avatar" style={{
+                                  width: 26, height: 26, fontSize: 9, fontWeight: 700,
+                                  background: avatarColors[i % avatarColors.length],
+                                  marginLeft: i > 0 ? -6 : 0, border: "2px solid var(--surface)",
+                                  position: "relative", zIndex: 3 - i,
+                                }}>
+                                  {initials}
+                                </div>
+                              );
+                            })}
                             {(p._count.membres ?? 0) > 3 && (
                               <div className="avatar" style={{
-                                width: 24, height: 24, fontSize: 9, background: "var(--surface-3)", color: "var(--text-3)",
+                                width: 26, height: 26, fontSize: 9, fontWeight: 700,
+                                background: "var(--surface-3)", color: "var(--text-3)",
                                 marginLeft: -6, border: "2px solid var(--surface)",
                               }}>
                                 +{p._count.membres - 3}
@@ -235,7 +235,7 @@ export default function ProjetsPage() {
                         <td>
                           {p.scoreIA != null ? (
                             <span className="tnum" style={{
-                              fontWeight: 600, fontSize: 12.5,
+                              fontWeight: 600, fontSize: 13,
                               color: p.scoreIA >= 85 ? "var(--success)" : p.scoreIA >= 70 ? "var(--warning)" : "var(--danger)",
                             }}>
                               {p.scoreIA}
@@ -281,17 +281,21 @@ export default function ProjetsPage() {
                           </div>
                           <div className="row" style={{ marginTop: 8, gap: 6, fontSize: 11 }}>
                             <span style={{ color: daysUntil(p.dateLimite) <= 7 ? "var(--warning)" : "var(--text-3)" }}>
-                              {daysUntil(p.dateLimite) <= 0 ? "Expire !" : `${daysUntil(p.dateLimite)}j`}
+                              {daysUntil(p.dateLimite) <= 0 ? "Expiré" : `${daysUntil(p.dateLimite)}j`}
                             </span>
                             <div style={{ marginLeft: "auto", display: "flex" }}>
-                              {(p.membres ?? []).slice(0, 2).map((m, i) => (
-                                <div key={m.user.id} className="avatar" style={{
-                                  width: 20, height: 20, fontSize: 8, background: avatarColors[i % avatarColors.length],
-                                  marginLeft: i > 0 ? -4 : 0, border: "2px solid var(--surface)",
-                                }}>
-                                  {m.user.name.charAt(0)}
-                                </div>
-                              ))}
+                              {(p.membres ?? []).slice(0, 2).map((m, i) => {
+                                const initials = m.user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+                                return (
+                                  <div key={m.user.id} className="avatar" style={{
+                                    width: 20, height: 20, fontSize: 7, fontWeight: 700,
+                                    background: avatarColors[i % avatarColors.length],
+                                    marginLeft: i > 0 ? -4 : 0, border: "2px solid var(--surface)",
+                                  }}>
+                                    {initials}
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         </div>
@@ -311,7 +315,7 @@ export default function ProjetsPage() {
   );
 }
 
-/* ─── Timeline Gantt pour les projets ─── */
+/* ─── Timeline Gantt ─── */
 function ProjectsTimeline({ projects }: { projects: Projet[] }) {
   if (projects.length === 0) {
     return <div className="card" style={{ padding: 48, textAlign: "center" }}><p style={{ color: "var(--text-4)", fontSize: 13 }}>Aucun projet</p></div>;
