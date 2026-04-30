@@ -44,8 +44,8 @@ export async function PUT(
   if (fichierUrl !== undefined) updateData.fichierUrl = fichierUrl;
 
   // Si le doc passe de A_FAIRE a EN_COURS automatiquement quand on commence a ecrire
-  if (contenu && existing.statut === "A_FAIRE") {
-    updateData.statut = "EN_COURS";
+  if (contenu && existing.statut === "BROUILLON") {
+    updateData.statut = "REDACTION";
   }
 
   const doc = await prisma.document.update({ where: { id }, data: updateData });

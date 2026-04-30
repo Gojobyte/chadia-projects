@@ -39,7 +39,7 @@ export async function POST(
 
     await prisma.document.update({
       where: { id },
-      data: { fichierUrl: url, statut: doc.statut === "A_FAIRE" ? "EN_COURS" : doc.statut },
+      data: { fichierUrl: url, statut: doc.statut === "BROUILLON" ? "REDACTION" : doc.statut },
     });
 
     await prisma.activite.create({

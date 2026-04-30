@@ -83,7 +83,7 @@ export async function GET(
     ${projet.documents.map(d => `
       <tr>
         <td>${d.titre}</td>
-        <td><span class="badge ${d.statut === "VALIDE" ? "badge-green" : d.statut === "EN_COURS" ? "badge-blue" : "badge-grey"}">${statutLabels[d.statut] ?? d.statut}</span></td>
+        <td><span class="badge ${d.statut === "VALIDE" ? "badge-green" : d.statut === "REDACTION" ? "badge-blue" : "badge-grey"}">${statutLabels[d.statut] ?? d.statut}</span></td>
         <td>${d.assigneA?.name ?? "—"}</td>
         <td>${d.fichierUrl ? '<a href="' + d.fichierUrl + '">Ouvrir</a>' : "—"}</td>
       </tr>

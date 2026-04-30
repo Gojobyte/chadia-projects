@@ -13,11 +13,13 @@ interface Doc {
 }
 
 const statutLabels: Record<string, string> = {
-  A_FAIRE: "A faire", EN_COURS: "En cours", EN_REVISION: "En revision", VALIDE: "Valide",
+  BROUILLON: "Brouillon", REDACTION: "Redaction", RELECTURE: "Relecture",
+  VALIDATION: "Validation", FINALISATION: "Finalisation", VALIDE: "Valide",
 };
 const statutColors: Record<string, string> = {
-  A_FAIRE: "bg-slate-100 text-slate-700", EN_COURS: "bg-blue-100 text-blue-700",
-  EN_REVISION: "bg-yellow-100 text-yellow-700", VALIDE: "bg-green-100 text-green-700",
+  BROUILLON: "bg-slate-100 text-slate-700", REDACTION: "bg-blue-100 text-blue-700",
+  RELECTURE: "bg-amber-100 text-amber-700", VALIDATION: "bg-purple-100 text-purple-700",
+  FINALISATION: "bg-indigo-100 text-indigo-700", VALIDE: "bg-green-100 text-green-700",
 };
 
 export default function DocumentPage() {
@@ -48,7 +50,7 @@ export default function DocumentPage() {
     const data = await res.json();
     setCreating(false);
     if (!res.ok) { setError(res.status === 403 ? "google-connect" : data.error ?? "Erreur"); return; }
-    setDoc(prev => prev ? { ...prev, fichierUrl: data.url, statut: "EN_COURS" } : null);
+    setDoc(prev => prev ? { ...prev, fichierUrl: data.url, statut: "REDACTION" } : null);
   }
 
   async function saveContentToApp() {
@@ -81,8 +83,9 @@ export default function DocumentPage() {
           <div className="flex items-center gap-3">
             <span className={`px-3 py-1 rounded-full text-xs font-medium ${statutColors[doc.statut]}`}>{statutLabels[doc.statut]}</span>
             <select value={doc.statut} onChange={e => changeStatut(e.target.value)} className="text-sm border border-slate-300 rounded-lg px-3 py-1.5">
-              <option value="A_FAIRE">A faire</option><option value="EN_COURS">En cours</option>
-              <option value="EN_REVISION">En revision</option><option value="VALIDE">Valide</option>
+              <option value="BROUILLON">Brouillon</option><option value="REDACTION">Redaction</option>
+              <option value="RELECTURE">Relecture</option><option value="VALIDATION">Validation</option>
+              <option value="FINALISATION">Finalisation</option><option value="VALIDE">Valide</option>
             </select>
           </div>
         </div>
