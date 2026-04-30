@@ -32,7 +32,7 @@ export default function ProjetDetailPage() {
   const id = params.id as string;
   const [projet, setProjet] = useState<Projet | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"kanban" | "taches" | "equipe" | "activite">("kanban");
+  const [tab, setTab] = useState<"kanban" | "ia" | "taches" | "equipe" | "activite">("kanban");
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/projets/${id}`);
