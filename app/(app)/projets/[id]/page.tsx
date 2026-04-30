@@ -6,7 +6,7 @@ import Link from "next/link";
 import { KanbanBoard } from "@/components/kanban-board";
 
 interface Document { id: string; categorie: string; titre: string; statut: string; fichierUrl: string | null; assigneA: { id: string; name: string } | null; }
-interface Tache { id: string; titre: string; statut: string; priorite: string; dateLimite: string | null; assigneA: { id: string; name: string } | null; }
+interface Tache { id: string; titre: string; description: string | null; statut: string; priorite: string; dateLimite: string | null; assigneA: { id: string; name: string } | null; }
 interface Membre { id: string; role: string; user: { id: string; name: string; email: string }; }
 interface Activite { id: string; action: string; description: string; createdAt: string; user: { name: string }; }
 interface Projet {
