@@ -16,10 +16,12 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
+import { Icons } from "@/components/icons";
 
 interface Document {
   id: string; categorie: string; titre: string; statut: string;
-  fichierUrl: string | null;
+  fichierUrl: string | null; progression?: number;
+  dateLimite?: string | null;
   assigneA: { id: string; name: string } | null;
 }
 
@@ -36,12 +38,12 @@ interface KanbanBoardProps {
 }
 
 const columns = [
-  { id: "BROUILLON", label: "Brouillon", color: "bg-slate-500", lightColor: "bg-slate-50", borderColor: "border-slate-300", emoji: "📝" },
-  { id: "REDACTION", label: "Redaction", color: "bg-blue-600", lightColor: "bg-blue-50", borderColor: "border-blue-200", emoji: "✏️" },
-  { id: "RELECTURE", label: "Relecture", color: "bg-amber-500", lightColor: "bg-amber-50", borderColor: "border-amber-200", emoji: "👀" },
-  { id: "VALIDATION", label: "Validation", color: "bg-purple-600", lightColor: "bg-purple-50", borderColor: "border-purple-200", emoji: "✔️" },
-  { id: "FINALISATION", label: "Finalisation", color: "bg-indigo-600", lightColor: "bg-indigo-50", borderColor: "border-indigo-200", emoji: "📋" },
-  { id: "VALIDE", label: "Valide", color: "bg-green-600", lightColor: "bg-green-50", borderColor: "border-green-200", emoji: "✅" },
+  { id: "BROUILLON", label: "Brouillon", color: "var(--st-brouillon)" },
+  { id: "REDACTION", label: "Redaction", color: "var(--st-redaction)" },
+  { id: "RELECTURE", label: "Relecture", color: "var(--st-relecture)" },
+  { id: "VALIDATION", label: "Validation", color: "var(--st-validation)" },
+  { id: "FINALISATION", label: "Finalisation", color: "var(--st-finalisation)" },
+  { id: "VALIDE", label: "Valide", color: "var(--st-soumis)" },
 ];
 
 const categorieLabels: Record<string, string> = {
@@ -56,7 +58,6 @@ export function KanbanBoard({ projetId, documents, onMoveDocument }: KanbanBoard
   const [items, setItems] = useState(documents);
   const [users, setUsers] = useState<User[]>([]);
 
-  // Charger les utilisateurs pour le menu d'assignation
   useEffect(() => {
     fetch("/api/users").then(r => r.json()).then(d => setUsers(d.users ?? []));
   }, []);
@@ -67,7 +68,6 @@ export function KanbanBoard({ projetId, documents, onMoveDocument }: KanbanBoard
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ documentId, assigneAId: userId }),
     });
-    // Mettre a jour localement
     const user = users.find(u => u.id === userId);
     setItems(prev => prev.map(d =>
       d.id === documentId ? { ...d, assigneA: userId && user ? { id: userId, name: user.name } : null } : d
@@ -90,9 +90,7 @@ export function KanbanBoard({ projetId, documents, onMoveDocument }: KanbanBoard
     if (!over) return;
 
     const overId = over.id as string;
-    // Verifier si on drop sur une colonne
     const targetColumn = columns.find(c => c.id === overId);
-    // Ou sur une carte (prendre le statut de la carte)
     const targetCard = items.find(d => d.id === overId);
     const newStatut = targetColumn?.id ?? targetCard?.statut;
 
@@ -101,9 +99,7 @@ export function KanbanBoard({ projetId, documents, onMoveDocument }: KanbanBoard
     const draggedDoc = items.find(d => d.id === active.id);
     if (!draggedDoc || draggedDoc.statut === newStatut) return;
 
-    // Mettre a jour localement
     setItems(prev => prev.map(d => d.id === active.id ? { ...d, statut: newStatut } : d));
-    // Sauvegarder via l'API
     onMoveDocument(draggedDoc.id, newStatut);
   }
 
@@ -114,7 +110,7 @@ export function KanbanBoard({ projetId, documents, onMoveDocument }: KanbanBoard
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid grid-cols-6 gap-2 h-full">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(200px, 1fr))", gap: 10 }}>
         {columns.map(col => {
           const colItems = items.filter(d => d.statut === col.id);
           return <DroppableColumn key={col.id} column={col} items={colItems} projetId={projetId} users={users} onAssign={assignDocument} />;
@@ -128,7 +124,6 @@ export function KanbanBoard({ projetId, documents, onMoveDocument }: KanbanBoard
   );
 }
 
-// Colonne droppable
 function DroppableColumn({ column, items, projetId, users, onAssign }: {
   column: typeof columns[0]; items: Document[]; projetId: string;
   users: User[]; onAssign: (docId: string, userId: string | null) => void;
@@ -136,33 +131,32 @@ function DroppableColumn({ column, items, projetId, users, onAssign }: {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
   return (
-    <div className="flex flex-col min-h-[500px]">
-      {/* Header */}
-      <div className={`${column.color} rounded-t-xl px-4 py-2.5 flex items-center justify-between`}>
-        <div className="flex items-center gap-2">
-          <span className="text-base">{column.emoji}</span>
-          <h3 className="text-sm font-bold text-white">{column.label}</h3>
-        </div>
-        <span className="bg-white/25 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full">
-          {items.length}
-        </span>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {/* Header avec carre colore — comme dans le design */}
+      <div className="row" style={{ padding: "8px 10px", gap: 8 }}>
+        <span style={{ width: 8, height: 8, borderRadius: 2, background: column.color, flexShrink: 0 }} />
+        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>{column.label}</span>
+        <span className="tag" style={{ marginLeft: "auto" }}>{items.length}</span>
       </div>
 
       {/* Zone de drop */}
       <div
         ref={setNodeRef}
-        className={`flex-1 rounded-b-xl p-2 space-y-2 transition-colors ${column.lightColor} border ${column.borderColor} ${
-          isOver ? "ring-2 ring-blue-400 bg-blue-100" : ""
-        }`}
+        style={{
+          display: "flex", flexDirection: "column", gap: 8, minHeight: 200,
+          borderRadius: 8,
+          ...(isOver ? { outline: "2px solid var(--primary)", outlineOffset: -2, background: "var(--primary-soft)" } : {}),
+        }}
       >
         {items.map(doc => (
           <DraggableCard key={doc.id} doc={doc} projetId={projetId} users={users} onAssign={onAssign} />
         ))}
         {items.length === 0 && (
-          <div className={`flex items-center justify-center h-32 rounded-lg border-2 border-dashed ${
-            isOver ? "border-blue-400 bg-blue-50" : "border-slate-200"
-          }`}>
-            <p className="text-xs text-slate-400 italic">Glissez ici</p>
+          <div style={{
+            border: "1px dashed var(--border-strong)", borderRadius: 8,
+            padding: 24, textAlign: "center", fontSize: 11, color: "var(--text-4)",
+          }}>
+            Glisser ici
           </div>
         )}
       </div>
@@ -170,98 +164,89 @@ function DroppableColumn({ column, items, projetId, users, onAssign }: {
   );
 }
 
-// Carte draggable
 function DraggableCard({ doc, projetId, users, onAssign }: {
   doc: Document; projetId: string; users: User[];
   onAssign: (docId: string, userId: string | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: doc.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1 };
-  const hasGDoc = doc.fichierUrl?.includes("docs.google.com");
   const [showAssign, setShowAssign] = useState(false);
+  const prog = doc.progression ?? 0;
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}
-      className="bg-white rounded-lg p-4 shadow-sm border border-slate-200 cursor-grab active:cursor-grabbing hover:shadow-md transition-all">
-      {/* Categorie tag */}
-      <span className="inline-block text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 mb-2">
+    <div ref={setNodeRef} {...attributes} {...listeners}
+      className="card" style={{ ...style, padding: 12, cursor: "grab", borderRadius: 8 }}>
+
+      {/* Categorie en uppercase */}
+      <div style={{ fontSize: 10.5, color: "var(--text-3)", textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.03em", marginBottom: 6 }}>
         {categorieLabels[doc.categorie] ?? doc.categorie}
-      </span>
+      </div>
 
       {/* Titre */}
       <Link href={`/projets/${projetId}/docs/${doc.id}`}
-        className="block text-sm font-semibold text-slate-900 hover:text-blue-600 mb-2 leading-snug"
+        style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--text)", lineHeight: 1.35, marginBottom: 10, textDecoration: "none" }}
         onPointerDown={e => e.stopPropagation()}>
         {doc.titre}
       </Link>
 
-      {/* Footer carte */}
-      <div className="flex items-center justify-between mt-2">
-        {/* Assignation */}
-        <div className="relative" onPointerDown={e => e.stopPropagation()}>
-          <button onClick={() => setShowAssign(!showAssign)}
-            className="flex items-center gap-1.5 hover:bg-slate-50 rounded px-1 py-0.5 -ml-1">
+      {/* Progress bar */}
+      {prog > 0 && prog < 100 && (
+        <div style={{ height: 4, background: "var(--surface-3)", borderRadius: 2, overflow: "hidden", marginBottom: 10 }}>
+          <div style={{ width: `${prog}%`, height: "100%", background: "var(--primary)", borderRadius: 2 }} />
+        </div>
+      )}
+
+      {/* Footer: avatar, deadline, comments */}
+      <div className="row" style={{ marginTop: 10, gap: 6 }}>
+        <div onPointerDown={e => e.stopPropagation()} style={{ position: "relative" }}>
+          <button onClick={() => setShowAssign(!showAssign)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
             {doc.assigneA ? (
-              <>
-                <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-[11px] font-bold text-white">
-                  {doc.assigneA.name.charAt(0)}
-                </div>
-                <span className="text-xs text-slate-500">{doc.assigneA.name}</span>
-              </>
+              <div className="avatar" style={{ width: 20, height: 20, fontSize: 9, background: "var(--primary)" }}>
+                {doc.assigneA.name.charAt(0)}
+              </div>
             ) : (
-              <>
-                <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[11px] text-slate-400">+</div>
-                <span className="text-xs text-slate-400">Assigner</span>
-              </>
+              <span style={{ width: 20, height: 20, borderRadius: 50, border: "1px dashed var(--border-strong)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-4)", fontSize: 11 }}>?</span>
             )}
           </button>
 
-          {/* Menu d'assignation */}
           {showAssign && (
-            <div className="absolute bottom-full left-0 mb-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 w-48 py-1">
-              <p className="text-[10px] text-slate-400 px-3 py-1 uppercase font-semibold">Assigner a</p>
+            <div style={{ position: "absolute", bottom: "100%", left: 0, marginBottom: 4, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, boxShadow: "var(--shadow-lg)", zIndex: 50, width: 180, padding: "4px 0" }}>
+              <p style={{ fontSize: 10, color: "var(--text-4)", padding: "6px 12px", textTransform: "uppercase", fontWeight: 600 }}>Assigner a</p>
               {doc.assigneA && (
                 <button onClick={() => { onAssign(doc.id, null); setShowAssign(false); }}
-                  className="w-full text-left px-3 py-1.5 text-xs text-red-600 hover:bg-red-50">
-                  Retirer l&apos;assignation
+                  style={{ width: "100%", textAlign: "left", padding: "6px 12px", fontSize: 12, color: "var(--danger)", background: "none", border: "none", cursor: "pointer" }}>
+                  Retirer
                 </button>
               )}
               {users.map(u => (
                 <button key={u.id} onClick={() => { onAssign(doc.id, u.id); setShowAssign(false); }}
-                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 flex items-center gap-2 ${
-                    doc.assigneA?.id === u.id ? "bg-indigo-50 text-indigo-700" : "text-slate-700"
-                  }`}>
-                  <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white">
-                    {u.name.charAt(0)}
-                  </div>
+                  style={{ width: "100%", textAlign: "left", padding: "6px 12px", fontSize: 12, color: "var(--text)", background: doc.assigneA?.id === u.id ? "var(--primary-soft)" : "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                  <div className="avatar" style={{ width: 18, height: 18, fontSize: 8, background: "var(--primary)" }}>{u.name.charAt(0)}</div>
                   {u.name}
                 </button>
               ))}
-              {users.length === 0 && <p className="px-3 py-2 text-xs text-slate-400">Aucun utilisateur</p>}
+              {users.length === 0 && <p style={{ padding: "8px 12px", fontSize: 11, color: "var(--text-4)" }}>Aucun utilisateur</p>}
             </div>
           )}
         </div>
 
-        <div className="flex items-center gap-1" onPointerDown={e => e.stopPropagation()}>
-          {hasGDoc && <span className="text-sm" title="Google Doc lie">📄</span>}
-          <Link href={`/projets/${projetId}/docs/${doc.id}`}
-            className="text-xs px-2 py-1 rounded bg-slate-100 text-slate-600 hover:bg-slate-200">
-            Ouvrir
-          </Link>
-        </div>
+        {doc.dateLimite && (
+          <span style={{ fontSize: 11, color: "var(--text-3)" }}>
+            {new Date(doc.dateLimite).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
+          </span>
+        )}
       </div>
     </div>
   );
 }
 
-// Overlay pendant le drag
 function CardOverlay({ doc }: { doc: Document }) {
   return (
-    <div className="bg-white rounded-lg p-4 shadow-2xl border-2 border-blue-400 cursor-grabbing w-full max-w-[300px] rotate-2 scale-105">
-      <span className="inline-block text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 mb-2">
+    <div className="card" style={{ padding: 12, cursor: "grabbing", borderRadius: 8, boxShadow: "var(--shadow-lg)", transform: "rotate(2deg) scale(1.05)", maxWidth: 280 }}>
+      <div style={{ fontSize: 10.5, color: "var(--text-3)", textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.03em", marginBottom: 6 }}>
         {categorieLabels[doc.categorie] ?? doc.categorie}
-      </span>
-      <p className="text-sm font-semibold text-slate-900">{doc.titre}</p>
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{doc.titre}</div>
     </div>
   );
 }

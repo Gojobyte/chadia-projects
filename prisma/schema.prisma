@@ -188,6 +188,7 @@ model Document {
   ordre       Int                @default(0)
   assigneAId  String?
   dateLimite  DateTime?
+  progression Int                @default(0)
 
   projet       Projet        @relation(fields: [projetId], references: [id], onDelete: Cascade)
   assigneA     User?         @relation("DocumentAssigne", fields: [assigneAId], references: [id])

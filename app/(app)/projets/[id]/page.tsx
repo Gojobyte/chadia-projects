@@ -8,7 +8,12 @@ import { Icons } from "@/components/icons";
 
 function daysUntil(d: string | Date): number { return Math.ceil((new Date(d).getTime() - Date.now()) / 864e5); }
 
-interface Document { id: string; categorie: string; titre: string; statut: string; fichierUrl: string | null; assigneA: { id: string; name: string } | null; }
+interface Document {
+  id: string; categorie: string; titre: string; statut: string;
+  fichierUrl: string | null; progression: number;
+  dateLimite: string | null;
+  assigneA: { id: string; name: string } | null;
+}
 interface Tache { id: string; titre: string; description: string | null; statut: string; priorite: string; dateLimite: string | null; assigneA: { id: string; name: string } | null; }
 interface Membre { id: string; role: string; user: { id: string; name: string; email: string }; }
 interface Activite { id: string; action: string; description: string; createdAt: string; user: { name: string }; }
@@ -20,14 +25,31 @@ interface Projet {
   createdBy: { name: string };
 }
 
-const statutColumns = ["A_FAIRE", "EN_COURS", "EN_REVISION", "VALIDE"];
-const statutLabels: Record<string, string> = { A_FAIRE: "A faire", EN_COURS: "En cours", EN_REVISION: "En revision", VALIDE: "Valide" };
-const statutColors: Record<string, string> = { A_FAIRE: "bg-slate-200", EN_COURS: "bg-blue-200", EN_REVISION: "bg-yellow-200", VALIDE: "bg-green-200" };
-
 const categorieLabels: Record<string, string> = {
-  PROPOSITION_TECHNIQUE: "Proposition technique", BUDGET_PREVISIONNEL: "Budget", BUDGET_DETAIL: "Budget detail",
-  CADRE_LOGIQUE: "Cadre logique", NOTE_CONCEPTUELLE: "Note conceptuelle", PLAN_TRAVAIL: "Plan de travail",
+  PROPOSITION_TECHNIQUE: "Proposition technique", BUDGET_PREVISIONNEL: "Budget",
+  BUDGET_DETAIL: "Budget detaille", CADRE_LOGIQUE: "Cadre logique",
+  NOTE_CONCEPTUELLE: "Note conceptuelle", PLAN_TRAVAIL: "Plan de travail",
   GANTT: "Gantt", CV: "CV", DOCUMENT_LEGAL: "Docs legaux", AUTRE: "Autre",
+};
+
+const statusLabels: Record<string, string> = {
+  BROUILLON: "Brouillon", REDACTION: "Redaction", RELECTURE: "Relecture",
+  VALIDATION: "Validation", FINALISATION: "Finalisation", VALIDE: "Valide",
+  SOUMIS: "Soumis", EN_COURS: "En cours", EN_REVISION: "Revision",
+  ACCEPTE: "Accepte", REJETE: "Rejete",
+};
+
+const statusColors: Record<string, string> = {
+  BROUILLON: "var(--st-brouillon)", REDACTION: "var(--st-redaction)",
+  RELECTURE: "var(--st-relecture)", VALIDATION: "var(--st-validation)",
+  FINALISATION: "var(--st-finalisation)", VALIDE: "var(--st-soumis)",
+  SOUMIS: "var(--st-soumis)", ACCEPTE: "var(--st-accepte)", REJETE: "var(--st-rejete)",
+};
+
+const pipelineSteps = ["BROUILLON", "REDACTION", "RELECTURE", "VALIDATION", "FINALISATION", "SOUMIS"];
+// Mapper les statuts projet vers les positions du pipeline visuel
+const projetStatusToStep: Record<string, number> = {
+  BROUILLON: 0, EN_COURS: 1, EN_REVISION: 2, SOUMIS: 5, ACCEPTE: 6, REJETE: -1, ARCHIVE: -1,
 };
 
 export default function ProjetDetailPage() {
@@ -35,7 +57,7 @@ export default function ProjetDetailPage() {
   const id = params.id as string;
   const [projet, setProjet] = useState<Projet | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"kanban" | "ia" | "taches" | "equipe" | "activite">("kanban");
+  const [tab, setTab] = useState<"kanban" | "timeline" | "docs" | "equipe" | "activite">("kanban");
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/projets/${id}`);
@@ -52,19 +74,23 @@ export default function ProjetDetailPage() {
     load();
   }
 
-  if (loading) return <p className="text-slate-500">Chargement...</p>;
-  if (!projet) return <p className="text-red-500">Projet introuvable.</p>;
+  if (loading) return <p style={{ color: "var(--text-3)", padding: 32 }}>Chargement...</p>;
+  if (!projet) return <p style={{ color: "var(--danger)", padding: 32 }}>Projet introuvable.</p>;
 
   const totalDocs = projet.documents.length;
   const valides = projet.documents.filter(d => d.statut === "VALIDE").length;
   const progression = totalDocs > 0 ? Math.round((valides / totalDocs) * 100) : 0;
+  const tachesDone = projet.taches.filter(t => t.statut === "TERMINE").length;
+
+  // Determiner l'etape pipeline du projet (mapper statut projet -> position visuelle)
+  const pipelineIdx = projetStatusToStep[projet.statut] ?? -1;
 
   return (
-    <div>
-      {/* Header projet */}
-      <div style={{ marginBottom: 20 }}>
+    <div style={{ maxWidth: "100%", padding: "20px 32px 48px" }}>
+      {/* Header */}
+      <div style={{ marginBottom: 18 }}>
         <div className="row" style={{ gap: 8, fontSize: 12.5, color: "var(--text-3)", marginBottom: 8 }}>
-          <Link href="/projets" style={{ cursor: "pointer" }}>Projets</Link>
+          <Link href="/projets" style={{ cursor: "pointer", color: "var(--text-3)" }}>Projets</Link>
           <span>/</span>
           <span style={{ color: "var(--text)" }}>{projet.titre}</span>
         </div>
@@ -75,7 +101,9 @@ export default function ProjetDetailPage() {
                 {projet.bailleur.sigle.slice(0, 3)}
               </div>
               <div>
-                <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.015em" }}>{projet.titre}</h1>
+                <div className="row" style={{ gap: 8 }}>
+                  <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.015em", color: "var(--text)" }}>{projet.titre}</h1>
+                </div>
                 <div className="row" style={{ gap: 10, marginTop: 4, fontSize: 12.5, color: "var(--text-3)" }}>
                   <span className="mono">{projet.reference ?? projet.bailleur.sigle}</span>
                   <span>·</span>
@@ -89,41 +117,46 @@ export default function ProjetDetailPage() {
             </div>
           </div>
           <div className="row" style={{ gap: 8 }}>
-            <a href={`/api/projets/${id}/export`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">Exporter</a>
+            <button className="btn btn-secondary btn-sm" onClick={() => setTab("kanban")}>
+              <Icons.Sparkles size={14} /> Co-pilote IA
+            </button>
+            <button className="btn btn-secondary btn-sm" onClick={() => setTab("equipe")}>
+              <Icons.Users size={14} /> Equipe
+            </button>
+            <button className="btn btn-primary btn-sm">
+              Soumettre <Icons.ArrowRight size={14} />
+            </button>
           </div>
         </div>
 
-        {/* Pipeline stepper */}
+        {/* Pipeline strip */}
         <div className="card" style={{ marginTop: 16, padding: "14px 18px" }}>
           <div className="row" style={{ gap: 8, marginBottom: 12 }}>
             <span style={{ fontSize: 11.5, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Pipeline</span>
             <span style={{ marginLeft: "auto", fontSize: 12.5, color: "var(--text-2)" }}>
-              <span className="tnum" style={{ fontWeight: 600, color: "var(--text)" }}>{progression}%</span> · {valides}/{totalDocs} documents
+              <span className="tnum" style={{ fontWeight: 600, color: "var(--text)" }}>{progression}%</span> · {valides}/{totalDocs} documents · {tachesDone}/{projet.taches.length} taches
             </span>
           </div>
           <div className="row" style={{ gap: 0 }}>
-            {["BROUILLON", "EN_COURS", "EN_REVISION", "SOUMIS", "ACCEPTE"].map((s, i) => {
-              const steps = ["BROUILLON", "EN_COURS", "EN_REVISION", "SOUMIS", "ACCEPTE"];
-              const labels: Record<string,string> = { BROUILLON: "Brouillon", EN_COURS: "En cours", EN_REVISION: "Revision", SOUMIS: "Soumis", ACCEPTE: "Accepte" };
-              const idx = steps.indexOf(projet.statut);
+            {pipelineSteps.map((s, i) => {
               const isCurrent = s === projet.statut;
-              const isPast = i < idx;
+              const isPast = pipelineIdx >= 0 && i < pipelineIdx;
               return (
-                <div key={s} style={{ flex: 1, display: "flex", alignItems: "center", gap: 6 }}>
+                <div key={s} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>
                   <div style={{
                     width: 24, height: 24, borderRadius: "50%",
-                    background: isPast || isCurrent ? "var(--primary)" : "var(--surface-3)",
+                    background: isPast ? "var(--primary)" : isCurrent ? "var(--primary)" : "var(--surface-3)",
                     color: isPast || isCurrent ? "white" : "var(--text-3)",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 11, fontWeight: 600, flexShrink: 0,
                     boxShadow: isCurrent ? "0 0 0 4px color-mix(in oklch, var(--primary) 18%, transparent)" : "none",
                   }}>
-                    {isPast ? "✓" : i + 1}
+                    {isPast ? <Icons.Check size={12} /> : i + 1}
                   </div>
-                  <div style={{ fontSize: 11, fontWeight: isCurrent ? 600 : 500, color: isCurrent ? "var(--text)" : isPast ? "var(--text-2)" : "var(--text-4)", whiteSpace: "nowrap" }}>
-                    {labels[s] ?? s}
+                  <div style={{ fontSize: 11.5, fontWeight: isCurrent ? 600 : 500, color: isCurrent ? "var(--text)" : isPast ? "var(--text-2)" : "var(--text-4)", whiteSpace: "nowrap" }}>
+                    {statusLabels[s] ?? s}
                   </div>
-                  {i < 4 && <div style={{ flex: 1, height: 1, background: isPast ? "var(--primary)" : "var(--border)", minWidth: 8 }} />}
+                  {i < 5 && <div style={{ flex: 1, height: 1, background: isPast ? "var(--primary)" : "var(--border)", minWidth: 8 }} />}
                 </div>
               );
             })}
@@ -134,9 +167,9 @@ export default function ProjetDetailPage() {
       {/* Tabs */}
       <div className="row" style={{ borderBottom: "1px solid var(--border)", marginBottom: 16, gap: 2 }}>
         {([
-          { id: "kanban" as const, label: "Kanban", Ic: Icons.Dashboard },
-          { id: "ia" as const, label: "IA", Ic: Icons.Sparkles },
-          { id: "taches" as const, label: "Taches", Ic: Icons.Check },
+          { id: "kanban" as const, label: "Kanban", Ic: Icons.Kanban },
+          { id: "timeline" as const, label: "Timeline", Ic: Icons.Timeline },
+          { id: "docs" as const, label: "Documents", Ic: Icons.Doc },
           { id: "equipe" as const, label: "Equipe", Ic: Icons.Users },
           { id: "activite" as const, label: "Activite", Ic: Icons.Clock },
         ]).map(t => (
@@ -149,278 +182,249 @@ export default function ProjetDetailPage() {
             <t.Ic size={14} /> {t.label}
           </button>
         ))}
+        <div style={{ marginLeft: "auto" }} className="row">
+          <button className="btn btn-ghost btn-sm">
+            <Icons.Money size={14} /> Budget
+          </button>
+          <button className="btn btn-secondary btn-sm">
+            <Icons.Plus size={14} /> Document
+          </button>
+        </div>
       </div>
 
-      {/* Tab: Kanban */}
-      {tab === "kanban" && (
-        <KanbanBoard projetId={id} documents={projet.documents} onMoveDocument={moveDocument} />
-      )}
+      {/* Tab content */}
+      {tab === "kanban" && <KanbanBoard projetId={id} documents={projet.documents} onMoveDocument={moveDocument} />}
+      {tab === "timeline" && <DocTimeline documents={projet.documents} dateLimiteProjet={projet.dateLimite} />}
+      {tab === "docs" && <DocsTable projetId={id} documents={projet.documents} />}
+      {tab === "equipe" && <TeamView membres={projet.membres} />}
+      {tab === "activite" && <ActivityView activites={projet.activites} />}
+    </div>
+  );
+}
 
-      {/* Tab: IA */}
-      {tab === "ia" && (
-        <IAPanel projetId={id} documents={projet.documents} bailleur={projet.bailleur.sigle} titreProjet={projet.titre} description={projet.description} onReload={load} />
-      )}
+/* ─── Timeline / Gantt ─── */
+function DocTimeline({ documents, dateLimiteProjet }: { documents: Document[]; dateLimiteProjet: string }) {
+  if (documents.length === 0) {
+    return <div className="card" style={{ padding: 48, textAlign: "center" }}><p style={{ color: "var(--text-4)", fontSize: 13 }}>Aucun document</p></div>;
+  }
 
-      {/* Tab: Taches */}
-      {tab === "taches" && (
-        <TachesPanel projetId={id} taches={projet.taches} membres={projet.membres} onReload={load} />
-      )}
+  // Calculer la plage de dates
+  const deadlines = documents.filter(d => d.dateLimite).map(d => new Date(d.dateLimite!).getTime());
+  const now = Date.now();
+  const earliest = deadlines.length > 0 ? Math.min(...deadlines) : now;
+  const latest = deadlines.length > 0 ? Math.max(...deadlines) : now;
 
-      {/* Tab: Equipe */}
-      {tab === "equipe" && (
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="space-y-3">
-            {projet.membres.map(m => (
-              <div key={m.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50">
-                <div>
-                  <p className="text-sm font-medium text-slate-900">{m.user.name}</p>
-                  <p className="text-xs text-slate-400">{m.user.email}</p>
-                </div>
-                <span className="px-2 py-1 rounded text-xs font-medium bg-indigo-100 text-indigo-700">{m.role}</span>
+  // Etendre la plage de 2 semaines avant/apres
+  const startMs = earliest - 14 * 864e5;
+  const endMs = latest + 14 * 864e5;
+  const span = endMs - startMs;
+
+  // Generer les labels de mois
+  const months: string[] = [];
+  const monthStarts: number[] = [];
+  const d = new Date(startMs);
+  d.setDate(1);
+  while (d.getTime() <= endMs) {
+    months.push(d.toLocaleDateString("fr-FR", { month: "short", year: "numeric" }));
+    monthStarts.push(d.getTime());
+    d.setMonth(d.getMonth() + 1);
+  }
+
+  const todayPct = ((now - startMs) / span) * 100;
+
+  return (
+    <div className="card" style={{ overflow: "hidden" }}>
+      {/* Header mois */}
+      <div style={{ display: "grid", gridTemplateColumns: "240px 1fr" }}>
+        <div style={{ borderRight: "1px solid var(--border)", background: "var(--surface-2)", padding: "10px 14px", fontSize: 11.5, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Document</div>
+        <div style={{ display: "flex", background: "var(--surface-2)", position: "relative" }}>
+          {months.map((m, i) => {
+            const left = ((monthStarts[i] - startMs) / span) * 100;
+            return (
+              <div key={m + i} style={{ position: "absolute", left: `${left}%`, padding: "10px 14px", fontSize: 11.5, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                {m}
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      )}
+      </div>
 
-      {/* Tab: Activite */}
-      {tab === "activite" && (
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          {projet.activites.length === 0 ? (
-            <p className="text-slate-400 text-sm text-center py-8">Aucune activite.</p>
-          ) : (
-            <div className="space-y-3">
-              {projet.activites.map(a => (
-                <div key={a.id} className="flex items-center gap-3 text-sm">
-                  <span className="text-xs text-slate-400 w-36 flex-shrink-0">{new Date(a.createdAt).toLocaleString("fr-FR")}</span>
-                  <span className="font-medium text-slate-700">{a.user.name}</span>
-                  <span className="text-slate-500">{a.description}</span>
-                </div>
-              ))}
+      {/* Lignes */}
+      {documents.map(doc => {
+        const dlEnd = doc.dateLimite ? new Date(doc.dateLimite).getTime() : endMs;
+        const dlStart = dlEnd - 7 * 864e5; // 1 semaine de duree
+        const left = Math.max(0, ((dlStart - startMs) / span) * 100);
+        const width = Math.min(100 - left, ((dlEnd - dlStart) / span) * 100);
+        const color = doc.statut === "VALIDE" ? "var(--success)" : doc.statut === "BROUILLON" ? "var(--st-brouillon)" : "var(--primary)";
+        const prog = doc.progression ?? 0;
+
+        return (
+          <div key={doc.id} style={{ display: "grid", gridTemplateColumns: "240px 1fr", borderTop: "1px solid var(--border)", minHeight: 44 }}>
+            <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }}>
+              <div style={{ fontSize: 12.5, fontWeight: 500, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.titre}</div>
+              <div style={{ fontSize: 10.5, color: "var(--text-4)" }}>{categorieLabels[doc.categorie] ?? doc.categorie}</div>
             </div>
-          )}
+            <div style={{ position: "relative" }}>
+              <div style={{
+                position: "absolute", top: "50%", transform: "translateY(-50%)",
+                left: `${left}%`, width: `${width}%`, height: 22,
+                background: `color-mix(in oklch, ${color} 18%, transparent)`,
+                border: `1px solid color-mix(in oklch, ${color} 45%, transparent)`,
+                borderRadius: 6,
+                display: "flex", alignItems: "center", padding: "0 8px",
+                fontSize: 10.5, fontWeight: 600, color: "var(--text-2)",
+                overflow: "hidden",
+              }}>
+                <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${prog}%`, background: `color-mix(in oklch, ${color} 25%, transparent)` }} />
+                <span style={{ position: "relative" }}>{prog}%</span>
+              </div>
+              {/* Ligne aujourd'hui */}
+              <div style={{ position: "absolute", top: 0, bottom: 0, left: `${todayPct}%`, borderLeft: "2px dashed var(--accent)", zIndex: 1 }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─── Documents Table ─── */
+function DocsTable({ projetId, documents }: { projetId: string; documents: Document[] }) {
+  return (
+    <div className="card">
+      <table className="t">
+        <thead>
+          <tr>
+            <th>Document</th>
+            <th>Categorie</th>
+            <th>Statut</th>
+            <th>Avancement</th>
+            <th>Assigne a</th>
+            <th>Echeance</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {documents.map(d => {
+            const prog = d.progression ?? 0;
+            const dl = d.dateLimite ? daysUntil(d.dateLimite) : null;
+            return (
+              <tr key={d.id} style={{ cursor: "pointer" }}>
+                <td>
+                  <Link href={`/projets/${projetId}/docs/${d.id}`} style={{ fontWeight: 500, color: "var(--text)" }}>
+                    {d.titre}
+                  </Link>
+                </td>
+                <td style={{ fontSize: 12, color: "var(--text-3)" }}>{categorieLabels[d.categorie] ?? d.categorie}</td>
+                <td>
+                  <span className="pill" style={{ background: `color-mix(in oklch, ${statusColors[d.statut] ?? "var(--text-3)"} 12%, transparent)`, color: statusColors[d.statut] }}>
+                    <span className="dot" style={{ background: statusColors[d.statut] }} />
+                    {statusLabels[d.statut] ?? d.statut}
+                  </span>
+                </td>
+                <td style={{ width: 160 }}>
+                  <div className="row" style={{ gap: 8 }}>
+                    <div style={{ flex: 1, height: 4, background: "var(--surface-3)", borderRadius: 2, overflow: "hidden" }}>
+                      <div style={{ width: `${prog}%`, height: "100%", background: "var(--primary)", borderRadius: 2 }} />
+                    </div>
+                    <span className="tnum" style={{ fontSize: 11.5, color: "var(--text-3)", minWidth: 28 }}>{prog}%</span>
+                  </div>
+                </td>
+                <td>
+                  {d.assigneA ? (
+                    <div className="row" style={{ gap: 6 }}>
+                      <div className="avatar" style={{ width: 20, height: 20, fontSize: 9, background: "var(--primary)" }}>
+                        {d.assigneA.name.charAt(0)}
+                      </div>
+                      <span style={{ fontSize: 12 }}>{d.assigneA.name}</span>
+                    </div>
+                  ) : <span style={{ color: "var(--text-4)" }}>—</span>}
+                </td>
+                <td>
+                  {dl !== null ? (
+                    <span style={{ fontSize: 12, color: dl <= 3 ? "var(--danger)" : dl <= 7 ? "var(--warning)" : "var(--text-3)" }}>
+                      {dl <= 0 ? "Expire !" : `${dl}j`}
+                    </span>
+                  ) : <span style={{ color: "var(--text-4)" }}>—</span>}
+                </td>
+                <td>
+                  <Icons.More size={14} style={{ color: "var(--text-3)" }} />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {documents.length === 0 && (
+        <div style={{ padding: 48, textAlign: "center" }}>
+          <p style={{ color: "var(--text-4)", fontSize: 13 }}>Aucun document</p>
         </div>
       )}
     </div>
   );
 }
 
-// Panneau de gestion des taches
-function TachesPanel({ projetId, taches: initialTaches, membres, onReload }: {
-  projetId: string;
-  taches: Tache[];
-  membres: Membre[];
-  onReload: () => void;
-}) {
-  const [taches, setTaches] = useState(initialTaches);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ titre: "", description: "", assigneAId: "", priorite: "MOYENNE", dateLimite: "" });
-  const [formLoading, setFormLoading] = useState(false);
-
-  async function createTache(e: React.FormEvent) {
-    e.preventDefault(); setFormLoading(true);
-    const res = await fetch(`/api/projets/${projetId}/taches`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setTaches(prev => [data.tache, ...prev]);
-      setForm({ titre: "", description: "", assigneAId: "", priorite: "MOYENNE", dateLimite: "" });
-      setShowForm(false);
-      onReload();
-    }
-    setFormLoading(false);
-  }
-
-  async function toggleStatut(tache: Tache) {
-    const next = tache.statut === "A_FAIRE" ? "EN_COURS" : tache.statut === "EN_COURS" ? "TERMINE" : "A_FAIRE";
-    await fetch(`/api/projets/${projetId}/taches/${tache.id}`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ statut: next }),
-    });
-    setTaches(prev => prev.map(t => t.id === tache.id ? { ...t, statut: next } : t));
-  }
-
-  async function deleteTache(tacheId: string) {
-    if (!confirm("Supprimer cette tache ?")) return;
-    await fetch(`/api/projets/${projetId}/taches/${tacheId}`, { method: "DELETE" });
-    setTaches(prev => prev.filter(t => t.id !== tacheId));
-  }
-
-  const statutBadge: Record<string, string> = {
-    A_FAIRE: "badge-neutral", EN_COURS: "badge-blue", TERMINE: "badge-success",
-  };
-  const statutLabel: Record<string, string> = {
-    A_FAIRE: "A faire", EN_COURS: "En cours", TERMINE: "Termine",
-  };
-  const prioBadge: Record<string, string> = {
-    HAUTE: "badge-danger", MOYENNE: "badge-warning", BASSE: "badge-neutral",
-  };
-
+/* ─── Team View ─── */
+function TeamView({ membres }: { membres: Membre[] }) {
   return (
-    <div className="card p-0 overflow-hidden">
-      <div className="px-5 py-3 border-b border-[#e2e8f0] flex items-center justify-between">
-        <h2 className="text-[13px] font-bold text-[#1a365d] uppercase tracking-wider">Taches ({taches.length})</h2>
-        <button onClick={() => setShowForm(!showForm)}
-          className="px-3 py-1.5 rounded text-[12px] font-semibold text-white" style={{ background: "#0468b1" }}>
-          {showForm ? "Annuler" : "+ Nouvelle tache"}
+    <div className="card" style={{ padding: 18 }}>
+      <div className="row" style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 14, fontWeight: 600 }}>Equipe projet · {membres.length} membres</div>
+        <button className="btn btn-secondary btn-sm" style={{ marginLeft: "auto" }}>
+          <Icons.Plus size={14} /> Inviter
         </button>
       </div>
-
-      {showForm && (
-        <form onSubmit={createTache} className="p-5 border-b border-[#e2e8f0] bg-[#f8fafc] space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
-              <label className="block text-[11px] font-semibold text-[#64748b] uppercase mb-1">Titre</label>
-              <input value={form.titre} onChange={e => setForm({...form, titre: e.target.value})} required
-                placeholder="Ex: Rediger la section methodologie"
-                className="w-full px-3 py-2 border border-[#e2e8f0] rounded text-[13px]" />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-[#64748b] uppercase mb-1">Assigner a</label>
-              <select value={form.assigneAId} onChange={e => setForm({...form, assigneAId: e.target.value})}
-                className="w-full px-3 py-2 border border-[#e2e8f0] rounded text-[13px]">
-                <option value="">Non assigne</option>
-                {membres.map(m => <option key={m.user.id} value={m.user.id}>{m.user.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-[#64748b] uppercase mb-1">Priorite</label>
-              <select value={form.priorite} onChange={e => setForm({...form, priorite: e.target.value})}
-                className="w-full px-3 py-2 border border-[#e2e8f0] rounded text-[13px]">
-                <option value="HAUTE">Haute</option>
-                <option value="MOYENNE">Moyenne</option>
-                <option value="BASSE">Basse</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-[#64748b] uppercase mb-1">Date limite</label>
-              <input type="date" value={form.dateLimite} onChange={e => setForm({...form, dateLimite: e.target.value})}
-                className="w-full px-3 py-2 border border-[#e2e8f0] rounded text-[13px]" />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-[#64748b] uppercase mb-1">Description</label>
-              <input value={form.description} onChange={e => setForm({...form, description: e.target.value})}
-                placeholder="Optionnel" className="w-full px-3 py-2 border border-[#e2e8f0] rounded text-[13px]" />
-            </div>
-          </div>
-          <button type="submit" disabled={formLoading}
-            className="px-4 py-2 rounded text-[12px] font-semibold text-white disabled:opacity-50" style={{ background: "#0468b1" }}>
-            {formLoading ? "Creation..." : "Creer la tache"}
-          </button>
-        </form>
-      )}
-
-      {taches.length === 0 && !showForm ? (
-        <div className="p-8 text-center">
-          <p className="text-[#94a3b8] text-[13px]">Aucune tache pour ce projet</p>
+      {membres.length === 0 ? (
+        <div style={{ padding: 32, textAlign: "center" }}>
+          <p style={{ color: "var(--text-4)", fontSize: 13 }}>Aucun membre</p>
         </div>
       ) : (
-        <div className="divide-y divide-[#f1f5f9]">
-          {taches.map(t => (
-            <div key={t.id} className="flex items-center gap-3 px-5 py-3 hover:bg-[#f8fafc] transition-colors group">
-              <button onClick={() => toggleStatut(t)} className="flex-shrink-0" title="Changer le statut">
-                {t.statut === "TERMINE" ? (
-                  <svg className="w-5 h-5 text-[#059669]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                ) : (
-                  <div className={`w-5 h-5 rounded-full border-2 ${t.statut === "EN_COURS" ? "border-[#0468b1] bg-[#e8f4fc]" : "border-[#cbd5e1]"}`} />
-                )}
-              </button>
-              <div className="flex-1 min-w-0">
-                <p className={`text-[13px] font-medium ${t.statut === "TERMINE" ? "line-through text-[#94a3b8]" : "text-[#1e293b]"}`}>{t.titre}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  {t.assigneA && <span className="text-[10px] text-[#64748b]">{t.assigneA.name}</span>}
-                  {t.dateLimite && <span className="text-[10px] text-[#94a3b8]">· {new Date(t.dateLimite).toLocaleDateString("fr-FR")}</span>}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+          {membres.map(m => {
+            const initials = m.user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+            return (
+              <div key={m.id} className="row" style={{ padding: 10, border: "1px solid var(--border)", borderRadius: 8, gap: 10 }}>
+                <div className="avatar" style={{ width: 36, height: 36, fontSize: 12, background: "var(--primary)" }}>{initials}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{m.user.name}</div>
+                  <div style={{ fontSize: 11.5, color: "var(--text-3)" }}>{m.role}</div>
                 </div>
+                <button className="icon-btn"><Icons.More size={14} /></button>
               </div>
-              <span className={`badge ${prioBadge[t.priorite] ?? "badge-neutral"}`}>
-                {t.priorite === "HAUTE" ? "Urgent" : t.priorite === "MOYENNE" ? "Normal" : "Faible"}
-              </span>
-              <span className={`badge ${statutBadge[t.statut] ?? "badge-neutral"}`}>{statutLabel[t.statut] ?? t.statut}</span>
-              <button onClick={() => deleteTache(t.id)} className="text-[#dc2626] opacity-0 group-hover:opacity-100 transition-opacity text-xs">
-                ✕
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
 
-// Panneau IA
-function IAPanel({ projetId, documents, onReload }: {
-  projetId: string; documents: Document[]; bailleur: string; titreProjet: string; description: string; onReload: () => void;
-}) {
-  const [appelTexte, setAppelTexte] = useState("");
-  const [analyzing, setAnalyzing] = useState(false);
-  const [analyse, setAnalyse] = useState<{ criteres: string; exigences: string; documentsRequis: string; budgetEstime: string; recommandations: string } | null>(null);
-  const [generating, setGenerating] = useState<string | null>(null);
-  const [error, setError] = useState("");
-
-  async function analyser() {
-    if (appelTexte.length < 50) { setError("Collez le texte (min 50 caracteres)."); return; }
-    setAnalyzing(true); setError("");
-    const res = await fetch(`/api/projets/${projetId}/analyser`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ texte: appelTexte }),
-    });
-    const data = await res.json(); setAnalyzing(false);
-    if (!res.ok) { setError(data.error ?? "Erreur"); return; }
-    setAnalyse(data.analyse);
+/* ─── Activity View ─── */
+function ActivityView({ activites }: { activites: Activite[] }) {
+  if (activites.length === 0) {
+    return (
+      <div className="card" style={{ padding: 48, textAlign: "center" }}>
+        <p style={{ color: "var(--text-4)", fontSize: 13 }}>Aucune activite</p>
+      </div>
+    );
   }
-
-  async function genererDoc(docId: string) {
-    setGenerating(docId);
-    const res = await fetch(`/api/documents/${docId}/generer`, { method: "POST" });
-    setGenerating(null);
-    if (res.ok) { onReload(); } else { const d = await res.json(); alert(d.error ?? "Erreur"); }
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="card p-0 overflow-hidden">
-        <div className="px-5 py-3 border-b border-[#e2e8f0]" style={{ background: "#0468b1" }}>
-          <h2 className="text-[14px] font-bold text-white">🧠 Analyse IA de l&apos;appel d&apos;offres</h2>
-          <p className="text-[11px] text-white/70 mt-0.5">Collez le texte — l&apos;IA extractra criteres, exigences et recommandations.</p>
-        </div>
-        <div className="p-5">
-          <textarea value={appelTexte} onChange={e => setAppelTexte(e.target.value)} rows={6}
-            placeholder="Collez ici le texte de l'appel d'offres..." className="w-full px-3 py-2 border border-[#e2e8f0] rounded text-[13px] mb-3" />
-          {error && <p className="text-[#dc2626] text-[12px] mb-3">{error}</p>}
-          <button onClick={analyser} disabled={analyzing}
-            className="px-5 py-2.5 rounded text-[13px] font-semibold text-white disabled:opacity-50" style={{ background: "#0468b1" }}>
-            {analyzing ? "Analyse en cours..." : "🧠 Analyser"}
-          </button>
-        </div>
-      </div>
-
-      {analyse && (
-        <div className="grid grid-cols-2 gap-4">
-          <div className="card p-5"><h3 className="text-[13px] font-bold text-[#1a365d] mb-3">📋 Criteres</h3><pre className="text-[12px] text-[#1e293b] whitespace-pre-wrap">{analyse.criteres}</pre></div>
-          <div className="card p-5"><h3 className="text-[13px] font-bold text-[#1a365d] mb-3">📌 Exigences</h3><pre className="text-[12px] text-[#1e293b] whitespace-pre-wrap">{analyse.exigences}</pre></div>
-          <div className="card p-5"><h3 className="text-[13px] font-bold text-[#1a365d] mb-3">📄 Documents requis</h3><pre className="text-[12px] text-[#1e293b] whitespace-pre-wrap">{analyse.documentsRequis}</pre></div>
-          <div className="card p-5"><h3 className="text-[13px] font-bold text-[#1a365d] mb-3">💡 Recommandations</h3><pre className="text-[12px] text-[#1e293b] whitespace-pre-wrap">{analyse.recommandations}</pre></div>
-        </div>
-      )}
-
-      <div className="card p-0 overflow-hidden">
-        <div className="px-5 py-3 border-b border-[#e2e8f0]">
-          <h2 className="text-[13px] font-bold text-[#1a365d] uppercase tracking-wider">Generer du contenu</h2>
-        </div>
-        <div className="divide-y divide-[#f1f5f9]">
-          {documents.map(doc => (
-            <div key={doc.id} className="flex items-center justify-between px-5 py-3 hover:bg-[#f8fafc]">
-              <div><p className="text-[13px] font-medium text-[#1e293b]">{doc.titre}</p></div>
-              <button onClick={() => genererDoc(doc.id)} disabled={generating === doc.id}
-                className="px-3 py-1.5 rounded text-[11px] font-semibold text-white disabled:opacity-50" style={{ background: "#0468b1" }}>
-                {generating === doc.id ? "..." : "🧠 Generer"}
-              </button>
+    <div className="card" style={{ padding: 18 }}>
+      {activites.map((a, i) => {
+        const initials = a.user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+        return (
+          <div key={a.id} className="row" style={{ gap: 10, padding: "10px 0", borderBottom: i < activites.length - 1 ? "1px solid var(--border)" : "none", alignItems: "flex-start" }}>
+            <div className="avatar" style={{ width: 28, height: 28, fontSize: 10, background: "var(--primary)", flexShrink: 0 }}>{initials}</div>
+            <div style={{ flex: 1, fontSize: 13 }}>
+              <span style={{ color: "var(--text)", fontWeight: 600 }}>{a.user.name}</span>
+              <span style={{ color: "var(--text-3)" }}> {a.description}</span>
+              <div style={{ fontSize: 11.5, color: "var(--text-4)", marginTop: 2 }}>
+                {new Date(a.createdAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
