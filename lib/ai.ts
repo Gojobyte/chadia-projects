@@ -25,7 +25,7 @@ export async function analyserAppelOffre(texte: string): Promise<{
   recommandations: string;
 }> {
   const ai = getAI();
-  const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = ai.getGenerativeModel({ model: "gemini-2.5-flash-preview-05-20" });
 
   const result = await model.generateContent(`Tu es un expert en montage de projets pour les ONG internationales. Analyse cet appel d'offres et extrais les informations suivantes en francais.
 
@@ -62,7 +62,7 @@ export async function genererContenu(params: {
   analyseIA?: string;
 }): Promise<string> {
   const ai = getAI();
-  const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = ai.getGenerativeModel({ model: "gemini-2.5-flash-preview-05-20" });
 
   const result = await model.generateContent(`Tu es un expert en redaction de projets pour les ONG. Genere le contenu d'un document de type "${params.typeDocument}" pour le projet suivant.
 
@@ -85,7 +85,7 @@ export async function verifierConformite(params: {
   exigences: string;
 }): Promise<{ score: number; problemes: string; suggestions: string }> {
   const ai = getAI();
-  const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = ai.getGenerativeModel({ model: "gemini-2.5-flash-preview-05-20" });
 
   const result = await model.generateContent(`Evalue la conformite de ce document par rapport aux exigences. Reponds UNIQUEMENT en JSON valide :
 
