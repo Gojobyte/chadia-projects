@@ -758,16 +758,17 @@ export default function DocumentPage() {
 
       {/* ─── Modal Aperçu Document ─── */}
       {showPreview && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 32 }}
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 200, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "stretch", justifyContent: "center", padding: "24px 40px" }}
           onClick={() => setShowPreview(false)}>
           <div onClick={e => e.stopPropagation()} style={{
-            background: "white", borderRadius: 12, width: "100%", maxWidth: 800,
-            maxHeight: "90vh", overflow: "auto", boxShadow: "0 24px 48px rgba(0,0,0,0.2)",
+            background: "white", borderRadius: 12, width: "100%", maxWidth: 960,
+            display: "flex", flexDirection: "column",
+            boxShadow: "0 24px 48px rgba(0,0,0,0.25)",
           }}>
-            {/* Preview header */}
-            <div style={{ padding: "16px 24px", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "white", zIndex: 1 }}>
+            {/* Preview header — sticky en haut */}
+            <div style={{ padding: "14px 24px", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, borderRadius: "12px 12px 0 0" }}>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>Aperçu du document</div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: "#1e293b" }}>Aperçu du document</div>
                 <div style={{ fontSize: 12, color: "#94a3b8" }}>{doc.titre} — {doc.projet.titre}</div>
               </div>
               <div className="row" style={{ gap: 8 }}>
@@ -783,14 +784,14 @@ export default function DocumentPage() {
               </div>
             </div>
 
-            {/* Preview body — style page A4 */}
-            <div style={{ padding: "48px 64px", fontFamily: "Georgia, serif", fontSize: "12pt", lineHeight: 1.8, color: "#1e293b" }}>
+            {/* Preview body — scrollable, style page A4 */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "48px 72px", fontFamily: "Georgia, serif", fontSize: "12pt", lineHeight: 1.8, color: "#1e293b" }}>
               {/* En-tête document */}
               <div style={{ textAlign: "center", marginBottom: 32 }}>
                 <div style={{ fontSize: "10pt", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>
                   {categorieLabels[doc.categorie] ?? doc.categorie}
                 </div>
-                <h1 style={{ fontSize: "20pt", fontWeight: 700, color: "#0f172a", margin: "0 0 8px" }}>{doc.titre}</h1>
+                <h1 style={{ fontSize: "22pt", fontWeight: 700, color: "#0f172a", margin: "0 0 8px" }}>{doc.titre}</h1>
                 <div style={{ fontSize: "10pt", color: "#94a3b8" }}>
                   {doc.projet.titre} — {doc.assigneA?.name ?? "Non assigné"}
                 </div>
