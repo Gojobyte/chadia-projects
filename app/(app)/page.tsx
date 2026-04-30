@@ -14,6 +14,13 @@ function daysUntil(date: Date): number {
   return Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
+const statutLabels: Record<string, string> = {
+  BROUILLON: "Brouillon", EN_COURS: "En cours", EN_REVISION: "Revision", SOUMIS: "Soumis",
+};
+const statutBadge: Record<string, string> = {
+  BROUILLON: "badge-neutral", EN_COURS: "badge-blue", EN_REVISION: "badge-warning", SOUMIS: "badge-success",
+};
+
 export default async function Dashboard() {
   const session = await auth();
   if (!session?.user) redirect("/login");
@@ -22,7 +29,7 @@ export default async function Dashboard() {
     prisma.projet.findMany({
       where: { statut: { in: ["EN_COURS", "BROUILLON", "EN_REVISION"] } },
       include: { bailleur: { select: { sigle: true } }, documents: { select: { statut: true } } },
-      orderBy: { dateLimite: "asc" }, take: 6,
+      orderBy: { dateLimite: "asc" }, take: 8,
     }),
     prisma.projet.findMany({
       where: { dateLimite: { lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) }, statut: { notIn: ["SOUMIS", "ACCEPTE", "REJETE", "ARCHIVE"] } },
@@ -36,7 +43,7 @@ export default async function Dashboard() {
     }),
     prisma.activite.findMany({
       include: { user: { select: { name: true } }, projet: { select: { titre: true } } },
-      orderBy: { createdAt: "desc" }, take: 8,
+      orderBy: { createdAt: "desc" }, take: 10,
     }),
     prisma.projet.count(),
   ]);
@@ -44,116 +51,143 @@ export default async function Dashboard() {
   const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   return (
-    <div className="min-h-screen" style={{ background: "#0c0f1a" }}>
-      {/* Hero banner */}
-      <div className="relative overflow-hidden rounded-2xl mx-1 mb-8 animate-in delay-1"
-        style={{ background: "linear-gradient(135deg, #141829 0%, #1a1040 50%, #1e1145 100%)" }}>
-        <div className="absolute inset-0 opacity-30"
-          style={{ background: "radial-gradient(ellipse at 70% 20%, rgba(129,140,248,0.15), transparent 60%), radial-gradient(ellipse at 30% 80%, rgba(245,158,11,0.1), transparent 50%)" }} />
-        <div className="relative px-8 py-8 flex items-center justify-between">
-          <div>
-            <p className="text-white/30 text-xs font-medium tracking-widest uppercase mb-1">{today}</p>
-            <h1 className="text-2xl font-semibold text-white/90">
-              {getGreeting()}, <span className="text-transparent bg-clip-text" style={{ backgroundImage: "linear-gradient(135deg, #818cf8, #f59e0b)" }}>{session.user.name}</span>
-            </h1>
-            <p className="text-white/30 text-sm mt-1">Votre espace de pilotage de projets</p>
-          </div>
-          <Link href="/projets/nouveau"
-            className="px-5 py-2.5 rounded-xl text-sm font-medium text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
-            style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", boxShadow: "0 4px 20px rgba(99,102,241,0.3)" }}>
-            + Nouveau projet
-          </Link>
+    <div>
+      {/* Header */}
+      <div className="flex items-end justify-between mb-6 animate-in delay-1">
+        <div>
+          <p className="text-[12px] text-[#94a3b8] mb-0.5 capitalize">{today}</p>
+          <h1 className="text-[22px] font-bold text-[#1a365d]">{getGreeting()}, {session.user.name}</h1>
         </div>
+        <Link href="/projets/nouveau"
+          className="px-4 py-2 rounded text-[13px] font-semibold text-white transition-colors hover:opacity-90"
+          style={{ background: "#0468b1" }}>
+          + Nouveau projet
+        </Link>
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        <StatCard label="Projets actifs" value={projetsEnCours.length} total={totalProjets} icon="📊" variant="amber" delay="delay-2" />
-        <StatCard label="Deadlines proches" value={deadlinesProches.length} icon="⏰" variant={deadlinesProches.length > 0 ? "rose" : "default"} delay="delay-3" />
-        <StatCard label="Mes taches" value={mesTaches.length} icon="✅" variant="indigo" delay="delay-4" />
-        <StatCard label="Activites recentes" value={activiteRecente.length} icon="📈" variant="emerald" delay="delay-5" />
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="card stat-blue p-4 animate-in delay-1">
+          <div className="flex items-center justify-between">
+            <p className="text-[12px] font-medium text-[#64748b]">Projets actifs</p>
+            <svg className="w-5 h-5 text-[#0468b1]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" /></svg>
+          </div>
+          <p className="text-[28px] font-bold text-[#1a365d] mt-1">{projetsEnCours.length}</p>
+          <p className="text-[11px] text-[#94a3b8]">sur {totalProjets} au total</p>
+        </div>
+        <div className={`card ${deadlinesProches.length > 0 ? "stat-red" : "stat-amber"} p-4 animate-in delay-2`}>
+          <div className="flex items-center justify-between">
+            <p className="text-[12px] font-medium text-[#64748b]">Deadlines proches</p>
+            <svg className="w-5 h-5 text-[#dc2626]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+          <p className={`text-[28px] font-bold mt-1 ${deadlinesProches.length > 0 ? "text-[#dc2626]" : "text-[#1a365d]"}`}>{deadlinesProches.length}</p>
+          <p className="text-[11px] text-[#94a3b8]">dans les 7 prochains jours</p>
+        </div>
+        <div className="card stat-green p-4 animate-in delay-3">
+          <div className="flex items-center justify-between">
+            <p className="text-[12px] font-medium text-[#64748b]">Mes taches</p>
+            <svg className="w-5 h-5 text-[#059669]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+          <p className="text-[28px] font-bold text-[#1a365d] mt-1">{mesTaches.length}</p>
+          <p className="text-[11px] text-[#94a3b8]">en attente</p>
+        </div>
+        <div className="card stat-amber p-4 animate-in delay-4">
+          <div className="flex items-center justify-between">
+            <p className="text-[12px] font-medium text-[#64748b]">Activites</p>
+            <svg className="w-5 h-5 text-[#d97706]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
+          </div>
+          <p className="text-[28px] font-bold text-[#1a365d] mt-1">{activiteRecente.length}</p>
+          <p className="text-[11px] text-[#94a3b8]">cette semaine</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-12 gap-5">
-        {/* Projects — 8 cols */}
-        <div className="col-span-8 glass rounded-2xl p-6 animate-in delay-5">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <div className="w-1 h-5 rounded-full" style={{ background: "linear-gradient(to bottom, #818cf8, #6366f1)" }} />
-              <h2 className="text-sm font-semibold text-white/70 uppercase tracking-wider">Projets en cours</h2>
-            </div>
-            <Link href="/projets" className="text-xs text-white/30 hover:text-indigo-400 transition-colors">Voir tout →</Link>
+        {/* Projects table */}
+        <div className="col-span-8 card p-0 overflow-hidden animate-in delay-5">
+          <div className="px-5 py-3 border-b border-[#e2e8f0] flex items-center justify-between">
+            <h2 className="text-[13px] font-bold text-[#1a365d] uppercase tracking-wider">Projets en cours</h2>
+            <Link href="/projets" className="text-[12px] text-[#0468b1] hover:underline font-medium">Voir tout →</Link>
           </div>
-
           {projetsEnCours.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-white/20 text-sm">Aucun projet en cours</p>
-              <Link href="/projets/nouveau" className="text-indigo-400 text-xs hover:underline mt-2 inline-block">Creer un projet</Link>
+            <div className="p-8 text-center">
+              <p className="text-[#94a3b8] text-sm">Aucun projet en cours</p>
+              <Link href="/projets/nouveau" className="text-[#0468b1] text-xs hover:underline mt-1 inline-block">Creer un projet</Link>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {projetsEnCours.map((p) => {
-                const total = p.documents.length;
-                const valides = p.documents.filter((d) => d.statut === "VALIDE").length;
-                const pct = total > 0 ? Math.round((valides / total) * 100) : 0;
-                const days = daysUntil(p.dateLimite);
-                const urgency = days <= 3 ? "text-red-400" : days <= 7 ? "text-amber-400" : "text-white/30";
+            <table className="w-full">
+              <thead>
+                <tr className="bg-[#f8fafc]">
+                  <th className="text-left px-5 py-2 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Projet</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Bailleur</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Statut</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Progression</th>
+                  <th className="text-right px-5 py-2 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Deadline</th>
+                </tr>
+              </thead>
+              <tbody>
+                {projetsEnCours.map((p) => {
+                  const total = p.documents.length;
+                  const valides = p.documents.filter((d) => d.statut === "VALIDE").length;
+                  const pct = total > 0 ? Math.round((valides / total) * 100) : 0;
+                  const days = daysUntil(p.dateLimite);
+                  const deadlineColor = days <= 3 ? "text-[#dc2626] font-bold" : days <= 7 ? "text-[#d97706]" : "text-[#64748b]";
 
-                return (
-                  <Link key={p.id} href={`/projets/${p.id}`}
-                    className="group p-4 rounded-xl border border-white/[0.04] hover:border-white/[0.1] bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-300">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium text-white/80 truncate group-hover:text-white transition-colors">{p.titre}</p>
-                        <p className="text-[10px] text-white/20 mt-0.5 font-mono">{p.bailleur.sigle}</p>
-                      </div>
-                      <ProgressRing pct={pct} size={36} />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-full bg-white/[0.06] rounded-full h-1 flex-1" style={{ minWidth: "60px" }}>
-                          <div className="h-1 rounded-full transition-all" style={{ width: `${pct}%`, background: pct === 100 ? "#34d399" : "linear-gradient(90deg, #6366f1, #818cf8)" }} />
+                  return (
+                    <tr key={p.id} className="border-t border-[#f1f5f9] hover:bg-[#f8fafc] transition-colors">
+                      <td className="px-5 py-3">
+                        <Link href={`/projets/${p.id}`} className="text-[13px] font-medium text-[#1e293b] hover:text-[#0468b1]">{p.titre}</Link>
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className="badge badge-blue">{p.bailleur.sigle}</span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className={`badge ${statutBadge[p.statut] ?? "badge-neutral"}`}>{statutLabels[p.statut] ?? p.statut}</span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 bg-[#e2e8f0] rounded-full h-1.5">
+                            <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, background: pct === 100 ? "#059669" : "#0468b1" }} />
+                          </div>
+                          <span className="text-[11px] text-[#64748b] font-medium w-8">{pct}%</span>
                         </div>
-                        <span className="text-[10px] text-white/30 font-mono">{pct}%</span>
-                      </div>
-                      <span className={`text-[10px] font-medium ${urgency}`}>
-                        {days <= 0 ? "Expire !" : `${days}j`}
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+                      </td>
+                      <td className={`px-5 py-3 text-right text-[12px] ${deadlineColor}`}>
+                        {days <= 0 ? "Expire !" : days === 1 ? "Demain" : `${days} jours`}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           )}
         </div>
 
-        {/* Deadlines — 4 cols */}
-        <div className="col-span-4 glass rounded-2xl p-6 animate-in delay-6">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="w-1 h-5 rounded-full" style={{ background: "linear-gradient(to bottom, #f87171, #ef4444)" }} />
-            <h2 className="text-sm font-semibold text-white/70 uppercase tracking-wider">Deadlines</h2>
+        {/* Deadlines */}
+        <div className="col-span-4 card p-0 overflow-hidden animate-in delay-6">
+          <div className="px-5 py-3 border-b border-[#e2e8f0]">
+            <h2 className="text-[13px] font-bold text-[#1a365d] uppercase tracking-wider">Echeances proches</h2>
           </div>
-
           {deadlinesProches.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-2xl mb-2">🎉</p>
-              <p className="text-white/20 text-xs">Aucune deadline urgente</p>
+            <div className="p-6 text-center">
+              <p className="text-xl mb-1">✓</p>
+              <p className="text-[#94a3b8] text-[12px]">Aucune echeance urgente</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="divide-y divide-[#f1f5f9]">
               {deadlinesProches.map((p) => {
                 const days = daysUntil(p.dateLimite);
-                const bg = days <= 1 ? "bg-red-500/10 border-red-500/20" : days <= 3 ? "bg-amber-500/10 border-amber-500/20" : "bg-white/[0.02] border-white/[0.04]";
-                const textColor = days <= 1 ? "text-red-400" : days <= 3 ? "text-amber-400" : "text-white/50";
+                const dotColor = days <= 1 ? "bg-[#dc2626]" : days <= 3 ? "bg-[#d97706]" : "bg-[#0468b1]";
                 return (
-                  <Link key={p.id} href={`/projets/${p.id}`}
-                    className={`block p-3 rounded-xl border ${bg} hover:bg-white/[0.04] transition-all`}>
-                    <p className="text-xs font-medium text-white/70 truncate">{p.titre}</p>
-                    <div className="flex items-center justify-between mt-1.5">
-                      <span className="text-[10px] text-white/20 font-mono">{p.bailleur.sigle}</span>
-                      <span className={`text-[11px] font-bold ${textColor}`}>
-                        {days <= 0 ? "EXPIRE" : days === 1 ? "Demain" : `${days} jours`}
-                      </span>
+                  <Link key={p.id} href={`/projets/${p.id}`} className="flex items-start gap-3 px-5 py-3 hover:bg-[#f8fafc] transition-colors">
+                    <div className={`w-2 h-2 rounded-full ${dotColor} mt-1.5 flex-shrink-0`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-medium text-[#1e293b] truncate">{p.titre}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] text-[#94a3b8]">{p.bailleur.sigle}</span>
+                        <span className={`text-[10px] font-bold ${days <= 1 ? "text-[#dc2626]" : days <= 3 ? "text-[#d97706]" : "text-[#64748b]"}`}>
+                          {days <= 0 ? "EXPIRE" : days === 1 ? "Demain" : `${days}j restants`}
+                        </span>
+                      </div>
                     </div>
                   </Link>
                 );
@@ -162,33 +196,27 @@ export default async function Dashboard() {
           )}
         </div>
 
-        {/* Tasks — 5 cols */}
-        <div className="col-span-5 glass rounded-2xl p-6 animate-in delay-5">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="w-1 h-5 rounded-full" style={{ background: "linear-gradient(to bottom, #f59e0b, #d97706)" }} />
-            <h2 className="text-sm font-semibold text-white/70 uppercase tracking-wider">Mes taches</h2>
+        {/* Tasks */}
+        <div className="col-span-5 card p-0 overflow-hidden animate-in delay-5">
+          <div className="px-5 py-3 border-b border-[#e2e8f0]">
+            <h2 className="text-[13px] font-bold text-[#1a365d] uppercase tracking-wider">Mes taches</h2>
           </div>
-
           {mesTaches.length === 0 ? (
-            <p className="text-white/20 text-xs text-center py-8">Aucune tache assignee</p>
+            <div className="p-6 text-center">
+              <p className="text-[#94a3b8] text-[12px]">Aucune tache en attente</p>
+            </div>
           ) : (
-            <div className="space-y-1.5">
+            <div className="divide-y divide-[#f1f5f9]">
               {mesTaches.map((t) => {
-                const prioColors: Record<string, string> = {
-                  HAUTE: "bg-red-500/20 text-red-400 border-red-500/30",
-                  MOYENNE: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-                  BASSE: "bg-white/[0.06] text-white/40 border-white/[0.08]",
-                };
+                const prioClass = t.priorite === "HAUTE" ? "badge-danger" : t.priorite === "MOYENNE" ? "badge-warning" : "badge-neutral";
                 return (
-                  <div key={t.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/[0.03] transition-all group">
-                    <div className="w-4 h-4 rounded border border-white/10 group-hover:border-indigo-400/50 transition-colors flex-shrink-0" />
+                  <div key={t.id} className="flex items-center gap-3 px-5 py-2.5 hover:bg-[#f8fafc] transition-colors">
+                    <input type="checkbox" disabled className="w-3.5 h-3.5 rounded border-[#cbd5e1] text-[#0468b1] flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-white/60 group-hover:text-white/80 truncate transition-colors">{t.titre}</p>
-                      <p className="text-[10px] text-white/20 truncate">{t.projet.titre}</p>
+                      <p className="text-[12px] font-medium text-[#1e293b] truncate">{t.titre}</p>
+                      <p className="text-[10px] text-[#94a3b8] truncate">{t.projet.titre}</p>
                     </div>
-                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium border ${prioColors[t.priorite] ?? prioColors.BASSE}`}>
-                      {t.priorite}
-                    </span>
+                    <span className={`badge ${prioClass}`}>{t.priorite === "HAUTE" ? "Urgent" : t.priorite === "MOYENNE" ? "Normal" : "Faible"}</span>
                   </div>
                 );
               })}
@@ -196,36 +224,35 @@ export default async function Dashboard() {
           )}
         </div>
 
-        {/* Activity — 7 cols */}
-        <div className="col-span-7 glass rounded-2xl p-6 animate-in delay-6">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="w-1 h-5 rounded-full" style={{ background: "linear-gradient(to bottom, #34d399, #059669)" }} />
-            <h2 className="text-sm font-semibold text-white/70 uppercase tracking-wider">Activite recente</h2>
+        {/* Activity */}
+        <div className="col-span-7 card p-0 overflow-hidden animate-in delay-6">
+          <div className="px-5 py-3 border-b border-[#e2e8f0]">
+            <h2 className="text-[13px] font-bold text-[#1a365d] uppercase tracking-wider">Journal d&apos;activite</h2>
           </div>
-
           {activiteRecente.length === 0 ? (
-            <p className="text-white/20 text-xs text-center py-8">Aucune activite</p>
+            <div className="p-6 text-center">
+              <p className="text-[#94a3b8] text-[12px]">Aucune activite recente</p>
+            </div>
           ) : (
-            <div className="space-y-0">
-              {activiteRecente.map((a, i) => {
+            <div className="divide-y divide-[#f1f5f9]">
+              {activiteRecente.map((a) => {
                 const initial = a.user.name?.charAt(0) ?? "?";
-                const colors = ["bg-indigo-500", "bg-amber-500", "bg-emerald-500", "bg-violet-500", "bg-rose-500"];
-                const color = colors[i % colors.length];
                 return (
-                  <div key={a.id} className="relative flex items-start gap-3 py-2.5 timeline-dot">
-                    <div className={`w-[30px] h-[30px] rounded-full ${color} flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0`}>
+                  <div key={a.id} className="flex items-start gap-3 px-5 py-2.5">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 mt-0.5"
+                      style={{ background: "#0468b1" }}>
                       {initial}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-white/50">
-                        <span className="text-white/70 font-medium">{a.user.name}</span>{" "}
-                        <span className="text-white/30">{a.description}</span>
+                      <p className="text-[12px] text-[#1e293b]">
+                        <span className="font-semibold">{a.user.name}</span>{" "}
+                        <span className="text-[#64748b]">{a.description}</span>
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] text-white/15 font-mono">
+                        <span className="text-[10px] text-[#94a3b8]">
                           {new Date(a.createdAt).toLocaleString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                         </span>
-                        {a.projet && <span className="text-[10px] text-indigo-400/40">· {a.projet.titre}</span>}
+                        {a.projet && <span className="text-[10px] text-[#0468b1]">· {a.projet.titre}</span>}
                       </div>
                     </div>
                   </div>
@@ -235,47 +262,6 @@ export default async function Dashboard() {
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-/* Stat card component */
-function StatCard({ label, value, total, icon, variant, delay }: {
-  label: string; value: number; total?: number; icon: string;
-  variant: "amber" | "indigo" | "emerald" | "rose" | "default"; delay: string;
-}) {
-  const glowClass = variant === "amber" ? "glow-amber" : variant === "indigo" ? "glow-indigo" : variant === "emerald" ? "glow-emerald" : variant === "rose" ? "glow-rose" : "";
-  const valueColor = variant === "rose" && value > 0 ? "text-red-400" : variant === "amber" ? "text-amber-400" : variant === "indigo" ? "text-indigo-400" : variant === "emerald" ? "text-emerald-400" : "text-white/80";
-
-  return (
-    <div className={`glass rounded-2xl p-5 ${glowClass} animate-in ${delay}`}>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-lg">{icon}</span>
-        {total !== undefined && (
-          <span className="text-[10px] text-white/20 font-mono">/{total} total</span>
-        )}
-      </div>
-      <p className={`text-3xl font-bold ${valueColor}`} style={{ fontFeatureSettings: "'tnum'" }}>{value}</p>
-      <p className="text-[11px] text-white/25 mt-1 font-medium">{label}</p>
-    </div>
-  );
-}
-
-/* Circular progress indicator */
-function ProgressRing({ pct, size }: { pct: number; size: number }) {
-  const r = (size - 4) / 2;
-  const circ = 2 * Math.PI * r;
-  const offset = circ - (pct / 100) * circ;
-  const color = pct === 100 ? "#34d399" : pct >= 50 ? "#818cf8" : "#f59e0b";
-
-  return (
-    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
-      <svg className="progress-ring" width={size} height={size}>
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={3} />
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={3}
-          strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" />
-      </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white/50">{pct}</span>
     </div>
   );
 }

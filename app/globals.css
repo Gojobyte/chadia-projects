@@ -1,102 +1,96 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 
 :root {
-  --background: #0c0f1a;
-  --foreground: #e8eaf0;
-  --surface: #141829;
-  --surface-hover: #1a1f36;
-  --border: rgba(255,255,255,0.06);
-  --border-active: rgba(255,255,255,0.12);
-  --accent: #f59e0b;
-  --accent-glow: rgba(245,158,11,0.15);
-  --indigo: #818cf8;
-  --indigo-glow: rgba(129,140,248,0.12);
-  --success: #34d399;
-  --danger: #f87171;
-  --warning: #fbbf24;
+  --un-blue: #0468b1;
+  --un-blue-dark: #035a96;
+  --un-blue-light: #e8f4fc;
+  --un-navy: #1a365d;
+  --bg: #f5f7fa;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --success: #059669;
+  --success-light: #ecfdf5;
+  --danger: #dc2626;
+  --danger-light: #fef2f2;
+  --warning: #d97706;
+  --warning-light: #fffbeb;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: 'DM Sans', var(--font-geist-sans), system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', var(--font-geist-mono), monospace;
+  --color-background: var(--bg);
+  --color-foreground: var(--text-primary);
+  --font-sans: 'Source Sans 3', var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-* { scrollbar-width: thin; scrollbar-color: #2a2f48 transparent; }
+* { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: 'Source Sans 3', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Noise overlay for texture */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  pointer-events: none;
-  opacity: 0.025;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* Glass card effect */
-.glass {
-  background: linear-gradient(135deg, rgba(20,24,41,0.8), rgba(20,24,41,0.6));
-  backdrop-filter: blur(20px);
+/* Institutional card */
+.card {
+  background: var(--card);
   border: 1px solid var(--border);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 8px;
+  transition: box-shadow 0.2s ease;
 }
-.glass:hover {
-  border-color: var(--border-active);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-}
-
-/* Stat card glow variants */
-.glow-amber { box-shadow: inset 0 1px 0 rgba(245,158,11,0.1), 0 0 40px rgba(245,158,11,0.05); }
-.glow-indigo { box-shadow: inset 0 1px 0 rgba(129,140,248,0.1), 0 0 40px rgba(129,140,248,0.05); }
-.glow-emerald { box-shadow: inset 0 1px 0 rgba(52,211,153,0.1), 0 0 40px rgba(52,211,153,0.05); }
-.glow-rose { box-shadow: inset 0 1px 0 rgba(248,113,113,0.1), 0 0 40px rgba(248,113,113,0.05); }
-
-/* Progress ring */
-.progress-ring { transform: rotate(-90deg); }
-.progress-ring circle {
-  transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+.card:hover {
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
 }
 
-/* Staggered animations */
-@keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(12px); }
+/* Stat card left border accent */
+.stat-blue { border-left: 3px solid var(--un-blue); }
+.stat-green { border-left: 3px solid var(--success); }
+.stat-red { border-left: 3px solid var(--danger); }
+.stat-amber { border-left: 3px solid var(--warning); }
+
+/* Active nav item */
+.nav-active {
+  background: var(--un-blue-light);
+  color: var(--un-blue);
+  font-weight: 600;
+  border-right: 3px solid var(--un-blue);
+}
+
+/* Section divider */
+.section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+/* Subtle entrance */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.animate-in {
-  animation: fadeSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  opacity: 0;
-}
-.delay-1 { animation-delay: 0.05s; }
-.delay-2 { animation-delay: 0.1s; }
-.delay-3 { animation-delay: 0.15s; }
-.delay-4 { animation-delay: 0.2s; }
-.delay-5 { animation-delay: 0.25s; }
-.delay-6 { animation-delay: 0.3s; }
+.animate-in { animation: fadeIn 0.4s ease forwards; opacity: 0; }
+.delay-1 { animation-delay: 0.04s; }
+.delay-2 { animation-delay: 0.08s; }
+.delay-3 { animation-delay: 0.12s; }
+.delay-4 { animation-delay: 0.16s; }
+.delay-5 { animation-delay: 0.20s; }
+.delay-6 { animation-delay: 0.24s; }
 
-/* Timeline connector */
-.timeline-dot::before {
-  content: '';
-  position: absolute;
-  left: 15px;
-  top: 32px;
-  bottom: -8px;
-  width: 1px;
-  background: linear-gradient(to bottom, var(--border-active), transparent);
-}
-
-/* Sidebar glow on active */
-.nav-active {
-  background: linear-gradient(135deg, rgba(129,140,248,0.15), rgba(245,158,11,0.08));
-  border: 1px solid rgba(129,140,248,0.2);
-  box-shadow: 0 0 20px rgba(129,140,248,0.08);
-}
+/* Badge styles */
+.badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.badge-danger { background: var(--danger-light); color: var(--danger); }
+.badge-warning { background: var(--warning-light); color: var(--warning); }
+.badge-success { background: var(--success-light); color: var(--success); }
+.badge-blue { background: var(--un-blue-light); color: var(--un-blue); }
+.badge-neutral { background: #f1f5f9; color: var(--text-secondary); }
