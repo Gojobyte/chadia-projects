@@ -98,6 +98,11 @@ export default function DocumentPage() {
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -273,6 +278,66 @@ export default function DocumentPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
+  // Chat IA interactif
+  async function sendChatMessage() {
+    if (!chatInput.trim() || chatLoading) return;
+    const userMsg = chatInput.trim();
+    setChatInput("");
+    setChatMessages(prev => [...prev, { role: "user", text: userMsg }]);
+    setChatLoading(true);
+
+    // Récupérer le texte sélectionné s'il y en a
+    const selection = window.getSelection()?.toString() ?? "";
+    const context = editorRef.current?.innerText?.slice(-3000) ?? "";
+
+    try {
+      const res = await fetch(`/api/documents/${docId}/copilot`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "custom",
+          context: `${userMsg}\n\nTexte sélectionné : ${selection || "(aucun)"}\n\nContenu du document :\n${context}`,
+          selection,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.suggestion) {
+        setChatMessages(prev => [...prev, { role: "ai", text: data.suggestion }]);
+      } else {
+        setChatMessages(prev => [...prev, { role: "ai", text: `Erreur : ${data.error ?? "Impossible de répondre"}` }]);
+      }
+    } catch {
+      setChatMessages(prev => [...prev, { role: "ai", text: "Erreur de connexion." }]);
+    }
+    setChatLoading(false);
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  }
+
+  // Insérer la réponse IA dans le document
+  function insertAiResponse(html: string) {
+    if (!editorRef.current) return;
+    editorRef.current.innerHTML += html;
+    const newHtml = editorRef.current.innerHTML;
+    saveContent(newHtml);
+    setDoc(prev => prev ? { ...prev, contenu: newHtml } : null);
+  }
+
+  // Remplacer la sélection par la réponse IA
+  function replaceWithAiResponse(html: string) {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && editorRef.current) {
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      const temp = document.createElement("div");
+      temp.innerHTML = html;
+      const frag = document.createDocumentFragment();
+      while (temp.firstChild) frag.appendChild(temp.firstChild);
+      range.insertNode(frag);
+      const newHtml = editorRef.current.innerHTML;
+      saveContent(newHtml);
+      setDoc(prev => prev ? { ...prev, contenu: newHtml } : null);
+    }
+  }
+
   async function changeStatut(statut: string) {
     setStatutOpen(false);
     await fetch(`/api/documents/${docId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ statut }) });
@@ -365,8 +430,8 @@ export default function DocumentPage() {
         </h1>
       </div>
 
-      {/* Two-column layout */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 32 }}>
+      {/* Layout: éditeur + sidebar + chat IA optionnel */}
+      <div style={{ display: "grid", gridTemplateColumns: showChat ? "1fr 240px 320px" : "1fr 240px", gap: showChat ? 20 : 32, transition: "all 0.2s" }}>
         {/* ─── Left: Éditeur contentEditable ─── */}
         <div style={{ position: "relative" }}>
           {hasContent ? (
@@ -406,9 +471,9 @@ export default function DocumentPage() {
                 <input ref={fileInputRef} type="file" accept=".docx,.html,.htm,.txt,.md" onChange={handleImport} style={{ display: "none" }} />
                 <ToolbarSep />
                 {/* IA */}
-                <button onClick={() => callCopilot("continuer")}
-                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 4, border: "none", background: "var(--primary-soft)", color: "var(--primary)", fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
-                  <Icons.Sparkles size={12} /> IA
+                <button onClick={() => setShowChat(!showChat)}
+                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 4, border: "none", background: showChat ? "var(--primary)" : "var(--primary-soft)", color: showChat ? "white" : "var(--primary)", fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
+                  <Icons.Sparkles size={12} /> Co-pilote IA
                 </button>
               </div>
 
@@ -596,6 +661,99 @@ export default function DocumentPage() {
             )}
           </div>
         </aside>
+
+        {/* ─── Panneau Chat IA ─── */}
+        {showChat && (
+          <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 180px)", position: "sticky", top: 64, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden", background: "var(--surface)" }}>
+            {/* Header chat */}
+            <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 8 }}>
+              <Icons.Sparkles size={14} style={{ color: "var(--primary)" }} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>Co-pilote IA</span>
+              <button onClick={() => setShowChat(false)} className="icon-btn" style={{ marginLeft: "auto", width: 24, height: 24 }}>
+                <Icons.X size={14} />
+              </button>
+            </div>
+
+            {/* Messages */}
+            <div style={{ flex: 1, overflowY: "auto", padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+              {chatMessages.length === 0 && (
+                <div style={{ textAlign: "center", padding: "24px 8px" }}>
+                  <Icons.Sparkles size={20} style={{ color: "var(--primary)", margin: "0 auto 8px", display: "block" }} />
+                  <p style={{ fontSize: 12.5, color: "var(--text-3)", lineHeight: 1.5 }}>
+                    Demandez-moi de modifier, améliorer ou reformater votre document. Sélectionnez du texte pour une action ciblée.
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 12 }}>
+                    {[
+                      "Améliore ce paragraphe",
+                      "Ajoute une section méthodologie",
+                      "Reformate en liste numérotée",
+                      "Rédige une conclusion",
+                    ].map(q => (
+                      <button key={q} onClick={() => { setChatInput(q); }} style={{
+                        padding: "6px 10px", fontSize: 11.5, color: "var(--text-2)",
+                        background: "var(--surface-2)", border: "1px solid var(--border)",
+                        borderRadius: 6, cursor: "pointer", textAlign: "left",
+                      }}>
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {chatMessages.map((msg, i) => (
+                <div key={i} style={{
+                  padding: "8px 12px", borderRadius: 8, fontSize: 13, lineHeight: 1.5,
+                  maxWidth: "90%",
+                  ...(msg.role === "user" ? {
+                    alignSelf: "flex-end", background: "var(--primary)", color: "white",
+                  } : {
+                    alignSelf: "flex-start", background: "var(--surface-2)", color: "var(--text)",
+                  }),
+                }}>
+                  {msg.role === "ai" ? (
+                    <>
+                      <div dangerouslySetInnerHTML={{ __html: msg.text }} style={{ fontSize: 12.5, lineHeight: 1.6 }} />
+                      <div style={{ marginTop: 8, display: "flex", gap: 4 }}>
+                        <button onClick={() => insertAiResponse(msg.text)} className="btn btn-primary btn-sm" style={{ fontSize: 10, padding: "2px 8px" }}>
+                          Insérer en bas
+                        </button>
+                        <button onClick={() => replaceWithAiResponse(msg.text)} className="btn btn-secondary btn-sm" style={{ fontSize: 10, padding: "2px 8px" }}>
+                          Remplacer sélection
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <span>{msg.text}</span>
+                  )}
+                </div>
+              ))}
+
+              {chatLoading && (
+                <div style={{ alignSelf: "flex-start", padding: "8px 12px", background: "var(--surface-2)", borderRadius: 8, fontSize: 12, color: "var(--text-3)" }}>
+                  <Icons.Sparkles size={12} style={{ color: "var(--primary)", marginRight: 4 }} />
+                  Réflexion en cours...
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Input */}
+            <div style={{ padding: "8px 12px", borderTop: "1px solid var(--border)", display: "flex", gap: 6 }}>
+              <input
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }}
+                placeholder="Demandez une modification..."
+                style={{ flex: 1, padding: "6px 10px", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12.5, background: "var(--surface)", color: "var(--text)", outline: "none" }}
+              />
+              <button onClick={sendChatMessage} disabled={chatLoading || !chatInput.trim()}
+                style={{ padding: "6px 10px", borderRadius: 6, border: "none", background: "var(--primary)", color: "white", cursor: "pointer", fontSize: 12, opacity: chatLoading || !chatInput.trim() ? 0.5 : 1 }}>
+                Envoyer
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ─── Modal Aperçu Document ─── */}
