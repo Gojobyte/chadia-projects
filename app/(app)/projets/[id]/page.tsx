@@ -20,6 +20,7 @@ interface Activite { id: string; action: string; description: string; createdAt:
 interface Projet {
   id: string; titre: string; reference: string | null; description: string; statut: string;
   budget: number | null; devise: string; dateLimite: string; appelOffreUrl: string | null;
+  pays: string | null;
   bailleur: { nom: string; sigle: string };
   documents: Document[]; taches: Tache[]; membres: Membre[]; activites: Activite[];
   createdBy: { name: string };
@@ -31,6 +32,21 @@ const categorieLabels: Record<string, string> = {
   NOTE_CONCEPTUELLE: "Note conceptuelle", PLAN_TRAVAIL: "Plan de travail",
   GANTT: "Gantt", CV: "CV", DOCUMENT_LEGAL: "Docs legaux", AUTRE: "Autre",
 };
+
+const bailleurColors: Record<string, string> = {
+  PNUD: "oklch(0.55 0.18 245)", UE: "oklch(0.55 0.18 270)",
+  BADEA: "oklch(0.55 0.15 30)", AFD: "oklch(0.55 0.15 0)",
+  USAID: "oklch(0.55 0.15 240)", BM: "oklch(0.5 0.15 200)",
+};
+
+function fmtMoney(n: number, cur = "EUR"): string {
+  const sym = cur === "EUR" ? "€" : cur === "USD" ? "$" : cur;
+  return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n)} ${sym}`;
+}
+
+function fmtDate(d: string): string {
+  return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+}
 
 const statusLabels: Record<string, string> = {
   BROUILLON: "Brouillon", REDACTION: "Redaction", RELECTURE: "Relecture",
@@ -97,21 +113,26 @@ export default function ProjetDetailPage() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 16, alignItems: "flex-start" }}>
           <div>
             <div className="row" style={{ gap: 12, marginBottom: 8 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--primary-soft)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "var(--primary)" }}>
-                {projet.bailleur.sigle.slice(0, 3)}
+              <div style={{
+                width: 36, height: 36, borderRadius: 6,
+                background: bailleurColors[projet.bailleur.sigle] ?? "oklch(0.55 0.13 200)",
+                color: "white", display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 11, fontWeight: 700, letterSpacing: "0.02em",
+                boxShadow: "inset 0 -6px 12px rgba(0,0,0,0.15)",
+              }}>
+                {projet.bailleur.sigle}
               </div>
               <div>
                 <div className="row" style={{ gap: 8 }}>
                   <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.015em", color: "var(--text)" }}>{projet.titre}</h1>
+                  <Icons.Star size={16} style={{ color: "var(--warning)", fill: "var(--warning)" }} />
                 </div>
                 <div className="row" style={{ gap: 10, marginTop: 4, fontSize: 12.5, color: "var(--text-3)" }}>
                   <span className="mono">{projet.reference ?? projet.bailleur.sigle}</span>
                   <span>·</span>
-                  {projet.budget && <span className="tnum">{projet.budget.toLocaleString()} {projet.devise}</span>}
-                  <span>·</span>
-                  <span style={{ color: daysUntil(projet.dateLimite) <= 7 ? "var(--warning)" : "var(--text-3)" }}>
-                    {daysUntil(projet.dateLimite) <= 0 ? "Expire !" : `${daysUntil(projet.dateLimite)}j restants`}
-                  </span>
+                  {projet.pays && <><span>{projet.pays}</span><span>·</span></>}
+                  {projet.budget && <><span className="tnum">{fmtMoney(projet.budget, projet.devise)}</span><span>·</span></>}
+                  <span>{fmtDate(projet.dateLimite)}</span>
                 </div>
               </div>
             </div>
