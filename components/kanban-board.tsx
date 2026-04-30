@@ -10,13 +10,11 @@ import {
   useSensor,
   useSensors,
   useDroppable,
+  useDraggable,
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
-import { Icons } from "@/components/icons";
 
 interface Document {
   id: string; categorie: string; titre: string; statut: string;
@@ -39,18 +37,18 @@ interface KanbanBoardProps {
 
 const columns = [
   { id: "BROUILLON", label: "Brouillon", color: "var(--st-brouillon)" },
-  { id: "REDACTION", label: "Redaction", color: "var(--st-redaction)" },
+  { id: "REDACTION", label: "Rédaction", color: "var(--st-redaction)" },
   { id: "RELECTURE", label: "Relecture", color: "var(--st-relecture)" },
   { id: "VALIDATION", label: "Validation", color: "var(--st-validation)" },
   { id: "FINALISATION", label: "Finalisation", color: "var(--st-finalisation)" },
-  { id: "VALIDE", label: "Valide", color: "var(--st-soumis)" },
+  { id: "VALIDE", label: "Validé", color: "var(--st-soumis)" },
 ];
 
 const categorieLabels: Record<string, string> = {
-  PROPOSITION_TECHNIQUE: "Proposition technique", BUDGET_PREVISIONNEL: "Budget previsionnel",
-  BUDGET_DETAIL: "Budget detaille", CADRE_LOGIQUE: "Cadre logique",
+  PROPOSITION_TECHNIQUE: "Proposition technique", BUDGET_PREVISIONNEL: "Budget prévisionnel",
+  BUDGET_DETAIL: "Budget détaillé", CADRE_LOGIQUE: "Cadre logique",
   NOTE_CONCEPTUELLE: "Note conceptuelle", PLAN_TRAVAIL: "Plan de travail",
-  GANTT: "Diagramme de Gantt", CV: "CV equipe", DOCUMENT_LEGAL: "Documents legaux", AUTRE: "Autre",
+  GANTT: "Diagramme de Gantt", CV: "CV équipe", DOCUMENT_LEGAL: "Documents légaux", AUTRE: "Autre",
 };
 
 export function KanbanBoard({ projetId, documents, onMoveDocument }: KanbanBoardProps) {
@@ -117,7 +115,7 @@ export function KanbanBoard({ projetId, documents, onMoveDocument }: KanbanBoard
         })}
       </div>
 
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {activeCard && <CardOverlay doc={activeCard} />}
       </DragOverlay>
     </DndContext>
@@ -132,19 +130,17 @@ function DroppableColumn({ column, items, projetId, users, onAssign }: {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {/* Header avec carre colore — comme dans le design */}
       <div className="row" style={{ padding: "8px 10px", gap: 8 }}>
         <span style={{ width: 8, height: 8, borderRadius: 2, background: column.color, flexShrink: 0 }} />
         <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>{column.label}</span>
         <span className="tag" style={{ marginLeft: "auto" }}>{items.length}</span>
       </div>
 
-      {/* Zone de drop */}
       <div
         ref={setNodeRef}
         style={{
           display: "flex", flexDirection: "column", gap: 8, minHeight: 200,
-          borderRadius: 8,
+          borderRadius: 8, padding: 4, transition: "background 0.15s",
           ...(isOver ? { outline: "2px solid var(--primary)", outlineOffset: -2, background: "var(--primary-soft)" } : {}),
         }}
       >
@@ -168,16 +164,22 @@ function DraggableCard({ doc, projetId, users, onAssign }: {
   doc: Document; projetId: string; users: User[];
   onAssign: (docId: string, userId: string | null) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: doc.id });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1 };
+  // useDraggable au lieu de useSortable — la carte suit la souris correctement
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: doc.id });
   const [showAssign, setShowAssign] = useState(false);
   const prog = doc.progression ?? 0;
 
   return (
     <div ref={setNodeRef} {...attributes} {...listeners}
-      className="card" style={{ ...style, padding: 12, cursor: "grab", borderRadius: 8 }}>
+      className="card"
+      style={{
+        padding: 12, cursor: isDragging ? "grabbing" : "grab", borderRadius: 8,
+        // Cacher la carte originale pendant le drag (le DragOverlay la remplace)
+        opacity: isDragging ? 0.3 : 1,
+        transition: "opacity 0.15s",
+      }}>
 
-      {/* Categorie en uppercase */}
+      {/* Catégorie en uppercase */}
       <div style={{ fontSize: 10.5, color: "var(--text-3)", textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.03em", marginBottom: 6 }}>
         {categorieLabels[doc.categorie] ?? doc.categorie}
       </div>
@@ -191,12 +193,12 @@ function DraggableCard({ doc, projetId, users, onAssign }: {
 
       {/* Progress bar */}
       {prog > 0 && prog < 100 && (
-        <div style={{ height: 4, background: "var(--surface-3)", borderRadius: 2, overflow: "hidden", marginBottom: 10 }}>
-          <div style={{ width: `${prog}%`, height: "100%", background: "var(--primary)", borderRadius: 2 }} />
+        <div className="progress" style={{ marginBottom: 10 }}>
+          <span style={{ width: `${prog}%` }} />
         </div>
       )}
 
-      {/* Footer: avatar, deadline, comments */}
+      {/* Footer: avatar, deadline */}
       <div className="row" style={{ marginTop: 10, gap: 6 }}>
         <div onPointerDown={e => e.stopPropagation()} style={{ position: "relative" }}>
           <button onClick={() => setShowAssign(!showAssign)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
@@ -211,7 +213,7 @@ function DraggableCard({ doc, projetId, users, onAssign }: {
 
           {showAssign && (
             <div style={{ position: "absolute", bottom: "100%", left: 0, marginBottom: 4, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, boxShadow: "var(--shadow-lg)", zIndex: 50, width: 180, padding: "4px 0" }}>
-              <p style={{ fontSize: 10, color: "var(--text-4)", padding: "6px 12px", textTransform: "uppercase", fontWeight: 600 }}>Assigner a</p>
+              <p style={{ fontSize: 10, color: "var(--text-4)", padding: "6px 12px", textTransform: "uppercase", fontWeight: 600 }}>Assigner à</p>
               {doc.assigneA && (
                 <button onClick={() => { onAssign(doc.id, null); setShowAssign(false); }}
                   style={{ width: "100%", textAlign: "left", padding: "6px 12px", fontSize: 12, color: "var(--danger)", background: "none", border: "none", cursor: "pointer" }}>
@@ -241,12 +243,20 @@ function DraggableCard({ doc, projetId, users, onAssign }: {
 }
 
 function CardOverlay({ doc }: { doc: Document }) {
+  const prog = doc.progression ?? 0;
   return (
-    <div className="card" style={{ padding: 12, cursor: "grabbing", borderRadius: 8, boxShadow: "var(--shadow-lg)", transform: "rotate(2deg) scale(1.05)", maxWidth: 280 }}>
+    <div className="card" style={{
+      padding: 12, cursor: "grabbing", borderRadius: 8,
+      boxShadow: "var(--shadow-lg)", maxWidth: 280,
+      transform: "rotate(2deg) scale(1.03)",
+    }}>
       <div style={{ fontSize: 10.5, color: "var(--text-3)", textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.03em", marginBottom: 6 }}>
         {categorieLabels[doc.categorie] ?? doc.categorie}
       </div>
-      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{doc.titre}</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", lineHeight: 1.35, marginBottom: 8 }}>{doc.titre}</div>
+      {prog > 0 && prog < 100 && (
+        <div className="progress"><span style={{ width: `${prog}%` }} /></div>
+      )}
     </div>
   );
 }
