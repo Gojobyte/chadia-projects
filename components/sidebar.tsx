@@ -3,16 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { Icons } from "@/components/icons";
 
 const navItems = [
-  { label: "Tableau de bord", href: "/", icon: "📊" },
-  { label: "Projets", href: "/projets", icon: "📁" },
-  { label: "Analytics", href: "/analytics", icon: "📈" },
-  { label: "Templates", href: "/templates", icon: "📄" },
+  { label: "Tableau de bord", href: "/", icon: Icons.Dashboard },
+  { label: "Projets", href: "/projets", icon: Icons.Folder },
+  { label: "Analytics", href: "/analytics", icon: Icons.Chart },
+  { label: "Templates", href: "/templates", icon: Icons.Doc },
 ];
 
 const settingsItems = [
-  { label: "Equipe", href: "/equipe", icon: "👥" },
+  { label: "Equipe", href: "/equipe", icon: Icons.Users },
+  { label: "Parametres", href: "/settings", icon: Icons.Settings },
 ];
 
 interface SidebarProps { userName: string; userRole: string; }
@@ -34,10 +36,11 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
 
       <div className="sidebar-section">
         {navItems.map((item) => {
+          const Ic = item.icon;
           const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
           return (
             <Link key={item.href} href={item.href} className={`nav-item ${isActive ? "active" : ""}`}>
-              <span className="nav-icon">{item.icon}</span>
+              <Ic className="nav-icon" />
               <span>{item.label}</span>
             </Link>
           );
@@ -47,10 +50,11 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
       <div className="sidebar-section">
         <div className="sidebar-section-title">Parametres</div>
         {settingsItems.map((item) => {
+          const Ic = item.icon;
           const isActive = pathname.startsWith(item.href);
           return (
             <Link key={item.href} href={item.href} className={`nav-item ${isActive ? "active" : ""}`}>
-              <span className="nav-icon">{item.icon}</span>
+              <Ic className="nav-icon" />
               <span>{item.label}</span>
             </Link>
           );
