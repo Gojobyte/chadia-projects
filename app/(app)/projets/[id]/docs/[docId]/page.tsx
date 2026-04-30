@@ -155,12 +155,11 @@ export default function DocumentPage() {
   }
 
   function startWithTemplate() {
-    if (editorRef.current) {
-      editorRef.current.innerHTML = TEMPLATE_CONTENT;
-      editorRef.current.focus();
-      saveContent(TEMPLATE_CONTENT);
-      setDoc(prev => prev ? { ...prev, contenu: TEMPLATE_CONTENT } : null);
-    }
+    // Mettre a jour doc.contenu — ca affiche le div contentEditable
+    // Le useEffect injectera le HTML dans le ref au prochain rendu
+    contentLoaded.current = false;
+    setDoc(prev => prev ? { ...prev, contenu: TEMPLATE_CONTENT } : null);
+    saveContent(TEMPLATE_CONTENT);
   }
 
   if (loading) return <p style={{ color: "var(--text-3)", padding: 32 }}>Chargement...</p>;
