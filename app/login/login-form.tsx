@@ -22,29 +22,29 @@ export function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-lg">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-slate-900">CHADIA Projects</h1>
-          <p className="text-slate-500 mt-1 text-sm">Plateforme de montage de projets</p>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)" }}>
+      <div className="card" style={{ width: "100%", maxWidth: 420, padding: 32 }}>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div className="brand-mark" style={{ margin: "0 auto 12px", width: 40, height: 40, fontSize: 14 }}>CP</div>
+          <h1 style={{ fontSize: 20, fontWeight: 600, letterSpacing: "-0.01em" }}>CHADIA Projects</h1>
+          <p style={{ fontSize: 13, color: "var(--text-3)", marginTop: 4 }}>Plateforme de montage de projets</p>
         </div>
 
-        {error && <div className="mb-4 p-3 rounded bg-red-50 text-red-700 text-sm" role="alert">{error}</div>}
-        {searchParams.get("error") && <div className="mb-4 p-3 rounded bg-red-50 text-red-700 text-sm" role="alert">Acces refuse.</div>}
+        {error && <div style={{ padding: "10px 14px", background: "var(--danger-soft)", color: "var(--danger)", borderRadius: "var(--radius)", fontSize: 13, marginBottom: 16 }} role="alert">{error}</div>}
+        {searchParams.get("error") && <div style={{ padding: "10px 14px", background: "var(--danger-soft)", color: "var(--danger)", borderRadius: "var(--radius)", fontSize: 13, marginBottom: 16 }} role="alert">Acces refuse.</div>}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+            <label htmlFor="email" style={{ display: "block", fontSize: 12.5, fontWeight: 500, color: "var(--text-2)", marginBottom: 4 }}>Email</label>
             <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="votre@email.com" />
+              style={{ width: "100%", padding: "8px 12px", border: "1px solid var(--border-strong)", borderRadius: "var(--radius)", fontSize: 13 }} placeholder="votre@email.com" />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">Mot de passe</label>
+            <label htmlFor="password" style={{ display: "block", fontSize: 12.5, fontWeight: 500, color: "var(--text-2)", marginBottom: 4 }}>Mot de passe</label>
             <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="••••••••" />
+              style={{ width: "100%", padding: "8px 12px", border: "1px solid var(--border-strong)", borderRadius: "var(--radius)", fontSize: 13 }} placeholder="••••••••" />
           </div>
-          <button type="submit" disabled={loading}
-            className="w-full py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+          <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: "100%", justifyContent: "center", padding: "10px", marginTop: 4 }}>
             {loading ? "Connexion..." : "Se connecter"}
           </button>
         </form>
