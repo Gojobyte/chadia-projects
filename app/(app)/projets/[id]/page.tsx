@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { KanbanBoard } from "@/components/kanban-board";
 
+function daysUntil(d: string | Date): number { return Math.ceil((new Date(d).getTime() - Date.now()) / 864e5); }
+
 interface Document { id: string; categorie: string; titre: string; statut: string; fichierUrl: string | null; assigneA: { id: string; name: string } | null; }
 interface Tache { id: string; titre: string; description: string | null; statut: string; priorite: string; dateLimite: string | null; assigneA: { id: string; name: string } | null; }
 interface Membre { id: string; role: string; user: { id: string; name: string; email: string }; }
@@ -59,43 +61,57 @@ export default function ProjetDetailPage() {
   return (
     <div>
       {/* Header projet */}
-      <div className="mb-6">
-        <Link href="/projets" className="text-sm text-slate-500 hover:text-slate-700 mb-2 inline-block">← Retour aux projets</Link>
-        <div className="flex items-start justify-between">
+      <div style={{ marginBottom: 20 }}>
+        <div className="row" style={{ gap: 8, fontSize: 12.5, color: "var(--text-3)", marginBottom: 8 }}>
+          <Link href="/projets" style={{ cursor: "pointer" }}>Projets</Link>
+          <span>/</span>
+          <span style={{ color: "var(--text)" }}>{projet.titre}</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 16, alignItems: "flex-start" }}>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">{projet.titre}</h1>
-            <p className="text-sm text-slate-500 mt-1">{projet.bailleur.sigle} — {projet.bailleur.nom} {projet.reference ? `· Ref: ${projet.reference}` : ""}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-sm text-slate-500">Deadline: <span className="font-medium text-slate-900">{new Date(projet.dateLimite).toLocaleDateString("fr-FR")}</span></p>
-              {projet.budget && <p className="text-sm text-slate-500">{projet.budget.toLocaleString()} {projet.devise}</p>}
+            <div className="row" style={{ gap: 12, marginBottom: 8 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--primary-soft)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "var(--primary)" }}>
+                {projet.bailleur.sigle.slice(0, 3)}
+              </div>
+              <div>
+                <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.015em" }}>{projet.titre}</h1>
+                <div className="row" style={{ gap: 10, marginTop: 4, fontSize: 12.5, color: "var(--text-3)" }}>
+                  <span className="mono">{projet.reference ?? projet.bailleur.sigle}</span>
+                  <span>·</span>
+                  {projet.budget && <span className="tnum">{projet.budget.toLocaleString()} {projet.devise}</span>}
+                  <span>·</span>
+                  <span style={{ color: daysUntil(projet.dateLimite) <= 7 ? "var(--warning)" : "var(--text-3)" }}>
+                    {daysUntil(projet.dateLimite) <= 0 ? "Expire !" : `${daysUntil(projet.dateLimite)}j restants`}
+                  </span>
+                </div>
+              </div>
             </div>
-            <a href={`/api/projets/${id}/export`} target="_blank" rel="noopener noreferrer"
-              className="px-3 py-2 border border-[#e2e8f0] rounded text-[12px] font-medium text-[#64748b] hover:bg-[#f8fafc] transition-colors">
-              📄 Exporter PDF
-            </a>
+          </div>
+          <div className="row" style={{ gap: 8 }}>
+            <a href={`/api/projets/${id}/export`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">Exporter</a>
           </div>
         </div>
-        {/* Barre de progression */}
-        <div className="mt-4">
-          <div className="flex justify-between text-sm mb-1">
-            <span className="text-slate-500">Progression des documents</span>
-            <span className="font-medium text-slate-700">{progression}%</span>
+
+        {/* Pipeline progress */}
+        <div className="card" style={{ marginTop: 16, padding: "14px 18px" }}>
+          <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 11.5, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Progression</span>
+            <span className="tnum" style={{ marginLeft: "auto", fontSize: 13, fontWeight: 600 }}>{progression}%</span>
           </div>
-          <div className="w-full bg-slate-200 rounded-full h-3">
-            <div className={`h-3 rounded-full transition-all ${progression === 100 ? "bg-green-500" : "bg-indigo-600"}`} style={{ width: `${progression}%` }} />
+          <div className="progress-bar" style={{ height: 6 }}>
+            <span style={{ width: `${progression}%`, background: progression === 100 ? "var(--success)" : undefined }} />
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b border-slate-200">
+      <div className="row" style={{ gap: 4, borderBottom: "1px solid var(--border)", marginBottom: 16 }}>
         {(["kanban", "ia", "taches", "equipe", "activite"] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              tab === t ? "border-[#0468b1] text-[#0468b1]" : "border-transparent text-[#64748b] hover:text-[#1e293b]"
-            }`}>
+          <button key={t} onClick={() => setTab(t)} className="btn btn-ghost" style={{
+            padding: "8px 14px", fontSize: 13, fontWeight: 500, borderRadius: 0, marginBottom: -1,
+            color: tab === t ? "var(--text)" : "var(--text-3)",
+            borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent",
+          }}>
             {t === "kanban" ? "Documents" : t === "ia" ? "🧠 IA" : t === "taches" ? "Taches" : t === "equipe" ? "Equipe" : "Activite"}
           </button>
         ))}
