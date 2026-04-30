@@ -532,84 +532,122 @@ export default function DocumentPage() {
         <div style={{ position: "relative" }}>
           {hasContent ? (
             <>
-              {/* Barre d'outils de formatage — complète */}
+              {/* ══════ TOOLBAR STYLE GOOGLE DOCS ══════ */}
               <div style={{
-                display: "flex", alignItems: "center", gap: 1, padding: "4px 8px",
                 background: "var(--surface)", border: "1px solid var(--border)",
-                borderRadius: "var(--radius) var(--radius) 0 0", borderBottom: "none",
-                flexWrap: "wrap", position: "sticky", top: 52, zIndex: 10,
+                borderRadius: "var(--radius-lg) var(--radius-lg) 0 0", borderBottom: "none",
+                position: "sticky", top: 52, zIndex: 10,
               }}>
-                {/* Annuler / Refaire */}
-                <ToolbarBtn label="↩" title="Annuler (Ctrl+Z)" onClick={() => document.execCommand("undo")} />
-                <ToolbarBtn label="↪" title="Refaire (Ctrl+Y)" onClick={() => document.execCommand("redo")} />
-                <ToolbarSep />
+                {/* ── Ligne 1 : Annuler, Style, Police, Taille ── */}
+                <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 10px", borderBottom: "1px solid var(--border)", flexWrap: "wrap" }}>
+                  {/* Annuler / Refaire */}
+                  <TbIcon title="Annuler (Ctrl+Z)" onClick={() => document.execCommand("undo")} d="M3 10h10a5 5 0 0 1 0 10H9" />
+                  <TbIcon title="Refaire (Ctrl+Y)" onClick={() => document.execCommand("redo")} d="M21 10H11a5 5 0 0 0 0 10h4" />
+                  <TbIcon title="Imprimer" onClick={() => window.print()} d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" />
+                  <ToolbarSep />
 
-                {/* Blocs */}
-                <ToolbarBtn label="¶" title="Texte normal" onClick={execNormal} />
-                <ToolbarBtn label="H1" title="Titre principal" onClick={() => execBlock("h2")} />
-                <ToolbarBtn label="H2" title="Sous-titre" onClick={() => execBlock("h3")} />
-                <ToolbarBtn label="H3" title="Sous-sous-titre" onClick={() => execBlock("h4")} />
-                <ToolbarSep />
+                  {/* Style de paragraphe */}
+                  <select title="Style" onChange={e => { if (e.target.value === "p") execNormal(); else execBlock(e.target.value); e.target.value = ""; }}
+                    style={{ padding: "3px 6px", border: "1px solid var(--border)", borderRadius: 4, background: "var(--surface)", fontSize: 12, color: "var(--text)", width: 120, cursor: "pointer" }}>
+                    <option value="">Style...</option>
+                    <option value="p">Texte normal</option>
+                    <option value="h1">Titre du document</option>
+                    <option value="h2">Titre de section</option>
+                    <option value="h3">Sous-section</option>
+                    <option value="h4">Sous-sous-section</option>
+                  </select>
 
-                {/* Formatage inline */}
-                <ToolbarBtn label="G" title="Gras (Ctrl+B)" onClick={() => document.execCommand("bold")} bold />
-                <ToolbarBtn label="I" title="Italique (Ctrl+I)" onClick={() => document.execCommand("italic")} italic />
-                <ToolbarBtn label="S" title="Souligné (Ctrl+U)" onClick={() => document.execCommand("underline")} underline />
-                <ToolbarBtn label="S̶" title="Barré" onClick={() => document.execCommand("strikeThrough")} />
-                <ToolbarBtn label="x²" title="Exposant" onClick={() => document.execCommand("superscript")} />
-                <ToolbarBtn label="x₂" title="Indice" onClick={() => document.execCommand("subscript")} />
-                <ToolbarSep />
+                  {/* Police */}
+                  <select title="Police" onChange={e => { if (e.target.value) document.execCommand("fontName", false, e.target.value); }}
+                    style={{ padding: "3px 6px", border: "1px solid var(--border)", borderRadius: 4, background: "var(--surface)", fontSize: 12, color: "var(--text)", width: 130, cursor: "pointer" }}>
+                    <option value="">Police...</option>
+                    <option value="Arial" style={{ fontFamily: "Arial" }}>Arial</option>
+                    <option value="Calibri" style={{ fontFamily: "Calibri" }}>Calibri</option>
+                    <option value="Georgia" style={{ fontFamily: "Georgia" }}>Georgia</option>
+                    <option value="Times New Roman" style={{ fontFamily: "Times New Roman" }}>Times New Roman</option>
+                    <option value="Verdana" style={{ fontFamily: "Verdana" }}>Verdana</option>
+                    <option value="Courier New" style={{ fontFamily: "Courier New" }}>Courier New</option>
+                    <option value="Trebuchet MS" style={{ fontFamily: "Trebuchet MS" }}>Trebuchet MS</option>
+                  </select>
 
-                {/* Surlignage et couleurs */}
-                <ToolbarBtn label="ab" title="Surligner jaune" onClick={() => document.execCommand("hiliteColor", false, "#fef9c3")} highlight />
-                <ToolbarBtn label="A" title="Texte rouge" onClick={() => document.execCommand("foreColor", false, "#dc2626")} style={{ color: "#dc2626" }} />
-                <ToolbarBtn label="A" title="Texte bleu" onClick={() => document.execCommand("foreColor", false, "#2563eb")} style={{ color: "#2563eb" }} />
-                <ToolbarBtn label="A" title="Texte vert" onClick={() => document.execCommand("foreColor", false, "#059669")} style={{ color: "#059669" }} />
-                <ToolbarBtn label="Aa" title="Couleur par défaut" onClick={() => document.execCommand("removeFormat")} />
-                <ToolbarSep />
+                  {/* Taille de police */}
+                  <select title="Taille" onChange={e => { if (e.target.value) document.execCommand("fontSize", false, e.target.value); }}
+                    style={{ padding: "3px 6px", border: "1px solid var(--border)", borderRadius: 4, background: "var(--surface)", fontSize: 12, color: "var(--text)", width: 60, cursor: "pointer" }}>
+                    <option value="">Taille</option>
+                    <option value="1">8</option>
+                    <option value="2">10</option>
+                    <option value="3">12</option>
+                    <option value="4">14</option>
+                    <option value="5">18</option>
+                    <option value="6">24</option>
+                    <option value="7">36</option>
+                  </select>
 
-                {/* Alignement */}
-                <ToolbarBtn label="≡" title="Aligner à gauche" onClick={() => document.execCommand("justifyLeft")} />
-                <ToolbarBtn label="≡" title="Centrer" onClick={() => document.execCommand("justifyCenter")} style={{ textAlign: "center" }} />
-                <ToolbarBtn label="≡" title="Aligner à droite" onClick={() => document.execCommand("justifyRight")} style={{ textAlign: "right" }} />
-                <ToolbarBtn label="⊞" title="Justifier" onClick={() => document.execCommand("justifyFull")} />
-                <ToolbarSep />
+                  {/* Compteur de mots — à droite */}
+                  <div style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-4)", display: "flex", alignItems: "center", gap: 8 }}>
+                    <span>{(editorRef.current?.innerText ?? "").split(/\s+/).filter(Boolean).length} mots</span>
+                    <button onClick={() => fileInputRef.current?.click()} disabled={importing}
+                      style={{ display: "flex", alignItems: "center", gap: 3, padding: "2px 8px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-2)", fontSize: 11, cursor: "pointer" }}>
+                      <Icons.Download size={10} style={{ transform: "rotate(180deg)" }} /> {importing ? "..." : "Importer"}
+                    </button>
+                    <input ref={fileInputRef} type="file" accept=".docx,.html,.htm,.txt,.md" onChange={handleImport} style={{ display: "none" }} />
+                    <button onClick={() => setShowChat(!showChat)}
+                      style={{ display: "flex", alignItems: "center", gap: 3, padding: "2px 8px", borderRadius: 4, border: "none", background: showChat ? "var(--primary)" : "var(--primary-soft)", color: showChat ? "white" : "var(--primary)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                      <Icons.Sparkles size={10} /> IA
+                    </button>
+                  </div>
+                </div>
 
-                {/* Listes et indentation */}
-                <ToolbarBtn label="1." title="Liste numérotée" onClick={() => document.execCommand("insertOrderedList")} />
-                <ToolbarBtn label="•" title="Liste à puces" onClick={() => document.execCommand("insertUnorderedList")} />
-                <ToolbarBtn label="→" title="Augmenter l'indentation" onClick={() => document.execCommand("indent")} />
-                <ToolbarBtn label="←" title="Diminuer l'indentation" onClick={() => document.execCommand("outdent")} />
-                <ToolbarSep />
+                {/* ── Ligne 2 : Formatage, Couleur, Alignement, Listes, Insertions ── */}
+                <div style={{ display: "flex", alignItems: "center", gap: 1, padding: "4px 10px", flexWrap: "wrap" }}>
+                  {/* Gras, Italique, Souligné, Barré */}
+                  <ToolbarBtn label="G" title="Gras (Ctrl+B)" onClick={() => document.execCommand("bold")} bold />
+                  <ToolbarBtn label="I" title="Italique (Ctrl+I)" onClick={() => document.execCommand("italic")} italic />
+                  <ToolbarBtn label="S" title="Souligné (Ctrl+U)" onClick={() => document.execCommand("underline")} underline />
+                  <ToolbarBtn label="S̶" title="Barré" onClick={() => document.execCommand("strikeThrough")} />
+                  <ToolbarSep />
 
-                {/* Insertions */}
-                <ToolbarBtn label="▤" title="Insérer un tableau" onClick={insertTable} />
-                <ToolbarBtn label="—" title="Séparateur horizontal" onClick={insertHR} />
-                <ToolbarBtn label="❝" title="Citation / Blockquote" onClick={insertBlockquote} />
-                <ToolbarBtn label="{ }" title="Bloc de code" onClick={insertCodeBlock} />
-                <ToolbarBtn label="🔗" title="Insérer un lien" onClick={insertLink} />
-                <ToolbarBtn label="🖼" title="Insérer une image (URL)" onClick={insertImage} />
-                <ToolbarSep />
+                  {/* Couleur du texte */}
+                  <ColorPicker title="Couleur du texte" onSelect={c => document.execCommand("foreColor", false, c)} />
+                  {/* Surlignage */}
+                  <ColorPicker title="Surlignage" onSelect={c => document.execCommand("hiliteColor", false, c)} highlight />
+                  <ToolbarBtn label="✕" title="Effacer le formatage" onClick={() => document.execCommand("removeFormat")} style={{ fontSize: 10 }} />
+                  <ToolbarSep />
 
-                {/* Encadrés colorés */}
-                <ToolbarBtn label="☐" title="Encadré vert (Point clé)" onClick={() => insertCalloutType("success")} style={{ color: "var(--success)" }} />
-                <ToolbarBtn label="☐" title="Encadré bleu (Information)" onClick={() => insertCalloutType("info")} style={{ color: "var(--info)" }} />
-                <ToolbarBtn label="☐" title="Encadré orange (Attention)" onClick={() => insertCalloutType("warning")} style={{ color: "var(--warning)" }} />
-                <ToolbarBtn label="☐" title="Encadré rouge (Important)" onClick={() => insertCalloutType("danger")} style={{ color: "var(--danger)" }} />
-                <ToolbarSep />
+                  {/* Alignement */}
+                  <TbIcon title="Gauche" onClick={() => document.execCommand("justifyLeft")} d="M3 6h18M3 12h12M3 18h18" />
+                  <TbIcon title="Centrer" onClick={() => document.execCommand("justifyCenter")} d="M3 6h18M6 12h12M3 18h18" />
+                  <TbIcon title="Droite" onClick={() => document.execCommand("justifyRight")} d="M3 6h18M9 12h12M3 18h18" />
+                  <TbIcon title="Justifier" onClick={() => document.execCommand("justifyFull")} d="M3 6h18M3 12h18M3 18h18" />
+                  <ToolbarSep />
 
-                {/* Import */}
-                <button onClick={() => fileInputRef.current?.click()} disabled={importing}
-                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 4, border: "none", background: "transparent", color: "var(--text-2)", fontSize: 11, fontWeight: 500, cursor: "pointer" }}>
-                  <Icons.Download size={11} style={{ transform: "rotate(180deg)" }} /> {importing ? "..." : "Importer"}
-                </button>
-                <input ref={fileInputRef} type="file" accept=".docx,.html,.htm,.txt,.md" onChange={handleImport} style={{ display: "none" }} />
+                  {/* Listes */}
+                  <TbIcon title="Liste numérotée" onClick={() => document.execCommand("insertOrderedList")} d="M10 6h11M10 12h11M10 18h11M3 6h.01M3 12h.01M3 18h.01" />
+                  <TbIcon title="Liste à puces" onClick={() => document.execCommand("insertUnorderedList")} d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01" />
+                  <TbIcon title="Indenter" onClick={() => document.execCommand("indent")} d="M3 6h18M9 12h12M3 18h18M3 12l4-3v6z" />
+                  <TbIcon title="Désindenter" onClick={() => document.execCommand("outdent")} d="M3 6h18M9 12h12M3 18h18M7 9l-4 3 4 3z" />
+                  <ToolbarSep />
 
-                {/* IA */}
-                <button onClick={() => setShowChat(!showChat)}
-                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 4, border: "none", background: showChat ? "var(--primary)" : "var(--primary-soft)", color: showChat ? "white" : "var(--primary)", fontSize: 11, fontWeight: 600, cursor: "pointer", marginLeft: "auto" }}>
-                  <Icons.Sparkles size={11} /> IA
-                </button>
+                  {/* Insertions */}
+                  <TbIcon title="Lien (Ctrl+K)" onClick={insertLink} d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  <TbIcon title="Image" onClick={insertImage} d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21" />
+                  <ToolbarBtn label="▤" title="Tableau" onClick={insertTable} />
+                  <ToolbarBtn label="—" title="Séparateur" onClick={insertHR} />
+                  <ToolbarBtn label="❝" title="Citation" onClick={insertBlockquote} />
+                  <ToolbarBtn label="⟨⟩" title="Code" onClick={insertCodeBlock} style={{ fontSize: 10 }} />
+                  <ToolbarSep />
+
+                  {/* Encadrés */}
+                  <ToolbarBtn label="◻" title="Point clé (vert)" onClick={() => insertCalloutType("success")} style={{ color: "#059669", fontSize: 14 }} />
+                  <ToolbarBtn label="◻" title="Information (bleu)" onClick={() => insertCalloutType("info")} style={{ color: "#2563eb", fontSize: 14 }} />
+                  <ToolbarBtn label="◻" title="Attention (orange)" onClick={() => insertCalloutType("warning")} style={{ color: "#d97706", fontSize: 14 }} />
+                  <ToolbarBtn label="◻" title="Important (rouge)" onClick={() => insertCalloutType("danger")} style={{ color: "#dc2626", fontSize: 14 }} />
+                  <ToolbarSep />
+
+                  {/* Exposant / Indice */}
+                  <ToolbarBtn label="x²" title="Exposant" onClick={() => document.execCommand("superscript")} style={{ fontSize: 10 }} />
+                  <ToolbarBtn label="x₂" title="Indice" onClick={() => document.execCommand("subscript")} style={{ fontSize: 10 }} />
+                </div>
               </div>
 
               <div
@@ -976,5 +1014,74 @@ function ToolbarBtn({ label, title, onClick, bold, italic, underline, highlight,
 }
 
 function ToolbarSep() {
-  return <div style={{ width: 1, height: 16, background: "var(--border)", margin: "0 3px" }} />;
+  return <div style={{ width: 1, height: 18, background: "var(--border)", margin: "0 4px" }} />;
+}
+
+/* Bouton icône SVG pour la toolbar */
+function TbIcon({ title, onClick, d }: { title: string; onClick: () => void; d: string }) {
+  return (
+    <button onClick={e => { e.preventDefault(); onClick(); }} title={title} style={{
+      width: 28, height: 28, borderRadius: 4, border: "none", cursor: "pointer",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      background: "transparent", color: "var(--text-2)", padding: 0,
+    }}
+      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-2)"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+    >
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d={d} />
+      </svg>
+    </button>
+  );
+}
+
+/* Sélecteur de couleur compact */
+function ColorPicker({ title, onSelect, highlight }: { title: string; onSelect: (c: string) => void; highlight?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const colors = [
+    "#1e293b", "#dc2626", "#ea580c", "#d97706", "#059669",
+    "#2563eb", "#7c3aed", "#db2777", "#64748b", "#000000",
+  ];
+  const bgColors = [
+    "#fef9c3", "#fecaca", "#fed7aa", "#d1fae5", "#dbeafe",
+    "#e9d5ff", "#fce7f3", "#f1f5f9", "#ffffff", "transparent",
+  ];
+  const palette = highlight ? bgColors : colors;
+
+  return (
+    <div style={{ position: "relative" }}>
+      <button onClick={e => { e.preventDefault(); setOpen(!open); }} title={title} style={{
+        width: 28, height: 28, borderRadius: 4, border: "none", cursor: "pointer",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        background: "transparent", gap: 1, padding: 0,
+      }}
+        onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-2)"; }}
+        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+      >
+        <span style={{ fontSize: 12, fontWeight: 700, color: highlight ? "var(--text-2)" : "var(--text-2)", lineHeight: 1 }}>A</span>
+        <span style={{ width: 14, height: 3, borderRadius: 1, background: highlight ? "#fef9c3" : "#dc2626" }} />
+      </button>
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 50 }} />
+          <div style={{
+            position: "absolute", top: "100%", left: 0, marginTop: 4, zIndex: 60,
+            background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8,
+            boxShadow: "var(--shadow-lg)", padding: 8,
+            display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 3, width: 150,
+          }}>
+            {palette.map(c => (
+              <button key={c} onClick={e => { e.preventDefault(); onSelect(c); setOpen(false); }}
+                style={{
+                  width: 24, height: 24, borderRadius: 4, border: c === "transparent" || c === "#ffffff" ? "1px solid var(--border)" : "none",
+                  background: c, cursor: "pointer",
+                }}
+                title={c}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
