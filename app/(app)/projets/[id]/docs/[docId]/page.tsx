@@ -96,6 +96,8 @@ export default function DocumentPage() {
   const [slashPos, setSlashPos] = useState({ top: 0, left: 0 });
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -243,6 +245,34 @@ export default function DocumentPage() {
     editorRef.current?.focus();
   }
 
+  // Importer un fichier (.docx, .html, .txt)
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await fetch(`/api/documents/${docId}/import`, { method: "POST", body: formData });
+      const data = await res.json();
+      if (res.ok && data.html) {
+        // Injecter le contenu importé dans l'éditeur
+        if (editorRef.current) {
+          editorRef.current.innerHTML = data.html;
+        }
+        contentLoaded.current = true;
+        setDoc(prev => prev ? { ...prev, contenu: data.html } : null);
+      } else {
+        alert(data.error ?? "Erreur d'import");
+      }
+    } catch {
+      alert("Erreur de connexion");
+    }
+    setImporting(false);
+    // Reset l'input pour permettre de reimporter le meme fichier
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   async function changeStatut(statut: string) {
     setStatutOpen(false);
     await fetch(`/api/documents/${docId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ statut }) });
@@ -368,6 +398,14 @@ export default function DocumentPage() {
                 <ToolbarBtn label="☐" title="Insérer un encadré" onClick={() => insertCallout()} />
                 <ToolbarSep />
                 {/* IA */}
+                {/* Import fichier */}
+                <button onClick={() => fileInputRef.current?.click()} disabled={importing}
+                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 4, border: "none", background: "transparent", color: "var(--text-2)", fontSize: 11.5, fontWeight: 500, cursor: "pointer" }}>
+                  <Icons.Download size={12} style={{ transform: "rotate(180deg)" }} /> {importing ? "Import..." : "Importer"}
+                </button>
+                <input ref={fileInputRef} type="file" accept=".docx,.html,.htm,.txt,.md" onChange={handleImport} style={{ display: "none" }} />
+                <ToolbarSep />
+                {/* IA */}
                 <button onClick={() => callCopilot("continuer")}
                   style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 4, border: "none", background: "var(--primary-soft)", color: "var(--primary)", fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
                   <Icons.Sparkles size={12} /> IA
@@ -482,7 +520,14 @@ export default function DocumentPage() {
                 <button className="btn btn-secondary" onClick={() => { startWithTemplate(); setTimeout(() => callCopilot("titres"), 500); }}>
                   <Icons.Sparkles size={14} /> Générer avec l&apos;IA
                 </button>
+                <button className="btn btn-secondary" onClick={() => fileInputRef.current?.click()} disabled={importing}>
+                  <Icons.Download size={14} style={{ transform: "rotate(180deg)" }} /> {importing ? "Import..." : "Importer un fichier"}
+                </button>
+                <input ref={fileInputRef} type="file" accept=".docx,.html,.htm,.txt,.md" onChange={handleImport} style={{ display: "none" }} />
               </div>
+              <p style={{ fontSize: 11, color: "var(--text-4)", marginTop: 12 }}>
+                Formats acceptés : .docx, .html, .txt, .md
+              </p>
             </div>
           )}
 
