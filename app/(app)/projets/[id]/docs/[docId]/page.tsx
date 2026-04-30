@@ -92,6 +92,10 @@ export default function DocumentPage() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [statutOpen, setStatutOpen] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [slashPos, setSlashPos] = useState({ top: 0, left: 0 });
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -139,13 +143,77 @@ export default function DocumentPage() {
     }, 2000);
   }
 
-  // Commandes clavier pour formater
+  // Commandes clavier
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.ctrlKey || e.metaKey) {
       if (e.key === "b") { e.preventDefault(); document.execCommand("bold"); }
       if (e.key === "i") { e.preventDefault(); document.execCommand("italic"); }
       if (e.key === "u") { e.preventDefault(); document.execCommand("underline"); }
     }
+    // Détecter "/" pour ouvrir le menu IA
+    if (e.key === "/" && !e.ctrlKey && !e.metaKey) {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        const editorRect = editorRef.current?.getBoundingClientRect();
+        if (editorRect) {
+          setSlashPos({ top: rect.bottom - editorRect.top + 4, left: rect.left - editorRect.left });
+          setShowSlashMenu(true);
+        }
+      }
+    }
+    // Fermer le menu avec Escape
+    if (e.key === "Escape") { setShowSlashMenu(false); setAiSuggestion(null); }
+  }
+
+  // Appeler le copilote IA
+  async function callCopilot(action: string) {
+    setShowSlashMenu(false);
+    setAiLoading(true);
+    setAiSuggestion(null);
+
+    // Supprimer le "/" tapé
+    if (editorRef.current) {
+      const html = editorRef.current.innerHTML;
+      // Enlever le dernier "/" si présent
+      if (html.endsWith("/")) {
+        editorRef.current.innerHTML = html.slice(0, -1);
+      }
+    }
+
+    const context = editorRef.current?.innerText ?? "";
+    const selection = window.getSelection()?.toString() ?? "";
+
+    try {
+      const res = await fetch(`/api/documents/${docId}/copilot`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, context: context.slice(-3000), selection }),
+      });
+      const data = await res.json();
+      if (res.ok && data.suggestion) {
+        setAiSuggestion(data.suggestion);
+      } else {
+        alert(data.error ?? "Erreur IA");
+      }
+    } catch {
+      alert("Erreur de connexion");
+    }
+    setAiLoading(false);
+  }
+
+  // Accepter la suggestion IA — l'insérer dans l'éditeur
+  function acceptSuggestion() {
+    if (!aiSuggestion || !editorRef.current) return;
+    editorRef.current.innerHTML += aiSuggestion;
+    const html = editorRef.current.innerHTML;
+    saveContent(html);
+    setDoc(prev => prev ? { ...prev, contenu: html } : null);
+    setAiSuggestion(null);
+  }
+
+  function rejectSuggestion() {
+    setAiSuggestion(null);
   }
 
   async function changeStatut(statut: string) {
@@ -243,19 +311,92 @@ export default function DocumentPage() {
       {/* Two-column layout */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 32 }}>
         {/* ─── Left: Éditeur contentEditable ─── */}
-        <div>
+        <div style={{ position: "relative" }}>
           {hasContent ? (
-            <div
-              ref={editorRef}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={handleInput}
-              onKeyDown={handleKeyDown}
-              style={{
-                outline: "none", minHeight: 500, fontSize: 15, lineHeight: 1.7, color: "var(--text-2)",
-                cursor: "text",
-              }}
-            />
+            <>
+              <div
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                onInput={handleInput}
+                onKeyDown={handleKeyDown}
+                onClick={() => setShowSlashMenu(false)}
+                style={{
+                  outline: "none", minHeight: 500, fontSize: 15, lineHeight: 1.7, color: "var(--text-2)",
+                  cursor: "text",
+                }}
+              />
+
+              {/* Menu "/" — commandes IA */}
+              {showSlashMenu && (
+                <div style={{
+                  position: "absolute", top: slashPos.top, left: slashPos.left,
+                  background: "var(--surface)", border: "1px solid var(--border)",
+                  borderRadius: 10, boxShadow: "var(--shadow-lg)", zIndex: 60,
+                  padding: "6px 0", width: 260,
+                }}>
+                  <div style={{ padding: "6px 14px", fontSize: 10.5, color: "var(--text-4)", textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.04em" }}>
+                    Co-pilote IA
+                  </div>
+                  {[
+                    { id: "continuer", icon: "→", label: "Continuer la rédaction", desc: "L'IA écrit la suite" },
+                    { id: "ameliorer", icon: "✦", label: "Améliorer le texte", desc: "Rendre plus professionnel" },
+                    { id: "developper", icon: "⊕", label: "Développer", desc: "Ajouter des détails" },
+                    { id: "resumer", icon: "≡", label: "Résumer", desc: "Synthétiser en 2-3 phrases" },
+                    { id: "titres", icon: "#", label: "Générer un plan", desc: "Structure de sections" },
+                  ].map(item => (
+                    <button key={item.id} onClick={() => callCopilot(item.id)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 10, width: "100%",
+                        padding: "8px 14px", border: "none", background: "transparent",
+                        cursor: "pointer", fontSize: 13, color: "var(--text)", textAlign: "left",
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-2)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                    >
+                      <span style={{ width: 24, height: 24, borderRadius: 6, background: "var(--primary-soft)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "var(--primary)", flexShrink: 0 }}>
+                        {item.icon}
+                      </span>
+                      <div>
+                        <div style={{ fontWeight: 500 }}>{item.label}</div>
+                        <div style={{ fontSize: 11, color: "var(--text-3)" }}>{item.desc}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Indicateur de chargement IA */}
+              {aiLoading && (
+                <div style={{ border: "1px dashed color-mix(in oklch, var(--primary) 40%, transparent)", borderRadius: 8, padding: 16, background: "color-mix(in oklch, var(--primary) 4%, transparent)", marginTop: 16, textAlign: "center" }}>
+                  <Icons.Sparkles size={16} style={{ color: "var(--primary)", marginBottom: 6 }} />
+                  <div style={{ fontSize: 13, color: "var(--primary)", fontWeight: 500 }}>L&apos;IA rédige...</div>
+                  <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 2 }}>Cela peut prendre quelques secondes</div>
+                </div>
+              )}
+
+              {/* Suggestion IA — à accepter ou rejeter */}
+              {aiSuggestion && (
+                <div style={{ border: "2px solid color-mix(in oklch, var(--primary) 40%, transparent)", borderRadius: 10, overflow: "hidden", marginTop: 16 }}>
+                  <div style={{ padding: "8px 14px", background: "color-mix(in oklch, var(--primary) 8%, transparent)", display: "flex", alignItems: "center", gap: 6 }}>
+                    <Icons.Sparkles size={14} style={{ color: "var(--primary)" }} />
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--primary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Suggestion IA</span>
+                    <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                      <button onClick={acceptSuggestion} className="btn btn-primary btn-sm" style={{ fontSize: 11 }}>
+                        <Icons.Check size={12} /> Accepter
+                      </button>
+                      <button onClick={rejectSuggestion} className="btn btn-ghost btn-sm" style={{ fontSize: 11 }}>
+                        <Icons.X size={12} /> Rejeter
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    style={{ padding: "14px 18px", fontSize: 15, lineHeight: 1.7, color: "var(--text-2)", background: "color-mix(in oklch, var(--primary) 3%, transparent)" }}
+                    dangerouslySetInnerHTML={{ __html: aiSuggestion }}
+                  />
+                </div>
+              )}
+            </>
           ) : (
             /* État vide — page de démarrage */
             <div style={{ textAlign: "center", padding: "60px 0" }}>
@@ -276,27 +417,28 @@ export default function DocumentPage() {
                 <button className="btn btn-primary" onClick={startWithTemplate}>
                   <Icons.Edit size={14} /> Commencer à écrire
                 </button>
-                <button className="btn btn-secondary">
+                <button className="btn btn-secondary" onClick={() => { startWithTemplate(); setTimeout(() => callCopilot("titres"), 500); }}>
                   <Icons.Sparkles size={14} /> Générer avec l&apos;IA
                 </button>
               </div>
             </div>
           )}
 
-          {/* AI suggestion block — affiché sous le contenu */}
-          {hasContent && (
-            <div style={{ border: "1px dashed color-mix(in oklch, var(--primary) 40%, transparent)", borderRadius: 8, padding: 14, background: "color-mix(in oklch, var(--primary) 4%, transparent)", marginTop: 24 }}>
-              <div className="row" style={{ gap: 6, marginBottom: 8 }}>
-                <Icons.Sparkles size={14} style={{ color: "var(--primary)" }} />
-                <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--primary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Suggestion IA</span>
-              </div>
-              <p style={{ fontSize: 13, color: "var(--text-2)", margin: 0 }}>
-                L&apos;appel d&apos;offre demande une section &quot;Théorie du changement&quot;. Voulez-vous que je génère un brouillon basé sur les objectifs ci-dessus ?
-              </p>
-              <div className="row" style={{ gap: 6, marginTop: 10 }}>
-                <button className="btn btn-primary btn-sm">Générer le brouillon</button>
-                <button className="btn btn-ghost btn-sm">Ignorer</button>
-              </div>
+          {/* Raccourci IA — affiché sous le contenu */}
+          {hasContent && !aiSuggestion && !aiLoading && (
+            <div style={{ marginTop: 20, display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <button onClick={() => callCopilot("continuer")} className="btn btn-ghost btn-sm" style={{ gap: 4 }}>
+                <Icons.Sparkles size={12} /> Continuer
+              </button>
+              <button onClick={() => callCopilot("ameliorer")} className="btn btn-ghost btn-sm" style={{ gap: 4 }}>
+                <Icons.Sparkles size={12} /> Améliorer
+              </button>
+              <button onClick={() => callCopilot("developper")} className="btn btn-ghost btn-sm" style={{ gap: 4 }}>
+                <Icons.Sparkles size={12} /> Développer
+              </button>
+              <span style={{ fontSize: 11, color: "var(--text-4)", display: "flex", alignItems: "center" }}>
+                ou tapez <kbd style={{ margin: "0 4px", padding: "1px 5px", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 4, fontFamily: "monospace", fontSize: 11 }}>/</kbd> pour plus d&apos;options
+              </span>
             </div>
           )}
         </div>
