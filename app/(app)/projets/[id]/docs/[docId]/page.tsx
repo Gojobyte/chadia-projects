@@ -216,6 +216,33 @@ export default function DocumentPage() {
     setAiSuggestion(null);
   }
 
+  // Formater un bloc (H2, H3, H4)
+  function execBlock(tag: string) {
+    document.execCommand("formatBlock", false, `<${tag}>`);
+    editorRef.current?.focus();
+  }
+
+  // Insérer un tableau
+  function insertTable() {
+    const html = `<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px">
+      <thead><tr><th style="border:1px solid var(--border);padding:8px 12px;background:var(--surface-2);text-align:left;font-weight:600">Colonne 1</th><th style="border:1px solid var(--border);padding:8px 12px;background:var(--surface-2);text-align:left;font-weight:600">Colonne 2</th><th style="border:1px solid var(--border);padding:8px 12px;background:var(--surface-2);text-align:left;font-weight:600">Colonne 3</th></tr></thead>
+      <tbody><tr><td style="border:1px solid var(--border);padding:8px 12px">Cellule</td><td style="border:1px solid var(--border);padding:8px 12px">Cellule</td><td style="border:1px solid var(--border);padding:8px 12px">Cellule</td></tr>
+      <tr><td style="border:1px solid var(--border);padding:8px 12px">Cellule</td><td style="border:1px solid var(--border);padding:8px 12px">Cellule</td><td style="border:1px solid var(--border);padding:8px 12px">Cellule</td></tr></tbody>
+    </table><p><br></p>`;
+    document.execCommand("insertHTML", false, html);
+    editorRef.current?.focus();
+  }
+
+  // Insérer un encadré/callout
+  function insertCallout() {
+    const html = `<div style="background:var(--primary-soft);border:1px solid color-mix(in oklch, var(--primary) 30%, transparent);border-radius:8px;padding:14px 16px;margin:16px 0">
+      <div style="font-size:11.5px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px">POINT CLÉ</div>
+      <p style="margin:0;color:var(--text-2)">Écrivez ici le contenu de l'encadré...</p>
+    </div><p><br></p>`;
+    document.execCommand("insertHTML", false, html);
+    editorRef.current?.focus();
+  }
+
   async function changeStatut(statut: string) {
     setStatutOpen(false);
     await fetch(`/api/documents/${docId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ statut }) });
@@ -314,6 +341,39 @@ export default function DocumentPage() {
         <div style={{ position: "relative" }}>
           {hasContent ? (
             <>
+              {/* Barre d'outils de formatage */}
+              <div style={{
+                display: "flex", alignItems: "center", gap: 2, padding: "6px 8px",
+                background: "var(--surface)", border: "1px solid var(--border)",
+                borderRadius: "var(--radius) var(--radius) 0 0", borderBottom: "none",
+                flexWrap: "wrap", position: "sticky", top: 52, zIndex: 10,
+              }}>
+                {/* Bloc de titres */}
+                <ToolbarBtn label="H1" title="Titre principal (section)" onClick={() => execBlock("h2")} />
+                <ToolbarBtn label="H2" title="Sous-titre (sous-section)" onClick={() => execBlock("h3")} />
+                <ToolbarBtn label="H3" title="Sous-sous-titre" onClick={() => execBlock("h4")} />
+                <ToolbarSep />
+                {/* Formatage inline */}
+                <ToolbarBtn label="G" title="Gras (Ctrl+B)" onClick={() => document.execCommand("bold")} bold />
+                <ToolbarBtn label="I" title="Italique (Ctrl+I)" onClick={() => document.execCommand("italic")} italic />
+                <ToolbarBtn label="S" title="Souligné (Ctrl+U)" onClick={() => document.execCommand("underline")} underline />
+                <ToolbarBtn label="ab" title="Surligner" onClick={() => document.execCommand("hiliteColor", false, "#fef9c3")} highlight />
+                <ToolbarSep />
+                {/* Listes */}
+                <ToolbarBtn label="1." title="Liste numérotée" onClick={() => document.execCommand("insertOrderedList")} />
+                <ToolbarBtn label="•" title="Liste à puces" onClick={() => document.execCommand("insertUnorderedList")} />
+                <ToolbarSep />
+                {/* Blocs spéciaux */}
+                <ToolbarBtn label="▤" title="Insérer un tableau" onClick={() => insertTable()} />
+                <ToolbarBtn label="☐" title="Insérer un encadré" onClick={() => insertCallout()} />
+                <ToolbarSep />
+                {/* IA */}
+                <button onClick={() => callCopilot("continuer")}
+                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 4, border: "none", background: "var(--primary-soft)", color: "var(--primary)", fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
+                  <Icons.Sparkles size={12} /> IA
+                </button>
+              </div>
+
               <div
                 ref={editorRef}
                 contentEditable
@@ -323,7 +383,9 @@ export default function DocumentPage() {
                 onClick={() => setShowSlashMenu(false)}
                 style={{
                   outline: "none", minHeight: 500, fontSize: 15, lineHeight: 1.7, color: "var(--text-2)",
-                  cursor: "text",
+                  cursor: "text", padding: "20px 24px",
+                  border: "1px solid var(--border)", borderRadius: "0 0 var(--radius) var(--radius)",
+                  background: "var(--surface)",
                 }}
               />
 
@@ -544,4 +606,31 @@ export default function DocumentPage() {
       )}
     </div>
   );
+}
+
+/* ─── Toolbar components ─── */
+function ToolbarBtn({ label, title, onClick, bold, italic, underline, highlight }: {
+  label: string; title: string; onClick: () => void;
+  bold?: boolean; italic?: boolean; underline?: boolean; highlight?: boolean;
+}) {
+  return (
+    <button onClick={onClick} title={title} style={{
+      width: 28, height: 28, borderRadius: 4, border: "none", cursor: "pointer",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      background: "transparent", color: "var(--text-2)", fontSize: 12,
+      fontWeight: bold ? 700 : 500,
+      fontStyle: italic ? "italic" : "normal",
+      textDecoration: underline ? "underline" : "none",
+      ...(highlight ? { background: "#fef9c3" } : {}),
+    }}
+      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-2)"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = highlight ? "#fef9c3" : "transparent"; }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function ToolbarSep() {
+  return <div style={{ width: 1, height: 18, background: "var(--border)", margin: "0 4px" }} />;
 }

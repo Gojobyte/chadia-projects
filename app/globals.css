@@ -161,6 +161,11 @@ table.t tr:last-child td { border-bottom: none; }
 /* Document editor — contentEditable styles */
 [contenteditable] h2 { font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -0.015em; margin: 24px 0 12px; }
 [contenteditable] h3 { font-size: 18px; font-weight: 600; color: var(--text); margin: 20px 0 10px; }
+[contenteditable] h4 { font-size: 15px; font-weight: 600; color: oklch(0.45 0.12 245); margin: 16px 0 8px; }
+[contenteditable] table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+[contenteditable] th, [contenteditable] td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+[contenteditable] th { background: var(--surface-2); font-weight: 600; }
+[contenteditable] blockquote { border-left: 3px solid var(--primary); padding: 8px 16px; margin: 12px 0; background: var(--primary-soft); border-radius: 0 6px 6px 0; }
 [contenteditable] p { margin-bottom: 14px; color: var(--text-2); }
 [contenteditable] ol, [contenteditable] ul { padding-left: 22px; margin-bottom: 16px; }
 [contenteditable] li { margin-bottom: 6px; color: var(--text-2); }
