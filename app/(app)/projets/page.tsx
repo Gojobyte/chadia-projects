@@ -9,24 +9,16 @@ interface Projet {
   bailleur: { sigle: string }; _count: { documents: number; taches: number; membres: number };
 }
 
-const statutColors: Record<string, string> = {
-  BROUILLON: "bg-slate-100 text-slate-700",
-  EN_COURS: "bg-blue-100 text-blue-700",
-  EN_REVISION: "bg-yellow-100 text-yellow-700",
-  SOUMIS: "bg-purple-100 text-purple-700",
-  ACCEPTE: "bg-green-100 text-green-700",
-  REJETE: "bg-red-100 text-red-700",
-  ARCHIVE: "bg-slate-100 text-slate-500",
-};
+const sPill: Record<string,string> = { BROUILLON:"pill-brouillon", EN_COURS:"pill-redaction", EN_REVISION:"pill-relecture", SOUMIS:"pill-soumis", ACCEPTE:"pill-accepte", REJETE:"pill-rejete" };
+const sLabel: Record<string,string> = { BROUILLON:"Brouillon", EN_COURS:"En cours", EN_REVISION:"Revision", SOUMIS:"Soumis", ACCEPTE:"Accepte", REJETE:"Rejete" };
 
-const statutLabels: Record<string, string> = {
-  BROUILLON: "Brouillon", EN_COURS: "En cours", EN_REVISION: "En revision",
-  SOUMIS: "Soumis", ACCEPTE: "Accepte", REJETE: "Rejete", ARCHIVE: "Archive",
-};
+function fmtMoney(n: number, cur = "FCFA"): string { return n >= 1e6 ? `${(n/1e6).toFixed(1)}M ${cur}` : n >= 1e3 ? `${(n/1e3).toFixed(0)}K ${cur}` : `${n} ${cur}`; }
+function daysUntil(d: string): number { return Math.ceil((new Date(d).getTime() - Date.now()) / 864e5); }
 
 export default function ProjetsPage() {
   const [projets, setProjets] = useState<Projet[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/projets");
@@ -35,49 +27,104 @@ export default function ProjetsPage() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  if (loading) return <p className="text-slate-500">Chargement...</p>;
+  const filtered = projets.filter(p => {
+    if (filter === "active") return !["ACCEPTE","REJETE","SOUMIS"].includes(p.statut);
+    if (filter === "submitted") return p.statut === "SOUMIS";
+    if (filter === "won") return p.statut === "ACCEPTE";
+    return true;
+  });
+
+  const totalBudget = projets.reduce((s, p) => s + (p.budget ?? 0), 0);
+
+  if (loading) return <div style={{color:"var(--text-3)",fontSize:13,padding:32}}>Chargement...</div>;
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Projets ({projets.length})</h1>
-        <Link href="/projets/nouveau" className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
-          Nouveau projet
-        </Link>
+    <>
+      <div className="page-header">
+        <div>
+          <div className="page-title">Projets</div>
+          <div className="page-subtitle">{filtered.length} projets · pipeline total {fmtMoney(totalBudget)}</div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <Link href="/projets/nouveau" className="btn btn-primary">+ Nouveau projet</Link>
+        </div>
       </div>
 
-      {projets.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-          <p className="text-slate-500 mb-4">Aucun projet. Creez votre premier projet !</p>
-          <Link href="/projets/nouveau" className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm">Creer un projet</Link>
+      {/* Tabs filtre */}
+      <div className="row" style={{marginBottom:16,gap:4,borderBottom:"1px solid var(--border)"}}>
+        {[
+          {id:"all",label:"Tous",count:projets.length},
+          {id:"active",label:"En cours",count:projets.filter(p=>!["ACCEPTE","REJETE","SOUMIS"].includes(p.statut)).length},
+          {id:"submitted",label:"Soumis",count:projets.filter(p=>p.statut==="SOUMIS").length},
+          {id:"won",label:"Gagnes",count:projets.filter(p=>p.statut==="ACCEPTE").length},
+        ].map(t => (
+          <button key={t.id} onClick={() => setFilter(t.id)} className="btn btn-ghost" style={{
+            padding:"8px 14px", fontSize:13, fontWeight:500,
+            color:filter===t.id?"var(--text)":"var(--text-3)",
+            borderBottom:filter===t.id?"2px solid var(--primary)":"2px solid transparent",
+            borderRadius:0, marginBottom:-1,
+          }}>
+            {t.label} <span style={{fontSize:11,color:"var(--text-4)",marginLeft:4}}>{t.count}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Table */}
+      {filtered.length === 0 ? (
+        <div className="card" style={{padding:"48px 18px",textAlign:"center"}}>
+          <div style={{color:"var(--text-3)",fontSize:13}}>Aucun projet.</div>
+          <Link href="/projets/nouveau" className="btn btn-primary" style={{marginTop:12}}>Creer un projet</Link>
         </div>
       ) : (
-        <div className="space-y-4">
-          {projets.map((p) => (
-            <Link key={p.id} href={`/projets/${p.id}`} className="block bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-900">{p.titre}</h2>
-                  <p className="text-sm text-slate-500">{p.bailleur.sigle} {p.reference ? `· Ref: ${p.reference}` : ""}</p>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${statutColors[p.statut] ?? ""}`}>
-                  {statutLabels[p.statut] ?? p.statut}
-                </span>
-              </div>
-              <div className="flex items-center gap-6 mb-3">
-                {p.budget && <span className="text-sm text-slate-600">{p.budget.toLocaleString()} {p.devise}</span>}
-                <span className="text-sm text-slate-500">Deadline: {new Date(p.dateLimite).toLocaleDateString("fr-FR")}</span>
-                <span className="text-sm text-slate-400">{p._count.documents} docs · {p._count.membres} membres</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2.5">
-                <div className={`h-2.5 rounded-full transition-all ${p.progression === 100 ? "bg-green-500" : "bg-indigo-600"}`}
-                  style={{ width: `${p.progression}%` }} />
-              </div>
-              <p className="text-xs text-slate-400 mt-1">{p.progression}% des documents valides</p>
-            </Link>
-          ))}
+        <div className="card">
+          <div className="table-wrap">
+            <table className="t">
+              <thead>
+                <tr>
+                  <th>Projet</th>
+                  <th>Bailleur</th>
+                  <th>Budget</th>
+                  <th>Statut</th>
+                  <th>Progression</th>
+                  <th style={{textAlign:"right"}}>Deadline</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(p => {
+                  const days = daysUntil(p.dateLimite);
+                  return (
+                    <tr key={p.id} style={{cursor:"pointer"}} onClick={() => window.location.href = `/projets/${p.id}`}>
+                      <td>
+                        <div style={{fontWeight:600,fontSize:13.5,color:"var(--text)"}}>{p.titre}</div>
+                        <div style={{fontSize:11,color:"var(--text-4)",marginTop:2}} className="mono">{p.reference ?? "—"}</div>
+                      </td>
+                      <td>
+                        <div style={{width:28,height:28,borderRadius:6,background:"var(--primary-soft)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:"var(--primary)"}}>
+                          {p.bailleur.sigle.slice(0,3)}
+                        </div>
+                      </td>
+                      <td><span className="tnum">{p.budget ? fmtMoney(p.budget, p.devise) : "—"}</span></td>
+                      <td><span className={`pill ${sPill[p.statut]??"pill-brouillon"}`}><span className="dot"/>{sLabel[p.statut]??p.statut}</span></td>
+                      <td>
+                        <div className="row" style={{gap:6}}>
+                          <div className="progress-bar" style={{width:80}}><span style={{width:`${p.progression}%`}}/></div>
+                          <span style={{fontSize:11,color:"var(--text-3)"}} className="tnum">{p.progression}%</span>
+                        </div>
+                      </td>
+                      <td style={{textAlign:"right"}}>
+                        <div style={{fontSize:12,fontWeight:500,color:days<=3?"var(--danger)":days<=7?"var(--warning)":"var(--text-3)"}}>
+                          {days<=0?"Expire !":days===1?"Demain":`${days}j`}
+                        </div>
+                        <div style={{fontSize:11,color:"var(--text-4)"}}>{new Date(p.dateLimite).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"})}</div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
