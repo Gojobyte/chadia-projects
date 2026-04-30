@@ -169,6 +169,23 @@ table.t tr:last-child td { border-bottom: none; }
 [contenteditable]:focus { outline: none; }
 [contenteditable] *::selection { background: color-mix(in oklch, var(--primary) 20%, transparent); }
 
+/* Document preview — print-ready styles */
+.preview-content h2 { font-size: 15pt; font-weight: 700; color: #0f172a; margin: 20px 0 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; }
+.preview-content h3 { font-size: 13pt; font-weight: 600; color: #1e293b; margin: 16px 0 8px; }
+.preview-content p { margin-bottom: 12px; color: #334155; }
+.preview-content ol, .preview-content ul { padding-left: 24px; margin-bottom: 14px; }
+.preview-content li { margin-bottom: 4px; color: #334155; }
+.preview-content strong { color: #0f172a; }
+.preview-content mark { background: #fef9c3; color: #1e293b; padding: 1px 3px; border-radius: 2px; }
+.preview-content table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10pt; }
+.preview-content table th, .preview-content table td { border: 1px solid #d1d5db; padding: 6px 10px; text-align: left; }
+.preview-content table th { background: #f1f5f9; font-weight: 600; }
+
+@media print {
+  .sidebar, .topbar, .icon-btn, .btn { display: none !important; }
+  .preview-content { padding: 0 !important; }
+}
+
 /* Badge styles (legacy compat) */
 .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
 .badge-danger { background: var(--danger-soft); color: var(--danger); }

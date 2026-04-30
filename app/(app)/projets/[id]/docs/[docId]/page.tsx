@@ -63,6 +63,7 @@ export default function DocumentPage() {
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [statutOpen, setStatutOpen] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -143,8 +144,8 @@ export default function DocumentPage() {
         <div style={{ marginLeft: "auto" }} className="row">
           <span style={{ fontSize: 11.5, color: "var(--text-3)" }}>{saveLabel}</span>
           <button className="btn btn-ghost btn-sm"><Icons.Comment size={14} /> {doc.commentaires?.length ?? 0}</button>
-          <button className="btn btn-ghost btn-sm"><Icons.Eye size={14} /> Aperçu</button>
-          <button className="btn btn-secondary btn-sm"><Icons.Download size={14} /> Export</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setShowPreview(true)}><Icons.Eye size={14} /> Aperçu</button>
+          <a href={`/api/documents/${docId}/export`} className="btn btn-secondary btn-sm" style={{ textDecoration: "none" }}><Icons.Download size={14} /> Export .docx</a>
           <button className="btn btn-primary btn-sm" onClick={() => changeStatut("VALIDE")}><Icons.Check size={14} /> Marquer prêt</button>
         </div>
       </div>
@@ -302,6 +303,58 @@ export default function DocumentPage() {
           </div>
         </aside>
       </div>
+
+      {/* ─── Modal Aperçu Document ─── */}
+      {showPreview && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 32 }}
+          onClick={() => setShowPreview(false)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: "white", borderRadius: 12, width: "100%", maxWidth: 800,
+            maxHeight: "90vh", overflow: "auto", boxShadow: "0 24px 48px rgba(0,0,0,0.2)",
+          }}>
+            {/* Preview header */}
+            <div style={{ padding: "16px 24px", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "white", zIndex: 1 }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>Aperçu du document</div>
+                <div style={{ fontSize: 12, color: "#94a3b8" }}>{doc.titre} — {doc.projet.titre}</div>
+              </div>
+              <div className="row" style={{ gap: 8 }}>
+                <a href={`/api/documents/${docId}/export`} className="btn btn-primary btn-sm" style={{ textDecoration: "none" }}>
+                  <Icons.Download size={14} /> Télécharger .docx
+                </a>
+                <button onClick={() => window.print()} className="btn btn-secondary btn-sm">
+                  <Icons.Download size={14} /> Imprimer / PDF
+                </button>
+                <button className="icon-btn" onClick={() => setShowPreview(false)}>
+                  <Icons.X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Preview body — style page A4 */}
+            <div style={{ padding: "48px 64px", fontFamily: "Georgia, serif", fontSize: "12pt", lineHeight: 1.8, color: "#1e293b" }}>
+              {/* En-tête document */}
+              <div style={{ textAlign: "center", marginBottom: 32 }}>
+                <div style={{ fontSize: "10pt", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>
+                  {categorieLabels[doc.categorie] ?? doc.categorie}
+                </div>
+                <h1 style={{ fontSize: "20pt", fontWeight: 700, color: "#0f172a", margin: "0 0 8px" }}>{doc.titre}</h1>
+                <div style={{ fontSize: "10pt", color: "#94a3b8" }}>
+                  {doc.projet.titre} — {doc.assigneA?.name ?? "Non assigné"}
+                </div>
+                <hr style={{ border: "none", borderTop: "2px solid #e2e8f0", margin: "24px 0" }} />
+              </div>
+
+              {/* Contenu rendu */}
+              <div
+                className="preview-content"
+                dangerouslySetInnerHTML={{ __html: doc.contenu ?? "<p>Document vide</p>" }}
+                style={{ fontSize: "11pt" }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
