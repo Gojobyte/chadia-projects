@@ -125,9 +125,38 @@ export default function DocumentPage() {
   useEffect(() => {
     if (doc?.contenu && editorRef.current && !contentLoaded.current) {
       editorRef.current.innerHTML = doc.contenu;
+      // Ajouter des id aux headings pour la navigation du plan
+      addHeadingIds();
       contentLoaded.current = true;
     }
   }, [doc]);
+
+  // Ajouter des id uniques a chaque heading dans l'editeur
+  function addHeadingIds() {
+    if (!editorRef.current) return;
+    const headings = editorRef.current.querySelectorAll("h1, h2, h3, h4");
+    headings.forEach((h, i) => {
+      if (!h.id) {
+        h.id = `heading-${i}`;
+      }
+    });
+  }
+
+  // Scroller vers un heading quand on clique dans le plan
+  function scrollToHeading(index: number) {
+    if (!editorRef.current) return;
+    const headings = editorRef.current.querySelectorAll("h1, h2, h3, h4");
+    const target = headings[index];
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Flash le heading pour montrer ou on est
+      const el = target as HTMLElement;
+      el.style.background = "color-mix(in oklch, var(--primary) 15%, transparent)";
+      el.style.borderRadius = "4px";
+      el.style.transition = "background 0.3s";
+      setTimeout(() => { el.style.background = ""; }, 1500);
+    }
+  }
 
   const saveContent = useCallback(async (html: string) => {
     setSaving(true);
@@ -147,6 +176,8 @@ export default function DocumentPage() {
       saveContent(html);
       // Mettre a jour doc.contenu pour le plan et l'apercu
       setDoc(prev => prev ? { ...prev, contenu: html } : null);
+      // Mettre a jour les ids des headings
+      addHeadingIds();
     }, 2000);
   }
 
@@ -621,11 +652,14 @@ export default function DocumentPage() {
           <div style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Plan</div>
           <div style={{ borderLeft: "1px solid var(--border)", paddingLeft: 12, marginBottom: 24 }}>
             {headings.length > 0 ? headings.map((s, i) => (
-              <div key={i} style={{
+              <div key={i} onClick={() => scrollToHeading(i)} style={{
                 fontSize: 12.5, padding: "5px 0", paddingLeft: s.level * 12,
                 color: i === 0 ? "var(--primary)" : "var(--text-3)",
                 fontWeight: i === 0 ? 600 : 400, cursor: "pointer",
-              }}>
+              }}
+                onMouseEnter={e => { e.currentTarget.style.color = "var(--primary)"; }}
+                onMouseLeave={e => { e.currentTarget.style.color = i === 0 ? "var(--primary)" : "var(--text-3)"; }}
+              >
                 {s.text}
               </div>
             )) : (
