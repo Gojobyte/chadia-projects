@@ -172,6 +172,11 @@ table.t tr:last-child td { border-bottom: none; }
 [contenteditable] strong { color: var(--text); }
 [contenteditable] mark { background: color-mix(in oklch, var(--warning) 18%, transparent); color: var(--text); padding: 1px 4px; border-radius: 3px; }
 [contenteditable]:focus { outline: none; }
+[contenteditable] h1 { font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; margin: 28px 0 14px; }
+[contenteditable] pre { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; font-family: ui-monospace, monospace; font-size: 13px; overflow-x: auto; margin: 12px 0; }
+[contenteditable] a { color: var(--primary); text-decoration: underline; }
+[contenteditable] img { max-width: 100%; height: auto; border-radius: 6px; margin: 12px 0; }
+[contenteditable] hr { border: none; border-top: 2px solid var(--border); margin: 24px 0; }
 [contenteditable] *::selection { background: color-mix(in oklch, var(--primary) 20%, transparent); }
 
 /* Document preview — print-ready styles */

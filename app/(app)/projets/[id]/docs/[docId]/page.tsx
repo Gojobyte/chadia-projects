@@ -428,10 +428,100 @@ export default function DocumentPage() {
     editorRef.current?.focus();
   }
 
-  // Texte normal (supprimer le formatage de bloc)
+  // Texte normal
   function execNormal() {
     document.execCommand("formatBlock", false, "<p>");
     editorRef.current?.focus();
+  }
+
+  // Taille de police (en pt, pas la valeur 1-7 de execCommand)
+  function setFontSize(size: string) {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+      const range = sel.getRangeAt(0);
+      const span = document.createElement("span");
+      span.style.fontSize = size + "pt";
+      range.surroundContents(span);
+    }
+    editorRef.current?.focus();
+  }
+
+  // Interligne
+  function setLineHeight(lh: string) {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const block = sel.anchorNode?.parentElement?.closest("p, h1, h2, h3, h4, li, div");
+      if (block instanceof HTMLElement) block.style.lineHeight = lh;
+    }
+    editorRef.current?.focus();
+  }
+
+  // Saut de page
+  function insertPageBreak() {
+    const html = `<div style="page-break-after:always;border-bottom:2px dashed var(--border);margin:32px 0;padding:8px 0;text-align:center;color:var(--text-4);font-size:11px;user-select:none" contenteditable="false">— saut de page —</div><p><br></p>`;
+    document.execCommand("insertHTML", false, html);
+    editorRef.current?.focus();
+  }
+
+  // Générer une page de garde
+  function insertCoverPage() {
+    const title = doc?.titre ?? "Document";
+    const project = doc?.projet?.titre ?? "Projet";
+    const date = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+    const html = `<div style="text-align:center;padding:80px 40px 60px;min-height:500px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <p style="font-size:13pt;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:3px;margin-bottom:8px">ONG CHADIA</p>
+      <p style="font-size:10pt;color:#94a3b8;margin-bottom:32px">Pour le Développement du Tchad</p>
+      <hr style="border:none;border-top:3px solid #2563eb;width:120px;margin:0 auto 32px" />
+      <h1 style="font-size:28pt;font-weight:bold;color:#0f172a;margin:0 0 16px;line-height:1.3">${title}</h1>
+      <p style="font-size:14pt;color:#475569;margin:12px 0 4px">Projet : <strong>${project}</strong></p>
+      <p style="font-size:12pt;color:#64748b;margin:4px 0 40px">${doc?.assigneA?.name ?? ""}</p>
+      <hr style="border:none;border-top:1px solid #cbd5e1;width:200px;margin:0 auto 16px" />
+      <p style="font-size:11pt;color:#94a3b8">${date}</p>
+    </div>
+    <div style="page-break-after:always;border-bottom:2px dashed var(--border);margin:16px 0;padding:8px 0;text-align:center;color:var(--text-4);font-size:11px;user-select:none" contenteditable="false">— saut de page —</div>`;
+
+    if (editorRef.current) {
+      editorRef.current.innerHTML = html + editorRef.current.innerHTML;
+      const newHtml = editorRef.current.innerHTML;
+      saveContent(newHtml);
+      setDoc(prev => prev ? { ...prev, contenu: newHtml } : null);
+    }
+  }
+
+  // Générer un sommaire automatique
+  function insertTOC() {
+    if (!editorRef.current) return;
+    const hs = editorRef.current.querySelectorAll("h1, h2, h3, h4");
+    if (hs.length === 0) { alert("Aucun titre trouvé dans le document."); return; }
+
+    let tocHtml = `<div style="border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:16px 0;background:var(--surface-2)">
+      <h2 style="font-size:16pt;font-weight:bold;color:var(--text);margin:0 0 14px;text-transform:uppercase;letter-spacing:1px">Sommaire</h2>`;
+
+    hs.forEach((h, i) => {
+      const level = parseInt(h.tagName[1]) - 1;
+      const indent = level * 20;
+      const text = h.textContent ?? "";
+      const fw = level <= 1 ? "bold" : "normal";
+      const fs = level <= 1 ? "12pt" : "11pt";
+      tocHtml += `<p style="margin:4px 0;padding-left:${indent}px;font-size:${fs};font-weight:${fw};color:var(--text-2);cursor:pointer" onclick="document.querySelectorAll('h1,h2,h3,h4')[${i}]?.scrollIntoView({behavior:'smooth',block:'center'})">${text}</p>`;
+    });
+
+    tocHtml += `</div><p><br></p>`;
+
+    // Insérer au début du contenu (après la page de garde si elle existe)
+    const content = editorRef.current.innerHTML;
+    const breakIdx = content.indexOf("— saut de page —");
+    if (breakIdx !== -1) {
+      // Trouver la fin du div du saut de page
+      const afterBreak = content.indexOf("</div>", breakIdx) + 6;
+      editorRef.current.innerHTML = content.slice(0, afterBreak) + tocHtml + content.slice(afterBreak);
+    } else {
+      editorRef.current.innerHTML = tocHtml + content;
+    }
+
+    const newHtml = editorRef.current.innerHTML;
+    saveContent(newHtml);
+    setDoc(prev => prev ? { ...prev, contenu: newHtml } : null);
   }
 
   async function changeStatut(statut: string) {
@@ -570,17 +660,25 @@ export default function DocumentPage() {
                     <option value="Trebuchet MS" style={{ fontFamily: "Trebuchet MS" }}>Trebuchet MS</option>
                   </select>
 
-                  {/* Taille de police */}
-                  <select title="Taille" onChange={e => { if (e.target.value) document.execCommand("fontSize", false, e.target.value); }}
+                  {/* Taille de police — vraies valeurs en pt */}
+                  <select title="Taille de police" onChange={e => { if (e.target.value) setFontSize(e.target.value); e.target.value = ""; }}
                     style={{ padding: "3px 6px", border: "1px solid var(--border)", borderRadius: 4, background: "var(--surface)", fontSize: 12, color: "var(--text)", width: 60, cursor: "pointer" }}>
                     <option value="">Taille</option>
-                    <option value="1">8</option>
-                    <option value="2">10</option>
-                    <option value="3">12</option>
-                    <option value="4">14</option>
-                    <option value="5">18</option>
-                    <option value="6">24</option>
-                    <option value="7">36</option>
+                    {[8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32, 36, 48, 72].map(s => (
+                      <option key={s} value={String(s)}>{s}</option>
+                    ))}
+                  </select>
+
+                  {/* Interligne */}
+                  <select title="Interligne" onChange={e => { if (e.target.value) setLineHeight(e.target.value); e.target.value = ""; }}
+                    style={{ padding: "3px 6px", border: "1px solid var(--border)", borderRadius: 4, background: "var(--surface)", fontSize: 12, color: "var(--text)", width: 50, cursor: "pointer" }}>
+                    <option value="">↕</option>
+                    <option value="1">1.0</option>
+                    <option value="1.15">1.15</option>
+                    <option value="1.5">1.5</option>
+                    <option value="1.7">1.7</option>
+                    <option value="2">2.0</option>
+                    <option value="2.5">2.5</option>
                   </select>
 
                   {/* Compteur de mots — à droite */}
@@ -647,6 +745,21 @@ export default function DocumentPage() {
                   {/* Exposant / Indice */}
                   <ToolbarBtn label="x²" title="Exposant" onClick={() => document.execCommand("superscript")} style={{ fontSize: 10 }} />
                   <ToolbarBtn label="x₂" title="Indice" onClick={() => document.execCommand("subscript")} style={{ fontSize: 10 }} />
+                  <ToolbarSep />
+
+                  {/* Document : page de garde, sommaire, saut de page */}
+                  <button onClick={insertCoverPage} title="Insérer une page de garde"
+                    style={{ display: "flex", alignItems: "center", gap: 3, padding: "3px 8px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-2)", fontSize: 10.5, cursor: "pointer" }}>
+                    📄 Page de garde
+                  </button>
+                  <button onClick={insertTOC} title="Générer le sommaire"
+                    style={{ display: "flex", alignItems: "center", gap: 3, padding: "3px 8px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-2)", fontSize: 10.5, cursor: "pointer" }}>
+                    📋 Sommaire
+                  </button>
+                  <button onClick={insertPageBreak} title="Saut de page"
+                    style={{ display: "flex", alignItems: "center", gap: 3, padding: "3px 8px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-2)", fontSize: 10.5, cursor: "pointer" }}>
+                    ⏎ Saut de page
+                  </button>
                 </div>
               </div>
 
@@ -789,10 +902,10 @@ export default function DocumentPage() {
         </div>
 
         {/* ─── Right sidebar ─── */}
-        <aside style={{ position: "sticky", top: 64, height: "fit-content" }}>
-          {/* Plan */}
+        <aside style={{ position: "sticky", top: 64, height: "calc(100vh - 100px)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          {/* Plan — avec scrollbar */}
           <div style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Plan</div>
-          <div style={{ borderLeft: "1px solid var(--border)", paddingLeft: 12, marginBottom: 24 }}>
+          <div style={{ borderLeft: "1px solid var(--border)", paddingLeft: 12, marginBottom: 16, overflowY: "auto", maxHeight: "40vh", flexShrink: 0 }}>
             {headings.length > 0 ? headings.map((s, i) => (
               <div key={i} onClick={() => scrollToHeading(i)} style={{
                 fontSize: 12.5, padding: "5px 0", paddingLeft: s.level * 12,
