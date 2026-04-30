@@ -33,6 +33,34 @@ const avatarColors = [
   "oklch(0.6 0.13 245)", "oklch(0.62 0.13 25)",
 ];
 
+// Convertir markdown en HTML (pour les anciens contenus)
+function markdownToHtml(md: string): string {
+  return md
+    .split("\n\n")
+    .map(block => {
+      block = block.trim();
+      if (!block) return "";
+      if (block.startsWith("# ")) return `<h2>${inlineFmt(block.slice(2))}</h2>`;
+      if (block.startsWith("## ")) return `<h3>${inlineFmt(block.slice(3))}</h3>`;
+      if (/^\d+\.\s/.test(block)) {
+        const items = block.split("\n").map(l => `<li>${inlineFmt(l.replace(/^\d+\.\s*/, ""))}</li>`).join("");
+        return `<ol>${items}</ol>`;
+      }
+      if (block.startsWith("- ")) {
+        const items = block.split("\n").map(l => `<li>${inlineFmt(l.replace(/^-\s*/, ""))}</li>`).join("");
+        return `<ul>${items}</ul>`;
+      }
+      return `<p>${inlineFmt(block)}</p>`;
+    })
+    .join("\n");
+}
+function inlineFmt(t: string): string {
+  return t
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/==(.+?)==/g, "<mark>$1</mark>");
+}
+
 const TEMPLATE_CONTENT = `<h2>1. Contexte et justification</h2>
 <p>La région du Sahel — englobant le Mali, le Burkina Faso et le Niger — fait face à une crise climatique aiguë : hausse des températures de 1,5 °C depuis 1970, raréfaction des ressources en eau, et insécurité alimentaire chronique touchant <mark>plus de 18 millions de personnes</mark>.</p>
 <p>Ce projet propose une approche intégrée de renforcement des capacités d'adaptation des communautés rurales sur 24 mois, articulée autour de trois piliers : agriculture résiliente, gestion participative de l'eau, et systèmes d'alerte précoce.</p>
@@ -70,8 +98,25 @@ export default function DocumentPage() {
   useEffect(() => {
     fetch(`/api/documents/${docId}`)
       .then(r => r.json())
-      .then(d => { setDoc(d.document); setLoading(false); });
+      .then(d => {
+        const document = d.document;
+        // Convertir markdown en HTML si le contenu n'est pas deja du HTML
+        if (document?.contenu && !document.contenu.trim().startsWith("<")) {
+          document.contenu = markdownToHtml(document.contenu);
+        }
+        setDoc(document);
+        setLoading(false);
+      });
   }, [docId]);
+
+  // Injecter le contenu dans le contentEditable apres le chargement
+  const contentLoaded = useRef(false);
+  useEffect(() => {
+    if (doc?.contenu && editorRef.current && !contentLoaded.current) {
+      editorRef.current.innerHTML = doc.contenu;
+      contentLoaded.current = true;
+    }
+  }, [doc]);
 
   const saveContent = useCallback(async (html: string) => {
     setSaving(true);
@@ -89,6 +134,8 @@ export default function DocumentPage() {
     saveTimer.current = setTimeout(() => {
       const html = editorRef.current?.innerHTML ?? "";
       saveContent(html);
+      // Mettre a jour doc.contenu pour le plan et l'apercu
+      setDoc(prev => prev ? { ...prev, contenu: html } : null);
     }, 2000);
   }
 
@@ -205,7 +252,6 @@ export default function DocumentPage() {
               suppressContentEditableWarning
               onInput={handleInput}
               onKeyDown={handleKeyDown}
-              dangerouslySetInnerHTML={{ __html: doc.contenu! }}
               style={{
                 outline: "none", minHeight: 500, fontSize: 15, lineHeight: 1.7, color: "var(--text-2)",
                 cursor: "text",
