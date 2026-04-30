@@ -465,7 +465,7 @@ export default function DocumentPage() {
   }
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 32px 80px" }}>
+    <div style={{ maxWidth: 1400, margin: "0 auto", padding: "20px 32px 80px" }}>
       {/* Breadcrumbs + actions */}
       <div className="row" style={{ gap: 8, fontSize: 12.5, color: "var(--text-3)", marginBottom: 16 }}>
         <Link href="/projets" style={{ color: "var(--text-3)" }}>Projets</Link>
@@ -620,8 +620,8 @@ export default function DocumentPage() {
                 onKeyDown={handleKeyDown}
                 onClick={() => setShowSlashMenu(false)}
                 style={{
-                  outline: "none", minHeight: 500, fontSize: 15, lineHeight: 1.7, color: "var(--text-2)",
-                  cursor: "text", padding: "20px 24px",
+                  outline: "none", minHeight: 700, fontSize: 15, lineHeight: 1.7, color: "var(--text-2)",
+                  cursor: "text", padding: "28px 32px",
                   border: "1px solid var(--border)", borderRadius: "0 0 var(--radius) var(--radius)",
                   background: "var(--surface)",
                 }}
