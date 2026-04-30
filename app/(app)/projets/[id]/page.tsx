@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { KanbanBoard } from "@/components/kanban-board";
+import { Icons } from "@/components/icons";
 
 function daysUntil(d: string | Date): number { return Math.ceil((new Date(d).getTime() - Date.now()) / 864e5); }
 
@@ -92,27 +93,60 @@ export default function ProjetDetailPage() {
           </div>
         </div>
 
-        {/* Pipeline progress */}
+        {/* Pipeline stepper */}
         <div className="card" style={{ marginTop: 16, padding: "14px 18px" }}>
-          <div className="row" style={{ gap: 8, marginBottom: 8 }}>
-            <span style={{ fontSize: 11.5, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Progression</span>
-            <span className="tnum" style={{ marginLeft: "auto", fontSize: 13, fontWeight: 600 }}>{progression}%</span>
+          <div className="row" style={{ gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 11.5, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Pipeline</span>
+            <span style={{ marginLeft: "auto", fontSize: 12.5, color: "var(--text-2)" }}>
+              <span className="tnum" style={{ fontWeight: 600, color: "var(--text)" }}>{progression}%</span> · {valides}/{totalDocs} documents
+            </span>
           </div>
-          <div className="progress-bar" style={{ height: 6 }}>
-            <span style={{ width: `${progression}%`, background: progression === 100 ? "var(--success)" : undefined }} />
+          <div className="row" style={{ gap: 0 }}>
+            {["BROUILLON", "EN_COURS", "EN_REVISION", "SOUMIS", "ACCEPTE"].map((s, i) => {
+              const steps = ["BROUILLON", "EN_COURS", "EN_REVISION", "SOUMIS", "ACCEPTE"];
+              const labels: Record<string,string> = { BROUILLON: "Brouillon", EN_COURS: "En cours", EN_REVISION: "Revision", SOUMIS: "Soumis", ACCEPTE: "Accepte" };
+              const idx = steps.indexOf(projet.statut);
+              const isCurrent = s === projet.statut;
+              const isPast = i < idx;
+              return (
+                <div key={s} style={{ flex: 1, display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{
+                    width: 24, height: 24, borderRadius: "50%",
+                    background: isPast || isCurrent ? "var(--primary)" : "var(--surface-3)",
+                    color: isPast || isCurrent ? "white" : "var(--text-3)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 11, fontWeight: 600, flexShrink: 0,
+                    boxShadow: isCurrent ? "0 0 0 4px color-mix(in oklch, var(--primary) 18%, transparent)" : "none",
+                  }}>
+                    {isPast ? "✓" : i + 1}
+                  </div>
+                  <div style={{ fontSize: 11, fontWeight: isCurrent ? 600 : 500, color: isCurrent ? "var(--text)" : isPast ? "var(--text-2)" : "var(--text-4)", whiteSpace: "nowrap" }}>
+                    {labels[s] ?? s}
+                  </div>
+                  {i < 4 && <div style={{ flex: 1, height: 1, background: isPast ? "var(--primary)" : "var(--border)", minWidth: 8 }} />}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="row" style={{ gap: 4, borderBottom: "1px solid var(--border)", marginBottom: 16 }}>
-        {(["kanban", "ia", "taches", "equipe", "activite"] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)} className="btn btn-ghost" style={{
-            padding: "8px 14px", fontSize: 13, fontWeight: 500, borderRadius: 0, marginBottom: -1,
-            color: tab === t ? "var(--text)" : "var(--text-3)",
-            borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent",
+      <div className="row" style={{ borderBottom: "1px solid var(--border)", marginBottom: 16, gap: 2 }}>
+        {([
+          { id: "kanban" as const, label: "Kanban", Ic: Icons.Dashboard },
+          { id: "ia" as const, label: "IA", Ic: Icons.Sparkles },
+          { id: "taches" as const, label: "Taches", Ic: Icons.Check },
+          { id: "equipe" as const, label: "Equipe", Ic: Icons.Users },
+          { id: "activite" as const, label: "Activite", Ic: Icons.Clock },
+        ]).map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            padding: "8px 14px", fontSize: 13, fontWeight: 500, display: "flex", alignItems: "center", gap: 6,
+            color: tab === t.id ? "var(--text)" : "var(--text-3)",
+            borderBottom: tab === t.id ? "2px solid var(--primary)" : "2px solid transparent",
+            marginBottom: -1, background: "none", border: "none", cursor: "pointer",
           }}>
-            {t === "kanban" ? "Documents" : t === "ia" ? "🧠 IA" : t === "taches" ? "Taches" : t === "equipe" ? "Equipe" : "Activite"}
+            <t.Ic size={14} /> {t.label}
           </button>
         ))}
       </div>
