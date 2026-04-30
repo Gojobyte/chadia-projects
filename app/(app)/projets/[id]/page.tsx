@@ -66,9 +66,15 @@ export default function ProjetDetailPage() {
             <h1 className="text-2xl font-bold text-slate-900">{projet.titre}</h1>
             <p className="text-sm text-slate-500 mt-1">{projet.bailleur.sigle} — {projet.bailleur.nom} {projet.reference ? `· Ref: ${projet.reference}` : ""}</p>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-slate-500">Deadline: <span className="font-medium text-slate-900">{new Date(projet.dateLimite).toLocaleDateString("fr-FR")}</span></p>
-            {projet.budget && <p className="text-sm text-slate-500">{projet.budget.toLocaleString()} {projet.devise}</p>}
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-sm text-slate-500">Deadline: <span className="font-medium text-slate-900">{new Date(projet.dateLimite).toLocaleDateString("fr-FR")}</span></p>
+              {projet.budget && <p className="text-sm text-slate-500">{projet.budget.toLocaleString()} {projet.devise}</p>}
+            </div>
+            <a href={`/api/projets/${id}/export`} target="_blank" rel="noopener noreferrer"
+              className="px-3 py-2 border border-[#e2e8f0] rounded text-[12px] font-medium text-[#64748b] hover:bg-[#f8fafc] transition-colors">
+              📄 Exporter PDF
+            </a>
           </div>
         </div>
         {/* Barre de progression */}

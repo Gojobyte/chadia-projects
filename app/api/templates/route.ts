@@ -17,3 +17,22 @@ export async function GET(request: Request) {
 
   return success({ templates });
 }
+
+// POST /api/templates — Creer un template
+export async function POST(request: Request) {
+  const result = await requireRole("ADMIN");
+  if (result.error) return result.error;
+
+  const body = await request.json();
+  const { categorie, titre, description, contenu } = body;
+
+  if (!categorie || !titre || !contenu) {
+    return success({ error: "categorie, titre et contenu requis" });
+  }
+
+  const template = await prisma.template.create({
+    data: { categorie, titre, description: description ?? null, contenu },
+  });
+
+  return success({ template });
+}
