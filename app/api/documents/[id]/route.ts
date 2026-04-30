@@ -16,6 +16,7 @@ export async function GET(
     include: {
       projet: { select: { id: true, titre: true } },
       assigneA: { select: { id: true, name: true } },
+      commentaires: { select: { id: true, contenu: true, createdAt: true, user: { select: { name: true } } }, orderBy: { createdAt: "desc" as const }, take: 10 },
     },
   });
   if (!doc) return notFound("Document");
