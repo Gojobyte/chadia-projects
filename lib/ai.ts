@@ -1,17 +1,17 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // --------------------------------------------------------------------------
-// Service IA — Claude API pour l'analyse et la generation
+// Service IA — Google Gemini (GRATUIT)
 // --------------------------------------------------------------------------
 
-let client: Anthropic | null = null;
+let genAI: GoogleGenerativeAI | null = null;
 
-function getClient(): Anthropic {
-  if (!client) {
-    if (!process.env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY manquant");
-    client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+function getAI(): GoogleGenerativeAI {
+  if (!genAI) {
+    if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY manquant");
+    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   }
-  return client;
+  return genAI;
 }
 
 /**
@@ -24,46 +24,31 @@ export async function analyserAppelOffre(texte: string): Promise<{
   budgetEstime: string;
   recommandations: string;
 }> {
-  const ai = getClient();
+  const ai = getAI();
+  const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-  const response = await ai.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 4000,
-    messages: [{
-      role: "user",
-      content: `Tu es un expert en montage de projets pour les ONG internationales. Analyse cet appel d'offres et extrais les informations suivantes en francais.
+  const result = await model.generateContent(`Tu es un expert en montage de projets pour les ONG internationales. Analyse cet appel d'offres et extrais les informations suivantes en francais.
 
 APPEL D'OFFRES :
 ${texte}
 
-Reponds EXACTEMENT dans ce format JSON (sans markdown, juste le JSON) :
+Reponds UNIQUEMENT en JSON valide (pas de markdown, pas de backticks) :
 {
   "criteres": "Liste des criteres d'evaluation (un par ligne)",
   "exigences": "Liste des exigences techniques et administratives (un par ligne)",
   "documentsRequis": "Liste des documents a fournir (un par ligne)",
   "budgetEstime": "Budget mentionne ou estime",
   "recommandations": "5 recommandations strategiques pour maximiser les chances de selection"
-}`
-    }],
-  });
+}`);
 
-  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  const text = result.response.text();
 
   try {
-    // Extraire le JSON de la reponse
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) return JSON.parse(jsonMatch[0]);
-  } catch {
-    // Si le parsing echoue, retourner le texte brut
-  }
+  } catch { /* fallback */ }
 
-  return {
-    criteres: text,
-    exigences: "",
-    documentsRequis: "",
-    budgetEstime: "",
-    recommandations: "",
-  };
+  return { criteres: text, exigences: "", documentsRequis: "", budgetEstime: "", recommandations: "" };
 }
 
 /**
@@ -76,14 +61,10 @@ export async function genererContenu(params: {
   description: string;
   analyseIA?: string;
 }): Promise<string> {
-  const ai = getClient();
+  const ai = getAI();
+  const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-  const response = await ai.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 8000,
-    messages: [{
-      role: "user",
-      content: `Tu es un expert en redaction de projets pour les ONG. Genere le contenu d'un document de type "${params.typeDocument}" pour le projet suivant.
+  const result = await model.generateContent(`Tu es un expert en redaction de projets pour les ONG. Genere le contenu d'un document de type "${params.typeDocument}" pour le projet suivant.
 
 PROJET : ${params.titreProjet}
 BAILLEUR : ${params.bailleur}
@@ -91,12 +72,9 @@ DESCRIPTION : ${params.description}
 ${params.analyseIA ? `\nANALYSE DE L'APPEL D'OFFRES :\n${params.analyseIA}` : ""}
 
 Redige un contenu professionnel, structure avec des titres et sous-titres, pret a etre utilise dans une proposition technique. Le contenu doit etre detaille et adapte au contexte du Tchad et de l'ONG CHADIA.
+Style formel, professionnel, adapte aux bailleurs internationaux.`);
 
-Utilise un style formel, professionnel, adapte aux bailleurs internationaux.`
-    }],
-  });
-
-  return response.content[0].type === "text" ? response.content[0].text : "";
+  return result.response.text();
 }
 
 /**
@@ -106,14 +84,10 @@ export async function verifierConformite(params: {
   contenuDocument: string;
   exigences: string;
 }): Promise<{ score: number; problemes: string; suggestions: string }> {
-  const ai = getClient();
+  const ai = getAI();
+  const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-  const response = await ai.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 2000,
-    messages: [{
-      role: "user",
-      content: `Tu es un evaluateur de propositions pour un bailleur international. Evalue la conformite de ce document par rapport aux exigences.
+  const result = await model.generateContent(`Evalue la conformite de ce document par rapport aux exigences. Reponds UNIQUEMENT en JSON valide :
 
 DOCUMENT :
 ${params.contenuDocument.slice(0, 5000)}
@@ -121,17 +95,13 @@ ${params.contenuDocument.slice(0, 5000)}
 EXIGENCES :
 ${params.exigences}
 
-Reponds en JSON :
 {
   "score": [0-100],
-  "problemes": "Liste des problemes identifies",
+  "problemes": "Liste des problemes",
   "suggestions": "Suggestions d'amelioration"
-}`
-    }],
-  });
+}`);
 
-  const text = response.content[0].type === "text" ? response.content[0].text : "";
-
+  const text = result.response.text();
   try {
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) return JSON.parse(jsonMatch[0]);
