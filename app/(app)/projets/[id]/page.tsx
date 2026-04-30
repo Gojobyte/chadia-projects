@@ -102,25 +102,7 @@ export default function ProjetDetailPage() {
 
       {/* Tab: Taches */}
       {tab === "taches" && (
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          {projet.taches.length === 0 ? (
-            <p className="text-slate-400 text-sm text-center py-8">Aucune tache. Les taches seront ajoutees dans l&apos;Epic 4.</p>
-          ) : (
-            <div className="space-y-2">
-              {projet.taches.map(t => (
-                <div key={t.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">{t.titre}</p>
-                    {t.assigneA && <p className="text-xs text-slate-400">{t.assigneA.name}</p>}
-                  </div>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    t.statut === "TERMINE" ? "bg-green-100 text-green-800" : t.statut === "EN_COURS" ? "bg-blue-100 text-blue-800" : "bg-slate-100 text-slate-600"
-                  }`}>{t.statut}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <TachesPanel projetId={id} taches={projet.taches} membres={projet.membres} onReload={load} />
       )}
 
       {/* Tab: Equipe */}
@@ -156,6 +138,150 @@ export default function ProjetDetailPage() {
               ))}
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Panneau de gestion des taches
+function TachesPanel({ projetId, taches: initialTaches, membres, onReload }: {
+  projetId: string;
+  taches: Tache[];
+  membres: Membre[];
+  onReload: () => void;
+}) {
+  const [taches, setTaches] = useState(initialTaches);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ titre: "", description: "", assigneAId: "", priorite: "MOYENNE", dateLimite: "" });
+  const [formLoading, setFormLoading] = useState(false);
+
+  async function createTache(e: React.FormEvent) {
+    e.preventDefault(); setFormLoading(true);
+    const res = await fetch(`/api/projets/${projetId}/taches`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setTaches(prev => [data.tache, ...prev]);
+      setForm({ titre: "", description: "", assigneAId: "", priorite: "MOYENNE", dateLimite: "" });
+      setShowForm(false);
+      onReload();
+    }
+    setFormLoading(false);
+  }
+
+  async function toggleStatut(tache: Tache) {
+    const next = tache.statut === "A_FAIRE" ? "EN_COURS" : tache.statut === "EN_COURS" ? "TERMINE" : "A_FAIRE";
+    await fetch(`/api/projets/${projetId}/taches/${tache.id}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ statut: next }),
+    });
+    setTaches(prev => prev.map(t => t.id === tache.id ? { ...t, statut: next } : t));
+  }
+
+  async function deleteTache(tacheId: string) {
+    if (!confirm("Supprimer cette tache ?")) return;
+    await fetch(`/api/projets/${projetId}/taches/${tacheId}`, { method: "DELETE" });
+    setTaches(prev => prev.filter(t => t.id !== tacheId));
+  }
+
+  const statutBadge: Record<string, string> = {
+    A_FAIRE: "badge-neutral", EN_COURS: "badge-blue", TERMINE: "badge-success",
+  };
+  const statutLabel: Record<string, string> = {
+    A_FAIRE: "A faire", EN_COURS: "En cours", TERMINE: "Termine",
+  };
+  const prioBadge: Record<string, string> = {
+    HAUTE: "badge-danger", MOYENNE: "badge-warning", BASSE: "badge-neutral",
+  };
+
+  return (
+    <div className="card p-0 overflow-hidden">
+      <div className="px-5 py-3 border-b border-[#e2e8f0] flex items-center justify-between">
+        <h2 className="text-[13px] font-bold text-[#1a365d] uppercase tracking-wider">Taches ({taches.length})</h2>
+        <button onClick={() => setShowForm(!showForm)}
+          className="px-3 py-1.5 rounded text-[12px] font-semibold text-white" style={{ background: "#0468b1" }}>
+          {showForm ? "Annuler" : "+ Nouvelle tache"}
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={createTache} className="p-5 border-b border-[#e2e8f0] bg-[#f8fafc] space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <label className="block text-[11px] font-semibold text-[#64748b] uppercase mb-1">Titre</label>
+              <input value={form.titre} onChange={e => setForm({...form, titre: e.target.value})} required
+                placeholder="Ex: Rediger la section methodologie"
+                className="w-full px-3 py-2 border border-[#e2e8f0] rounded text-[13px]" />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-[#64748b] uppercase mb-1">Assigner a</label>
+              <select value={form.assigneAId} onChange={e => setForm({...form, assigneAId: e.target.value})}
+                className="w-full px-3 py-2 border border-[#e2e8f0] rounded text-[13px]">
+                <option value="">Non assigne</option>
+                {membres.map(m => <option key={m.user.id} value={m.user.id}>{m.user.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-[#64748b] uppercase mb-1">Priorite</label>
+              <select value={form.priorite} onChange={e => setForm({...form, priorite: e.target.value})}
+                className="w-full px-3 py-2 border border-[#e2e8f0] rounded text-[13px]">
+                <option value="HAUTE">Haute</option>
+                <option value="MOYENNE">Moyenne</option>
+                <option value="BASSE">Basse</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-[#64748b] uppercase mb-1">Date limite</label>
+              <input type="date" value={form.dateLimite} onChange={e => setForm({...form, dateLimite: e.target.value})}
+                className="w-full px-3 py-2 border border-[#e2e8f0] rounded text-[13px]" />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-[#64748b] uppercase mb-1">Description</label>
+              <input value={form.description} onChange={e => setForm({...form, description: e.target.value})}
+                placeholder="Optionnel" className="w-full px-3 py-2 border border-[#e2e8f0] rounded text-[13px]" />
+            </div>
+          </div>
+          <button type="submit" disabled={formLoading}
+            className="px-4 py-2 rounded text-[12px] font-semibold text-white disabled:opacity-50" style={{ background: "#0468b1" }}>
+            {formLoading ? "Creation..." : "Creer la tache"}
+          </button>
+        </form>
+      )}
+
+      {taches.length === 0 && !showForm ? (
+        <div className="p-8 text-center">
+          <p className="text-[#94a3b8] text-[13px]">Aucune tache pour ce projet</p>
+        </div>
+      ) : (
+        <div className="divide-y divide-[#f1f5f9]">
+          {taches.map(t => (
+            <div key={t.id} className="flex items-center gap-3 px-5 py-3 hover:bg-[#f8fafc] transition-colors group">
+              <button onClick={() => toggleStatut(t)} className="flex-shrink-0" title="Changer le statut">
+                {t.statut === "TERMINE" ? (
+                  <svg className="w-5 h-5 text-[#059669]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                ) : (
+                  <div className={`w-5 h-5 rounded-full border-2 ${t.statut === "EN_COURS" ? "border-[#0468b1] bg-[#e8f4fc]" : "border-[#cbd5e1]"}`} />
+                )}
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className={`text-[13px] font-medium ${t.statut === "TERMINE" ? "line-through text-[#94a3b8]" : "text-[#1e293b]"}`}>{t.titre}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  {t.assigneA && <span className="text-[10px] text-[#64748b]">{t.assigneA.name}</span>}
+                  {t.dateLimite && <span className="text-[10px] text-[#94a3b8]">· {new Date(t.dateLimite).toLocaleDateString("fr-FR")}</span>}
+                </div>
+              </div>
+              <span className={`badge ${prioBadge[t.priorite] ?? "badge-neutral"}`}>
+                {t.priorite === "HAUTE" ? "Urgent" : t.priorite === "MOYENNE" ? "Normal" : "Faible"}
+              </span>
+              <span className={`badge ${statutBadge[t.statut] ?? "badge-neutral"}`}>{statutLabel[t.statut] ?? t.statut}</span>
+              <button onClick={() => deleteTache(t.id)} className="text-[#dc2626] opacity-0 group-hover:opacity-100 transition-opacity text-xs">
+                ✕
+              </button>
+            </div>
+          ))}
         </div>
       )}
     </div>
