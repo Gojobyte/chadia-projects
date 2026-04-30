@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { KanbanBoard } from "@/components/kanban-board";
 import { Icons } from "@/components/icons";
@@ -74,6 +74,7 @@ export default function ProjetDetailPage() {
   const [projet, setProjet] = useState<Projet | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"kanban" | "timeline" | "docs" | "equipe" | "activite">("kanban");
+  const [showNewDoc, setShowNewDoc] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/projets/${id}`);
@@ -213,10 +214,10 @@ export default function ProjetDetailPage() {
           </button>
         ))}
         <div style={{ marginLeft: "auto" }} className="row">
-          <button className="btn btn-ghost btn-sm">
+          <Link href={`/projets/${id}/budget`} className="btn btn-ghost btn-sm">
             <Icons.Money size={14} /> Budget
-          </button>
-          <button className="btn btn-secondary btn-sm">
+          </Link>
+          <button className="btn btn-secondary btn-sm" onClick={() => setShowNewDoc(true)}>
             <Icons.Plus size={14} /> Document
           </button>
         </div>
@@ -228,6 +229,9 @@ export default function ProjetDetailPage() {
       {tab === "docs" && <DocsTable projetId={id} documents={projet.documents} />}
       {tab === "equipe" && <TeamView membres={projet.membres} />}
       {tab === "activite" && <ActivityView activites={projet.activites} />}
+
+      {/* Modal nouveau document */}
+      {showNewDoc && <NewDocModal projetId={id} onClose={() => setShowNewDoc(false)} onCreated={load} />}
     </div>
   );
 }
@@ -455,6 +459,149 @@ function ActivityView({ activites }: { activites: Activite[] }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/* ─── Modal Nouveau Document ─── */
+function NewDocModal({ projetId, onClose, onCreated }: { projetId: string; onClose: () => void; onCreated: () => void }) {
+  const [mode, setMode] = useState<"create" | "import">("create");
+  const [form, setForm] = useState({ titre: "", categorie: "PROPOSITION_TECHNIQUE", description: "" });
+  const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
+
+  const categories = [
+    { value: "PROPOSITION_TECHNIQUE", label: "Proposition technique" },
+    { value: "BUDGET_PREVISIONNEL", label: "Budget prévisionnel" },
+    { value: "BUDGET_DETAIL", label: "Détail budgétaire" },
+    { value: "CADRE_LOGIQUE", label: "Cadre logique" },
+    { value: "NOTE_CONCEPTUELLE", label: "Note conceptuelle" },
+    { value: "PLAN_TRAVAIL", label: "Plan de travail" },
+    { value: "GANTT", label: "Diagramme de Gantt" },
+    { value: "CV", label: "CV équipe" },
+    { value: "DOCUMENT_LEGAL", label: "Documents légaux" },
+    { value: "AUTRE", label: "Autre" },
+  ];
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "8px 12px", border: "1px solid var(--border-strong)",
+    borderRadius: 6, background: "var(--surface)", fontSize: 13, color: "var(--text)",
+  };
+  const labelStyle: React.CSSProperties = {
+    display: "block", fontSize: 11.5, fontWeight: 600, color: "var(--text-3)",
+    textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6,
+  };
+
+  async function handleCreate() {
+    if (!form.titre.trim()) { setError("Le titre est requis"); return; }
+    setCreating(true); setError("");
+    const res = await fetch(`/api/projets/${projetId}/documents`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    const data = await res.json();
+    setCreating(false);
+    if (!res.ok) { setError(data.error ?? "Erreur"); return; }
+    onCreated();
+    onClose();
+    if (data.document?.id) router.push(`/projets/${projetId}/docs/${data.document.id}`);
+  }
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true); setError("");
+    const titre = form.titre.trim() || file.name.replace(/\.[^.]+$/, "");
+
+    const createRes = await fetch(`/api/projets/${projetId}/documents`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...form, titre }),
+    });
+    const createData = await createRes.json();
+    if (!createRes.ok) { setError(createData.error ?? "Erreur"); setImporting(false); return; }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    const importRes = await fetch(`/api/documents/${createData.document.id}/import`, { method: "POST", body: formData });
+    const importData = await importRes.json();
+    setImporting(false);
+    if (!importRes.ok) { setError(importData.error ?? "Erreur d'import"); return; }
+
+    onCreated();
+    onClose();
+    router.push(`/projets/${projetId}/docs/${createData.document.id}`);
+  }
+
+  return (
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 200, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center" }}
+      onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "var(--surface)", borderRadius: 12, width: "100%", maxWidth: 520, boxShadow: "var(--shadow-lg)" }}>
+        <div className="card-header">
+          <div className="card-title">Nouveau document</div>
+          <button className="icon-btn" onClick={onClose}><Icons.X size={16} /></button>
+        </div>
+
+        <div className="row" style={{ padding: "0 20px", gap: 0, borderBottom: "1px solid var(--border)" }}>
+          {([
+            { id: "create" as const, label: "Créer un document" },
+            { id: "import" as const, label: "Importer depuis le PC" },
+          ]).map(t => (
+            <button key={t.id} onClick={() => setMode(t.id)} style={{
+              padding: "10px 16px", fontSize: 13, fontWeight: 500, background: "none", border: "none", cursor: "pointer",
+              color: mode === t.id ? "var(--text)" : "var(--text-3)",
+              borderBottom: mode === t.id ? "2px solid var(--primary)" : "2px solid transparent",
+              marginBottom: -1,
+            }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ padding: 20 }}>
+          {error && <div style={{ padding: "8px 12px", background: "var(--danger-soft)", color: "var(--danger)", borderRadius: 6, fontSize: 12, marginBottom: 14 }}>{error}</div>}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div>
+              <label style={labelStyle}>Titre du document</label>
+              <input value={form.titre} onChange={e => setForm({ ...form, titre: e.target.value })} style={inputStyle}
+                placeholder="Ex : Proposition technique PNUD" />
+            </div>
+            <div>
+              <label style={labelStyle}>Catégorie</label>
+              <select value={form.categorie} onChange={e => setForm({ ...form, categorie: e.target.value })} style={inputStyle}>
+                {categories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
+
+            {mode === "create" && (
+              <>
+                <div>
+                  <label style={labelStyle}>Description (optionnel)</label>
+                  <input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} style={inputStyle}
+                    placeholder="Brève description du document" />
+                </div>
+                <button onClick={handleCreate} disabled={creating} className="btn btn-primary" style={{ width: "100%", justifyContent: "center", opacity: creating ? 0.5 : 1 }}>
+                  <Icons.Plus size={14} /> {creating ? "Création..." : "Créer le document"}
+                </button>
+              </>
+            )}
+
+            {mode === "import" && (
+              <div style={{ border: "2px dashed var(--border-strong)", borderRadius: 10, padding: 28, textAlign: "center", background: "var(--surface-2)" }}>
+                <Icons.Download size={24} style={{ color: "var(--text-3)", transform: "rotate(180deg)", margin: "0 auto 10px", display: "block" }} />
+                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>Déposer un fichier</div>
+                <div style={{ fontSize: 12, color: "var(--text-3)", marginBottom: 14 }}>.docx, .html, .txt, .md</div>
+                <label className="btn btn-secondary" style={{ cursor: "pointer" }}>
+                  <Icons.Download size={14} style={{ transform: "rotate(180deg)" }} /> {importing ? "Import en cours..." : "Choisir un fichier"}
+                  <input type="file" accept=".docx,.html,.htm,.txt,.md" onChange={handleImport} style={{ display: "none" }} disabled={importing} />
+                </label>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
