@@ -111,6 +111,7 @@ model Projet {
 
   datePublication DateTime?
   dateLimite      DateTime
+  pays            String?
   statut          ProjetStatut @default(BROUILLON)
 
   appelOffreUrl String?

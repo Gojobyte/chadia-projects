@@ -28,6 +28,7 @@ export async function GET() {
       _count: { select: { documents: true, taches: true, membres: true } },
       documents: { select: { statut: true } },
       membres: { select: { user: { select: { id: true, name: true } } }, take: 4 },
+      analyseIA: { select: { scoreConformite: true } },
     },
     orderBy: { updatedAt: "desc" },
   });
@@ -37,7 +38,8 @@ export async function GET() {
     const total = p.documents.length;
     const valides = p.documents.filter((d) => d.statut === "VALIDE").length;
     const progression = total > 0 ? Math.round((valides / total) * 100) : 0;
-    return { ...p, progression, documents: undefined };
+    const scoreIA = p.analyseIA?.scoreConformite ?? null;
+    return { ...p, progression, scoreIA, documents: undefined, analyseIA: undefined };
   });
 
   return success({ projets: projetsAvecProgression });

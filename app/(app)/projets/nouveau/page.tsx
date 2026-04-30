@@ -24,7 +24,7 @@ export default function NouveauProjetPage() {
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     titre: "", reference: "", description: "", bailleurId: "",
-    budget: "", devise: "FCFA", dateLimite: "", appelOffreUrl: "",
+    budget: "", devise: "FCFA", dateLimite: "", appelOffreUrl: "", pays: "",
     documents: ["PROPOSITION_TECHNIQUE", "BUDGET_PREVISIONNEL", "CADRE_LOGIQUE", "NOTE_CONCEPTUELLE", "PLAN_TRAVAIL"] as string[],
   });
 
@@ -87,6 +87,12 @@ export default function NouveauProjetPage() {
                 placeholder="Ex: PNUD/TCD/2026/001"
                 className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Pays</label>
+            <input value={form.pays} onChange={e => setForm({...form, pays: e.target.value})}
+              placeholder="Ex: Tchad, Senegal, Mali..."
+              className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>

@@ -6,6 +6,7 @@ export const createProjetSchema = z.object({
   description: z.string().min(10, "La description est trop courte"),
   objectifs: z.string().optional(),
   bailleurId: z.string().min(1, "Le bailleur est requis"),
+  pays: z.string().optional(),
   budget: z.number().optional(),
   devise: z.string().default("FCFA"),
   datePublication: z.string().optional(),
