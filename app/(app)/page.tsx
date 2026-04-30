@@ -9,259 +9,137 @@ function getGreeting(): string {
   if (h < 18) return "Bon apres-midi";
   return "Bonsoir";
 }
+function daysUntil(date: Date): number { return Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24)); }
+function fmtMoney(n: number, cur = "FCFA"): string { return n >= 1e6 ? `${(n/1e6).toFixed(1)}M ${cur}` : n >= 1e3 ? `${(n/1e3).toFixed(0)}K ${cur}` : `${n} ${cur}`; }
 
-function daysUntil(date: Date): number {
-  return Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-}
-
-const statutLabels: Record<string, string> = {
-  BROUILLON: "Brouillon", EN_COURS: "En cours", EN_REVISION: "Revision", SOUMIS: "Soumis",
-};
-const statutBadge: Record<string, string> = {
-  BROUILLON: "badge-neutral", EN_COURS: "badge-blue", EN_REVISION: "badge-warning", SOUMIS: "badge-success",
-};
+const sPill: Record<string,string> = { BROUILLON:"pill-brouillon", EN_COURS:"pill-redaction", EN_REVISION:"pill-relecture", SOUMIS:"pill-soumis", ACCEPTE:"pill-accepte", REJETE:"pill-rejete" };
+const sLabel: Record<string,string> = { BROUILLON:"Brouillon", EN_COURS:"En cours", EN_REVISION:"Revision", SOUMIS:"Soumis", ACCEPTE:"Accepte", REJETE:"Rejete" };
 
 export default async function Dashboard() {
   const session = await auth();
   if (!session?.user) redirect("/login");
-
-  const [projetsEnCours, deadlinesProches, mesTaches, activiteRecente, totalProjets] = await Promise.all([
-    prisma.projet.findMany({
-      where: { statut: { in: ["EN_COURS", "BROUILLON", "EN_REVISION"] } },
-      include: { bailleur: { select: { sigle: true } }, documents: { select: { statut: true } } },
-      orderBy: { dateLimite: "asc" }, take: 8,
-    }),
-    prisma.projet.findMany({
-      where: { dateLimite: { lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) }, statut: { notIn: ["SOUMIS", "ACCEPTE", "REJETE", "ARCHIVE"] } },
-      include: { bailleur: { select: { sigle: true } } },
-      orderBy: { dateLimite: "asc" }, take: 5,
-    }),
-    prisma.tache.findMany({
-      where: { assigneAId: session.user.id, statut: { not: "TERMINE" } },
-      include: { projet: { select: { titre: true } } },
-      orderBy: { dateLimite: "asc" }, take: 8,
-    }),
-    prisma.activite.findMany({
-      include: { user: { select: { name: true } }, projet: { select: { titre: true } } },
-      orderBy: { createdAt: "desc" }, take: 10,
-    }),
+  const [projets, deadlines, taches, activites, total] = await Promise.all([
+    prisma.projet.findMany({ where:{statut:{in:["EN_COURS","BROUILLON","EN_REVISION"]}}, include:{bailleur:{select:{sigle:true}},documents:{select:{statut:true}}}, orderBy:{dateLimite:"asc"}, take:8 }),
+    prisma.projet.findMany({ where:{dateLimite:{lte:new Date(Date.now()+7*864e5)},statut:{notIn:["SOUMIS","ACCEPTE","REJETE","ARCHIVE"]}}, include:{bailleur:{select:{sigle:true}}}, orderBy:{dateLimite:"asc"}, take:5 }),
+    prisma.tache.findMany({ where:{assigneAId:session.user.id,statut:{not:"TERMINE"}}, include:{projet:{select:{titre:true}}}, orderBy:{dateLimite:"asc"}, take:5 }),
+    prisma.activite.findMany({ include:{user:{select:{name:true}},projet:{select:{titre:true}}}, orderBy:{createdAt:"desc"}, take:6 }),
     prisma.projet.count(),
   ]);
+  const budget = projets.reduce((s,p) => s+(p.budget??0), 0);
 
-  const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  return (<>
+    <div className="page-header">
+      <div>
+        <div className="page-title">{getGreeting()} {session.user.name} 👋</div>
+        <div className="page-subtitle">{projets.length} projets en cours · {deadlines.length} echeances cette semaine</div>
+      </div>
+      <div style={{display:"flex",gap:8}}>
+        <Link href="/projets/nouveau" className="btn btn-primary">+ Nouveau projet</Link>
+      </div>
+    </div>
 
-  return (
-    <div>
-      {/* Header */}
-      <div className="flex items-end justify-between mb-6 animate-in delay-1">
+    {/* KPI */}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
+      {[
+        {label:"Projets en cours",value:String(projets.length),trend:`sur ${total} total`,color:"var(--primary)"},
+        {label:"Budget en jeu",value:fmtMoney(budget),trend:`${projets.length} dossiers`,color:"var(--info)"},
+        {label:"Echeances < 7j",value:String(deadlines.length),trend:deadlines.length>0?"Attention !":"RAS",color:"var(--warning)"},
+        {label:"Mes taches",value:String(taches.length),trend:"en attente",color:"var(--success)"},
+      ].map((k,i) => (
+        <div key={i} className="card" style={{padding:"16px 18px"}}>
+          <div className="row" style={{gap:6}}>
+            <span style={{width:6,height:6,borderRadius:"50%",background:k.color}} />
+            <div style={{fontSize:12,color:"var(--text-3)"}}>{k.label}</div>
+          </div>
+          <div style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginTop:6}}>{k.value}</div>
+          <div style={{fontSize:11.5,color:"var(--text-3)",marginTop:2}}>{k.trend}</div>
+        </div>
+      ))}
+    </div>
+
+    <div style={{display:"grid",gridTemplateColumns:"1fr 360px",gap:16}}>
+      {/* Projets */}
+      <div className="card">
+        <div className="card-header">
+          <div className="card-title">Projets actifs</div>
+          <Link href="/projets" className="btn btn-ghost btn-sm">Voir tout →</Link>
+        </div>
         <div>
-          <p className="text-[12px] text-[#94a3b8] mb-0.5 capitalize">{today}</p>
-          <h1 className="text-[22px] font-bold text-[#1a365d]">{getGreeting()}, {session.user.name}</h1>
-        </div>
-        <Link href="/projets/nouveau"
-          className="px-4 py-2 rounded text-[13px] font-semibold text-white transition-colors hover:opacity-90"
-          style={{ background: "#0468b1" }}>
-          + Nouveau projet
-        </Link>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <div className="card stat-blue p-4 animate-in delay-1">
-          <div className="flex items-center justify-between">
-            <p className="text-[12px] font-medium text-[#64748b]">Projets actifs</p>
-            <svg className="w-5 h-5 text-[#0468b1]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" /></svg>
-          </div>
-          <p className="text-[28px] font-bold text-[#1a365d] mt-1">{projetsEnCours.length}</p>
-          <p className="text-[11px] text-[#94a3b8]">sur {totalProjets} au total</p>
-        </div>
-        <div className={`card ${deadlinesProches.length > 0 ? "stat-red" : "stat-amber"} p-4 animate-in delay-2`}>
-          <div className="flex items-center justify-between">
-            <p className="text-[12px] font-medium text-[#64748b]">Deadlines proches</p>
-            <svg className="w-5 h-5 text-[#dc2626]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          </div>
-          <p className={`text-[28px] font-bold mt-1 ${deadlinesProches.length > 0 ? "text-[#dc2626]" : "text-[#1a365d]"}`}>{deadlinesProches.length}</p>
-          <p className="text-[11px] text-[#94a3b8]">dans les 7 prochains jours</p>
-        </div>
-        <div className="card stat-green p-4 animate-in delay-3">
-          <div className="flex items-center justify-between">
-            <p className="text-[12px] font-medium text-[#64748b]">Mes taches</p>
-            <svg className="w-5 h-5 text-[#059669]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          </div>
-          <p className="text-[28px] font-bold text-[#1a365d] mt-1">{mesTaches.length}</p>
-          <p className="text-[11px] text-[#94a3b8]">en attente</p>
-        </div>
-        <div className="card stat-amber p-4 animate-in delay-4">
-          <div className="flex items-center justify-between">
-            <p className="text-[12px] font-medium text-[#64748b]">Activites</p>
-            <svg className="w-5 h-5 text-[#d97706]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
-          </div>
-          <p className="text-[28px] font-bold text-[#1a365d] mt-1">{activiteRecente.length}</p>
-          <p className="text-[11px] text-[#94a3b8]">cette semaine</p>
+          {projets.length===0 ? (
+            <div style={{padding:"32px 18px",textAlign:"center",color:"var(--text-3)",fontSize:13}}>Aucun projet. <Link href="/projets/nouveau" style={{color:"var(--primary)"}}>Creer</Link></div>
+          ) : projets.map((p,i) => {
+            const tot=p.documents.length, val=p.documents.filter(d=>d.statut==="VALIDE").length, pct=tot>0?Math.round(val/tot*100):0;
+            const days=daysUntil(p.dateLimite), urg=days<=7;
+            return (
+              <Link key={p.id} href={`/projets/${p.id}`} style={{padding:"14px 18px",borderBottom:i===projets.length-1?"none":"1px solid var(--border)",cursor:"pointer",display:"grid",gridTemplateColumns:"32px 1fr auto auto",gap:14,alignItems:"center",textDecoration:"none",color:"inherit"}}>
+                <div style={{width:32,height:32,borderRadius:6,background:"var(--primary-soft)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"var(--primary)"}}>{p.bailleur.sigle.slice(0,3)}</div>
+                <div style={{minWidth:0}}>
+                  <div style={{fontWeight:600,fontSize:13.5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:4}}>{p.titre}</div>
+                  <div className="row" style={{gap:8,fontSize:11.5,color:"var(--text-3)"}}>
+                    <span className="mono">{p.reference??p.bailleur.sigle}</span>
+                    {p.budget && <><span>·</span><span className="tnum">{fmtMoney(p.budget,p.devise)}</span></>}
+                  </div>
+                </div>
+                <div style={{width:120}}>
+                  <div className="row" style={{gap:6,marginBottom:4}}>
+                    <span style={{fontSize:11,color:"var(--text-3)"}}>{pct}%</span>
+                    <span style={{marginLeft:"auto"}}><span className={`pill ${sPill[p.statut]??"pill-brouillon"}`}><span className="dot"/>{sLabel[p.statut]??p.statut}</span></span>
+                  </div>
+                  <div className="progress-bar"><span style={{width:`${pct}%`,background:urg?"var(--warning)":undefined}}/></div>
+                </div>
+                <div style={{minWidth:80,textAlign:"right"}}>
+                  <div style={{fontSize:12,fontWeight:500,color:days<=3?"var(--danger)":days<=7?"var(--warning)":"var(--text-3)"}}>{days<=0?"Expire !":days===1?"Demain":`${days}j`}</div>
+                  <div style={{fontSize:11,color:"var(--text-4)",marginTop:2}}>{new Date(p.dateLimite).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"})}</div>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-5">
-        {/* Projects table */}
-        <div className="col-span-8 card p-0 overflow-hidden animate-in delay-5">
-          <div className="px-5 py-3 border-b border-[#e2e8f0] flex items-center justify-between">
-            <h2 className="text-[13px] font-bold text-[#1a365d] uppercase tracking-wider">Projets en cours</h2>
-            <Link href="/projets" className="text-[12px] text-[#0468b1] hover:underline font-medium">Voir tout →</Link>
-          </div>
-          {projetsEnCours.length === 0 ? (
-            <div className="p-8 text-center">
-              <p className="text-[#94a3b8] text-sm">Aucun projet en cours</p>
-              <Link href="/projets/nouveau" className="text-[#0468b1] text-xs hover:underline mt-1 inline-block">Creer un projet</Link>
-            </div>
-          ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="bg-[#f8fafc]">
-                  <th className="text-left px-5 py-2 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Projet</th>
-                  <th className="text-left px-3 py-2 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Bailleur</th>
-                  <th className="text-left px-3 py-2 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Statut</th>
-                  <th className="text-left px-3 py-2 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Progression</th>
-                  <th className="text-right px-5 py-2 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Deadline</th>
-                </tr>
-              </thead>
-              <tbody>
-                {projetsEnCours.map((p) => {
-                  const total = p.documents.length;
-                  const valides = p.documents.filter((d) => d.statut === "VALIDE").length;
-                  const pct = total > 0 ? Math.round((valides / total) * 100) : 0;
-                  const days = daysUntil(p.dateLimite);
-                  const deadlineColor = days <= 3 ? "text-[#dc2626] font-bold" : days <= 7 ? "text-[#d97706]" : "text-[#64748b]";
-
-                  return (
-                    <tr key={p.id} className="border-t border-[#f1f5f9] hover:bg-[#f8fafc] transition-colors">
-                      <td className="px-5 py-3">
-                        <Link href={`/projets/${p.id}`} className="text-[13px] font-medium text-[#1e293b] hover:text-[#0468b1]">{p.titre}</Link>
-                      </td>
-                      <td className="px-3 py-3">
-                        <span className="badge badge-blue">{p.bailleur.sigle}</span>
-                      </td>
-                      <td className="px-3 py-3">
-                        <span className={`badge ${statutBadge[p.statut] ?? "badge-neutral"}`}>{statutLabels[p.statut] ?? p.statut}</span>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-20 bg-[#e2e8f0] rounded-full h-1.5">
-                            <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, background: pct === 100 ? "#059669" : "#0468b1" }} />
-                          </div>
-                          <span className="text-[11px] text-[#64748b] font-medium w-8">{pct}%</span>
-                        </div>
-                      </td>
-                      <td className={`px-5 py-3 text-right text-[12px] ${deadlineColor}`}>
-                        {days <= 0 ? "Expire !" : days === 1 ? "Demain" : `${days} jours`}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-        {/* Deadlines */}
-        <div className="col-span-4 card p-0 overflow-hidden animate-in delay-6">
-          <div className="px-5 py-3 border-b border-[#e2e8f0]">
-            <h2 className="text-[13px] font-bold text-[#1a365d] uppercase tracking-wider">Echeances proches</h2>
-          </div>
-          {deadlinesProches.length === 0 ? (
-            <div className="p-6 text-center">
-              <p className="text-xl mb-1">✓</p>
-              <p className="text-[#94a3b8] text-[12px]">Aucune echeance urgente</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-[#f1f5f9]">
-              {deadlinesProches.map((p) => {
-                const days = daysUntil(p.dateLimite);
-                const dotColor = days <= 1 ? "bg-[#dc2626]" : days <= 3 ? "bg-[#d97706]" : "bg-[#0468b1]";
-                return (
-                  <Link key={p.id} href={`/projets/${p.id}`} className="flex items-start gap-3 px-5 py-3 hover:bg-[#f8fafc] transition-colors">
-                    <div className={`w-2 h-2 rounded-full ${dotColor} mt-1.5 flex-shrink-0`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-medium text-[#1e293b] truncate">{p.titre}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] text-[#94a3b8]">{p.bailleur.sigle}</span>
-                        <span className={`text-[10px] font-bold ${days <= 1 ? "text-[#dc2626]" : days <= 3 ? "text-[#d97706]" : "text-[#64748b]"}`}>
-                          {days <= 0 ? "EXPIRE" : days === 1 ? "Demain" : `${days}j restants`}
-                        </span>
-                      </div>
+      {/* Droite */}
+      <div style={{display:"flex",flexDirection:"column",gap:16}}>
+        <div className="card">
+          <div className="card-header"><div className="card-title">Mes taches</div><span className="tag">{taches.length}</span></div>
+          <div>
+            {taches.length===0 ? <div style={{padding:"24px 18px",textAlign:"center",color:"var(--text-3)",fontSize:12}}>Aucune tache</div> :
+              taches.map((t,i) => (
+                <div key={t.id} className="row" style={{padding:"10px 18px",borderBottom:i===taches.length-1?"none":"1px solid var(--border)",gap:10,alignItems:"flex-start"}}>
+                  <input type="checkbox" disabled style={{marginTop:3,accentColor:"var(--primary)"}} />
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12.5,fontWeight:500,lineHeight:1.4}}>{t.titre}</div>
+                    <div className="row" style={{gap:6,marginTop:4}}>
+                      <span style={{fontSize:11,color:"var(--text-3)"}}>{t.projet.titre}</span>
+                      {t.priorite==="HAUTE" && <span className="tag" style={{color:"var(--danger)",background:"var(--danger-soft)",borderColor:"transparent"}}>Haute</span>}
                     </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Tasks */}
-        <div className="col-span-5 card p-0 overflow-hidden animate-in delay-5">
-          <div className="px-5 py-3 border-b border-[#e2e8f0]">
-            <h2 className="text-[13px] font-bold text-[#1a365d] uppercase tracking-wider">Mes taches</h2>
-          </div>
-          {mesTaches.length === 0 ? (
-            <div className="p-6 text-center">
-              <p className="text-[#94a3b8] text-[12px]">Aucune tache en attente</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-[#f1f5f9]">
-              {mesTaches.map((t) => {
-                const prioClass = t.priorite === "HAUTE" ? "badge-danger" : t.priorite === "MOYENNE" ? "badge-warning" : "badge-neutral";
-                return (
-                  <div key={t.id} className="flex items-center gap-3 px-5 py-2.5 hover:bg-[#f8fafc] transition-colors">
-                    <input type="checkbox" disabled className="w-3.5 h-3.5 rounded border-[#cbd5e1] text-[#0468b1] flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-medium text-[#1e293b] truncate">{t.titre}</p>
-                      <p className="text-[10px] text-[#94a3b8] truncate">{t.projet.titre}</p>
-                    </div>
-                    <span className={`badge ${prioClass}`}>{t.priorite === "HAUTE" ? "Urgent" : t.priorite === "MOYENNE" ? "Normal" : "Faible"}</span>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
+              ))
+            }
+          </div>
         </div>
 
-        {/* Activity */}
-        <div className="col-span-7 card p-0 overflow-hidden animate-in delay-6">
-          <div className="px-5 py-3 border-b border-[#e2e8f0]">
-            <h2 className="text-[13px] font-bold text-[#1a365d] uppercase tracking-wider">Journal d&apos;activite</h2>
-          </div>
-          {activiteRecente.length === 0 ? (
-            <div className="p-6 text-center">
-              <p className="text-[#94a3b8] text-[12px]">Aucune activite recente</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-[#f1f5f9]">
-              {activiteRecente.map((a) => {
-                const initial = a.user.name?.charAt(0) ?? "?";
+        <div className="card">
+          <div className="card-header"><div className="card-title">Activite recente</div></div>
+          <div style={{padding:"10px 18px 14px"}}>
+            {activites.length===0 ? <div style={{textAlign:"center",color:"var(--text-3)",fontSize:12,padding:16}}>Aucune activite</div> :
+              activites.map((a,i) => {
+                const colors=["var(--primary)","var(--info)","var(--warning)","var(--success)","var(--danger)"];
                 return (
-                  <div key={a.id} className="flex items-start gap-3 px-5 py-2.5">
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 mt-0.5"
-                      style={{ background: "#0468b1" }}>
-                      {initial}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[12px] text-[#1e293b]">
-                        <span className="font-semibold">{a.user.name}</span>{" "}
-                        <span className="text-[#64748b]">{a.description}</span>
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] text-[#94a3b8]">
-                          {new Date(a.createdAt).toLocaleString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                        {a.projet && <span className="text-[10px] text-[#0468b1]">· {a.projet.titre}</span>}
-                      </div>
+                  <div key={a.id} className="row" style={{gap:8,padding:"6px 0",alignItems:"flex-start"}}>
+                    <div className="avatar" style={{background:colors[i%5],width:22,height:22,fontSize:10}}>{a.user.name?.charAt(0)??"?"}</div>
+                    <div style={{fontSize:12,lineHeight:1.5,flex:1}}>
+                      <span style={{fontWeight:500}}>{a.user.name?.split(" ")[0]}</span>
+                      <span style={{color:"var(--text-3)"}}> {a.description}</span>
+                      <div style={{fontSize:11,color:"var(--text-4)",marginTop:1}}>{a.projet?.titre} · {new Date(a.createdAt).toLocaleString("fr-FR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
                     </div>
                   </div>
                 );
-              })}
-            </div>
-          )}
+              })
+            }
+          </div>
         </div>
       </div>
     </div>
-  );
+  </>);
 }
