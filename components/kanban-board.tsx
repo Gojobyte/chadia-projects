@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   DndContext,
   DragOverlay,
-  closestCenter,
-  KeyboardSensor,
+  closestCorners,
   PointerSensor,
   useSensor,
   useSensors,
@@ -23,11 +22,7 @@ interface Document {
   assigneA: { id: string; name: string } | null;
 }
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
+interface User { id: string; name: string; email: string; }
 
 interface KanbanBoardProps {
   projetId: string;
@@ -53,8 +48,10 @@ const categorieLabels: Record<string, string> = {
 
 export function KanbanBoard({ projetId, documents, onMoveDocument }: KanbanBoardProps) {
   const [activeCard, setActiveCard] = useState<Document | null>(null);
+  const [activeWidth, setActiveWidth] = useState(0);
   const [items, setItems] = useState(documents);
   const [users, setUsers] = useState<User[]>([]);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     fetch("/api/users").then(r => r.json()).then(d => setUsers(d.users ?? []));
@@ -72,14 +69,19 @@ export function KanbanBoard({ projetId, documents, onMoveDocument }: KanbanBoard
     ));
   }
 
+  // Un seul sensor: PointerSensor avec distance minimale de 8px pour eviter les faux drags
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor)
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
   function handleDragStart(event: DragStartEvent) {
     const doc = items.find(d => d.id === event.active.id);
-    if (doc) setActiveCard(doc);
+    if (doc) {
+      setActiveCard(doc);
+      // Capturer la largeur de la carte pour le DragOverlay
+      const el = cardRefs.current[doc.id];
+      if (el) setActiveWidth(el.offsetWidth);
+    }
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -104,27 +106,31 @@ export function KanbanBoard({ projetId, documents, onMoveDocument }: KanbanBoard
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={closestCorners}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
       <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(200px, 1fr))", gap: 10 }}>
         {columns.map(col => {
           const colItems = items.filter(d => d.statut === col.id);
-          return <DroppableColumn key={col.id} column={col} items={colItems} projetId={projetId} users={users} onAssign={assignDocument} />;
+          return (
+            <DroppableColumn key={col.id} column={col} items={colItems} projetId={projetId}
+              users={users} onAssign={assignDocument} cardRefs={cardRefs} />
+          );
         })}
       </div>
 
       <DragOverlay dropAnimation={null}>
-        {activeCard && <CardOverlay doc={activeCard} />}
+        {activeCard && <CardOverlay doc={activeCard} width={activeWidth} />}
       </DragOverlay>
     </DndContext>
   );
 }
 
-function DroppableColumn({ column, items, projetId, users, onAssign }: {
+function DroppableColumn({ column, items, projetId, users, onAssign, cardRefs }: {
   column: typeof columns[0]; items: Document[]; projetId: string;
   users: User[]; onAssign: (docId: string, userId: string | null) => void;
+  cardRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
@@ -140,12 +146,13 @@ function DroppableColumn({ column, items, projetId, users, onAssign }: {
         ref={setNodeRef}
         style={{
           display: "flex", flexDirection: "column", gap: 8, minHeight: 200,
-          borderRadius: 8, padding: 4, transition: "background 0.15s",
+          borderRadius: 8, padding: 4, transition: "background 0.15s, outline 0.15s",
           ...(isOver ? { outline: "2px solid var(--primary)", outlineOffset: -2, background: "var(--primary-soft)" } : {}),
         }}
       >
         {items.map(doc => (
-          <DraggableCard key={doc.id} doc={doc} projetId={projetId} users={users} onAssign={onAssign} />
+          <DraggableCard key={doc.id} doc={doc} projetId={projetId} users={users}
+            onAssign={onAssign} cardRefs={cardRefs} />
         ))}
         {items.length === 0 && (
           <div style={{
@@ -160,45 +167,48 @@ function DroppableColumn({ column, items, projetId, users, onAssign }: {
   );
 }
 
-function DraggableCard({ doc, projetId, users, onAssign }: {
+function DraggableCard({ doc, projetId, users, onAssign, cardRefs }: {
   doc: Document; projetId: string; users: User[];
   onAssign: (docId: string, userId: string | null) => void;
+  cardRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
 }) {
-  // useDraggable au lieu de useSortable — la carte suit la souris correctement
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: doc.id });
   const [showAssign, setShowAssign] = useState(false);
   const prog = doc.progression ?? 0;
 
+  // Stocker la ref pour mesurer la largeur
+  const setRef = (el: HTMLDivElement | null) => {
+    setNodeRef(el);
+    cardRefs.current[doc.id] = el;
+  };
+
   return (
-    <div ref={setNodeRef} {...attributes} {...listeners}
-      className="card"
+    <div ref={setRef} {...attributes} {...listeners}
       style={{
-        padding: 12, cursor: isDragging ? "grabbing" : "grab", borderRadius: 8,
-        // Cacher la carte originale pendant le drag (le DragOverlay la remplace)
-        opacity: isDragging ? 0.3 : 1,
+        background: "var(--surface)", border: "1px solid var(--border)",
+        borderRadius: 8, padding: 12,
+        cursor: isDragging ? "grabbing" : "grab",
+        opacity: isDragging ? 0.25 : 1,
         transition: "opacity 0.15s",
+        // Pas de transform ici — le DragOverlay gere le visuel du drag
       }}>
 
-      {/* Catégorie en uppercase */}
       <div style={{ fontSize: 10.5, color: "var(--text-3)", textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.03em", marginBottom: 6 }}>
         {categorieLabels[doc.categorie] ?? doc.categorie}
       </div>
 
-      {/* Titre */}
       <Link href={`/projets/${projetId}/docs/${doc.id}`}
         style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--text)", lineHeight: 1.35, marginBottom: 10, textDecoration: "none" }}
         onPointerDown={e => e.stopPropagation()}>
         {doc.titre}
       </Link>
 
-      {/* Progress bar */}
       {prog > 0 && prog < 100 && (
         <div className="progress" style={{ marginBottom: 10 }}>
           <span style={{ width: `${prog}%` }} />
         </div>
       )}
 
-      {/* Footer: avatar, deadline */}
       <div className="row" style={{ marginTop: 10, gap: 6 }}>
         <div onPointerDown={e => e.stopPropagation()} style={{ position: "relative" }}>
           <button onClick={() => setShowAssign(!showAssign)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
@@ -242,13 +252,16 @@ function DraggableCard({ doc, projetId, users, onAssign }: {
   );
 }
 
-function CardOverlay({ doc }: { doc: Document }) {
+function CardOverlay({ doc, width }: { doc: Document; width: number }) {
   const prog = doc.progression ?? 0;
   return (
-    <div className="card" style={{
-      padding: 12, cursor: "grabbing", borderRadius: 8,
-      boxShadow: "var(--shadow-lg)", maxWidth: 280,
-      transform: "rotate(2deg) scale(1.03)",
+    <div style={{
+      background: "var(--surface)", border: "1px solid var(--border)",
+      borderRadius: 8, padding: 12,
+      cursor: "grabbing",
+      boxShadow: "0 12px 32px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.08)",
+      width: width > 0 ? width : "auto",
+      transform: "rotate(2deg) scale(1.02)",
     }}>
       <div style={{ fontSize: 10.5, color: "var(--text-3)", textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.03em", marginBottom: 6 }}>
         {categorieLabels[doc.categorie] ?? doc.categorie}
