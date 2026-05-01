@@ -7,7 +7,7 @@
  */
 
 import { requireRole } from "@/lib/auth-guard";
-import { getProvider } from "@/lib/ai/providers/factory";
+import { completeWithFallback } from "@/lib/ai/providers/factory";
 import { logLLMInteraction } from "@/lib/ai/logger";
 import { TDR_EXTRACTION_SYSTEM, buildTDRExtractionPrompt } from "@/lib/ai/prompts/tdrExtractor";
 import { parseTDRAnalysis } from "@/lib/ai/schemas/tdrAnalysis";
@@ -63,16 +63,15 @@ export async function POST(request: Request) {
       return Response.json({ error: "Le contenu extrait est trop court (< 100 caractères)" }, { status: 400 });
     }
 
-    // Appel LLM
-    const provider = getProvider("tdr_extraction");
+    // Appel LLM avec fallback automatique (Mistral → Gemini)
     const prompt = buildTDRExtractionPrompt(rawText);
 
-    const response = await provider.complete({
+    const response = await completeWithFallback("tdr_extraction", {
       messages: [
         { role: "system", content: TDR_EXTRACTION_SYSTEM },
         { role: "user", content: prompt },
       ],
-      temperature: 0.1, // Très déterministe pour l'extraction
+      temperature: 0.1,
       maxTokens: 16384,
       jsonMode: true,
     });
