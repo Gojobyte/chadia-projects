@@ -1,17 +1,24 @@
 /**
- * POST /api/projets/analyze-tdr
+ * POST /api/projets/analyze-tdr — Phase 1.5
  *
  * Reçoit un PDF, une URL, ou du texte brut d'un appel d'offres.
- * Retourne une analyse TDR structurée (TDRAnalysis) sans créer de projet.
- * L'utilisateur valide/corrige avant de créer le projet (étape suivante).
+ * Retourne une analyse TDR structurée (TDRAnalysis).
+ *
+ * Améliorations Phase 1.5 :
+ * - Retry automatique si la validation stricte échoue
+ * - Flag extractionQuality: "high" | "partial"
+ * - Prompt de correction avec erreurs explicites
  */
 
 import { requireRole } from "@/lib/auth-guard";
 import { completeWithFallback } from "@/lib/ai/providers/factory";
 import { logLLMInteraction } from "@/lib/ai/logger";
-import { TDR_EXTRACTION_SYSTEM, buildTDRExtractionPrompt } from "@/lib/ai/prompts/tdrExtractor";
-import { parseTDRAnalysis } from "@/lib/ai/schemas/tdrAnalysis";
-// Extracteurs importés dynamiquement pour éviter les imports natifs au build time
+import {
+  TDR_EXTRACTION_SYSTEM,
+  buildTDRExtractionPrompt,
+  buildTDRCorrectionPrompt,
+} from "@/lib/ai/prompts/tdrExtractor";
+import { parseTDRAnalysis, formatValidationErrors } from "@/lib/ai/schemas/tdrAnalysis";
 
 export async function POST(request: Request) {
   const result = await requireRole("MEMBRE");
@@ -24,9 +31,8 @@ export async function POST(request: Request) {
   let sourceFileName: string | null = null;
 
   try {
-    // Déterminer la source
+    // ─── Extraction du texte source ───
     if (contentType.includes("multipart/form-data")) {
-      // Upload PDF
       const formData = await request.formData();
       const file = formData.get("file") as File | null;
       if (!file) return Response.json({ error: "Aucun fichier fourni" }, { status: 400 });
@@ -42,9 +48,7 @@ export async function POST(request: Request) {
         return Response.json({ error: "Le PDF dépasse 100 pages" }, { status: 400 });
       }
     } else {
-      // JSON body : URL ou texte
       const body = await request.json();
-
       if (body.url) {
         sourceType = "url";
         sourceUrl = body.url;
@@ -63,8 +67,11 @@ export async function POST(request: Request) {
       return Response.json({ error: "Le contenu extrait est trop court (< 100 caractères)" }, { status: 400 });
     }
 
-    // Appel LLM avec fallback automatique (Mistral → Gemini)
+    // ─── Premier appel LLM ───
     const prompt = buildTDRExtractionPrompt(rawText);
+    let totalCost = 0;
+    let totalTokensIn = 0;
+    let totalTokensOut = 0;
 
     const response = await completeWithFallback("tdr_extraction", {
       messages: [
@@ -76,11 +83,56 @@ export async function POST(request: Request) {
       jsonMode: true,
     });
 
-    // Parser et valider le JSON
-    const analysis = parseTDRAnalysis(response.content);
+    totalCost += response.costUsd;
+    totalTokensIn += response.tokensIn;
+    totalTokensOut += response.tokensOut;
 
-    if (!analysis) {
-      // Log l'échec
+    let parsed = parseTDRAnalysis(response.content);
+
+    // ─── Retry si extraction de qualité partielle ───
+    if (parsed && parsed.quality === "partial" && parsed.errors && parsed.errors.length > 0) {
+      console.log(`[analyze-tdr] Qualité partielle (${parsed.errors.length} erreurs), retry avec correction...`);
+
+      const correctionPrompt = buildTDRCorrectionPrompt(
+        rawText,
+        formatValidationErrors(parsed.errors)
+      );
+
+      try {
+        const retryResponse = await completeWithFallback("tdr_extraction", {
+          messages: [
+            { role: "system", content: TDR_EXTRACTION_SYSTEM },
+            { role: "user", content: correctionPrompt },
+          ],
+          temperature: 0.15,
+          maxTokens: 16384,
+          jsonMode: true,
+        });
+
+        totalCost += retryResponse.costUsd;
+        totalTokensIn += retryResponse.tokensIn;
+        totalTokensOut += retryResponse.tokensOut;
+
+        const retryParsed = parseTDRAnalysis(retryResponse.content);
+        if (retryParsed && (retryParsed.quality === "high" || (retryParsed.errors?.length ?? 99) < (parsed.errors?.length ?? 0))) {
+          console.log(`[analyze-tdr] Retry amélioré: ${retryParsed.quality} (${retryParsed.errors?.length ?? 0} erreurs restantes)`);
+          parsed = retryParsed;
+
+          // Logger le retry
+          await logLLMInteraction({
+            userId: result.user.id,
+            action: "tdr_extraction_retry",
+            inputPrompt: correctionPrompt.slice(0, 500),
+            response: retryResponse,
+            status: "success",
+          });
+        }
+      } catch (retryErr) {
+        console.warn("[analyze-tdr] Retry échoué, on garde l'extraction initiale:", retryErr);
+      }
+    }
+
+    if (!parsed) {
       await logLLMInteraction({
         userId: result.user.id,
         action: "tdr_extraction",
@@ -92,11 +144,10 @@ export async function POST(request: Request) {
 
       return Response.json({
         error: "L'IA n'a pas pu analyser ce document. Essayez avec un format différent ou saisissez manuellement.",
-        rawResponse: response.content.slice(0, 500),
       }, { status: 422 });
     }
 
-    // Log le succès
+    // ─── Logger le succès ───
     await logLLMInteraction({
       userId: result.user.id,
       action: "tdr_extraction",
@@ -106,7 +157,9 @@ export async function POST(request: Request) {
     });
 
     return Response.json({
-      analysis,
+      analysis: parsed.data,
+      extractionQuality: parsed.quality,
+      qualityErrors: parsed.errors ?? [],
       source: {
         type: sourceType,
         url: sourceUrl,
@@ -115,9 +168,9 @@ export async function POST(request: Request) {
         rawTextPreview: rawText.slice(0, 500),
       },
       cost: {
-        tokensIn: response.tokensIn,
-        tokensOut: response.tokensOut,
-        costUsd: response.costUsd,
+        tokensIn: totalTokensIn,
+        tokensOut: totalTokensOut,
+        costUsd: totalCost,
         model: response.model,
         provider: response.provider,
         durationMs: response.durationMs,
