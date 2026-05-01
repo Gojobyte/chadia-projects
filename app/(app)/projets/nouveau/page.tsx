@@ -3,6 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Icons } from "@/components/icons";
+import { TDRUploadStep } from "@/components/projets/TDRUploadStep";
+import { TDRReviewStep } from "@/components/projets/TDRReviewStep";
+import { ProjectScaffoldStep } from "@/components/projets/ProjectScaffoldStep";
+import type { TDRAnalysis } from "@/lib/ai/schemas/tdrAnalysis";
 
 interface Bailleur { id: string; nom: string; sigle: string; }
 interface User { id: string; name: string; email: string; role: string; }
@@ -54,6 +58,70 @@ export default function NouveauProjetPage() {
     membres: [] as string[],
   });
 
+  // États TDR wizard
+  const [tdrAnalysis, setTdrAnalysis] = useState<TDRAnalysis | null>(null);
+  const [tdrLoading, setTdrLoading] = useState(false);
+  const [tdrError, setTdrError] = useState<string | null>(null);
+  const [tdrCost, setTdrCost] = useState<{ tokensIn: number; tokensOut: number; costUsd: number; model: string; durationMs?: number } | undefined>();
+  const [tdrSource, setTdrSource] = useState<{ type: string; url?: string; fileName?: string; rawText?: string } | undefined>();
+  const [tdrCreating, setTdrCreating] = useState(false);
+
+  // Analyser un TDR (PDF, URL ou texte)
+  async function analyzeTDR(source: { type: "pdf" | "url" | "text"; file?: File; url?: string; text?: string }) {
+    setTdrLoading(true);
+    setTdrError(null);
+    try {
+      let res: Response;
+      if (source.type === "pdf" && source.file) {
+        const fd = new FormData();
+        fd.append("file", source.file);
+        res = await fetch("/api/projets/analyze-tdr", { method: "POST", body: fd });
+      } else {
+        res = await fetch("/api/projets/analyze-tdr", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: source.url, text: source.text }),
+        });
+      }
+      const data = await res.json();
+      if (!res.ok) { setTdrError(data.error ?? "Erreur d'analyse"); setTdrLoading(false); return; }
+      setTdrAnalysis(data.analysis);
+      setTdrCost(data.cost);
+      setTdrSource(data.source);
+      setStep(2); // Passer à l'étape Review
+    } catch {
+      setTdrError("Erreur de connexion au serveur");
+    }
+    setTdrLoading(false);
+  }
+
+  // Créer le projet depuis le TDR analysé
+  async function createFromTDR() {
+    if (!tdrAnalysis) return;
+    setTdrCreating(true);
+    // Trouver ou créer le bailleur
+    const bailleur = bailleurs.find(b =>
+      b.sigle.toLowerCase() === tdrAnalysis.donor.name.toLowerCase() ||
+      b.nom.toLowerCase().includes(tdrAnalysis.donor.name.toLowerCase())
+    );
+    if (!bailleur) {
+      setTdrError(`Bailleur "${tdrAnalysis.donor.name}" non trouvé. Créez-le d'abord ou sélectionnez-en un.`);
+      setTdrCreating(false);
+      return;
+    }
+    try {
+      const res = await fetch("/api/projets/from-tdr", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ analysis: tdrAnalysis, bailleurId: bailleur.id, source: tdrSource }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setTdrError(data.error ?? "Erreur"); setTdrCreating(false); return; }
+      router.push(`/projets/${data.projet.id}`);
+    } catch {
+      setTdrError("Erreur de connexion");
+      setTdrCreating(false);
+    }
+  }
+
   useEffect(() => {
     fetch("/api/bailleurs").then(r => r.json()).then(d => setBailleurs(d.bailleurs ?? []));
     fetch("/api/users").then(r => r.json()).then(d => setUsers(d.users ?? []));
@@ -87,9 +155,12 @@ export default function NouveauProjetPage() {
     router.push(`/projets/${data.projet.id}`);
   }
 
-  const totalSteps = 4;
-  const stepLabels = ["Méthode", "Informations", "Documents", "Équipe"];
-  const canNext = step === 1 ? !!form.method : step === 2 ? !!form.titre && !!form.bailleurId && !!form.dateLimite && !!form.description : true;
+  const isTDRMode = form.method === "ai";
+  const totalSteps = isTDRMode ? 3 : 4;
+  const stepLabels = isTDRMode
+    ? ["Source TDR", "Vérification", "Création"]
+    : ["Méthode", "Informations", "Documents", "Équipe"];
+  const canNext = step === 1 ? !!form.method : step === 2 ? (isTDRMode ? !!tdrAnalysis : !!form.titre && !!form.bailleurId && !!form.dateLimite && !!form.description) : true;
 
   return (
     <div style={{ maxWidth: 880, margin: "0 auto" }}>
@@ -122,7 +193,7 @@ export default function NouveauProjetPage() {
                   {done ? <Icons.Check size={11} /> : idx}
                 </div>
                 <div style={{ fontSize: 12, fontWeight: cur ? 600 : 500, color: cur ? "var(--text)" : done ? "var(--text-2)" : "var(--text-4)" }}>{label}</div>
-                {i < 3 && <div style={{ flex: 1, height: 1, background: done ? "var(--primary)" : "var(--border)" }} />}
+                {i < totalSteps - 1 && <div style={{ flex: 1, height: 1, background: done ? "var(--primary)" : "var(--border)" }} />}
               </div>
             );
           })}
@@ -173,8 +244,23 @@ export default function NouveauProjetPage() {
             </div>
           )}
 
-          {/* Step 2: Informations */}
-          {step === 2 && (
+          {/* Step 2 TDR : Upload */}
+          {step === 2 && isTDRMode && !tdrAnalysis && (
+            <TDRUploadStep onAnalyze={analyzeTDR} loading={tdrLoading} error={tdrError} />
+          )}
+
+          {/* Step 2 TDR : Review (après analyse réussie) */}
+          {step === 2 && isTDRMode && tdrAnalysis && (
+            <TDRReviewStep analysis={tdrAnalysis} onChange={setTdrAnalysis} cost={tdrCost} />
+          )}
+
+          {/* Step 3 TDR : Scaffold */}
+          {step === 3 && isTDRMode && tdrAnalysis && (
+            <ProjectScaffoldStep analysis={tdrAnalysis} creating={tdrCreating} onConfirm={() => createFromTDR()} />
+          )}
+
+          {/* Step 2 Manuel : Informations */}
+          {step === 2 && !isTDRMode && (
             <div>
               <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: "var(--text)" }}>Informations générales</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
@@ -293,22 +379,39 @@ export default function NouveauProjetPage() {
         </div>
 
         {/* Footer — navigation buttons */}
-        <div style={{ padding: "14px 24px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between" }}>
-          <button type="button" className="btn btn-ghost" onClick={() => router.push("/projets")}>Annuler</button>
-          <div className="row" style={{ gap: 8 }}>
-            {step > 1 && <button type="button" className="btn btn-secondary" onClick={() => setStep(step - 1)}>Précédent</button>}
-            {step < totalSteps ? (
-              <button type="button" className="btn btn-primary" disabled={!canNext} onClick={() => setStep(step + 1)}
-                style={{ opacity: !canNext ? 0.5 : 1 }}>
-                Suivant <Icons.ArrowRight size={14} />
-              </button>
-            ) : (
-              <button type="button" className="btn btn-primary" disabled={loading} onClick={handleCreate}>
-                <Icons.Check size={14} /> {loading ? "Création..." : "Créer le projet"}
-              </button>
-            )}
+        {/* En mode TDR step 3, le bouton créer est dans ProjectScaffoldStep */}
+        {!(isTDRMode && step === 3) && (
+          <div style={{ padding: "14px 24px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between" }}>
+            <button type="button" className="btn btn-ghost" onClick={() => {
+              if (isTDRMode && step === 2 && tdrAnalysis) { setTdrAnalysis(null); return; } // Retour à l'upload
+              router.push("/projets");
+            }}>
+              {step === 1 ? "Annuler" : isTDRMode && step === 2 && tdrAnalysis ? "Refaire l'analyse" : "Annuler"}
+            </button>
+            <div className="row" style={{ gap: 8 }}>
+              {step > 1 && <button type="button" className="btn btn-secondary" onClick={() => {
+                if (isTDRMode && step === 2 && !tdrAnalysis) { setStep(1); update("method", null); return; }
+                setStep(step - 1);
+              }}>Précédent</button>}
+              {step < totalSteps ? (
+                <button type="button" className="btn btn-primary" disabled={!canNext || (isTDRMode && step === 2 && !tdrAnalysis)}
+                  onClick={() => setStep(step + 1)}
+                  style={{ opacity: !canNext || (isTDRMode && step === 2 && !tdrAnalysis) ? 0.5 : 1 }}>
+                  Suivant <Icons.ArrowRight size={14} />
+                </button>
+              ) : !isTDRMode ? (
+                <button type="button" className="btn btn-primary" disabled={loading} onClick={handleCreate}>
+                  <Icons.Check size={14} /> {loading ? "Création..." : "Créer le projet"}
+                </button>
+              ) : null}
+            </div>
           </div>
-        </div>
+        )}
+        {isTDRMode && step === 3 && (
+          <div style={{ padding: "10px 24px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "flex-start" }}>
+            <button type="button" className="btn btn-ghost" onClick={() => setStep(2)}>← Retour à la vérification</button>
+          </div>
+        )}
       </div>
     </div>
   );
