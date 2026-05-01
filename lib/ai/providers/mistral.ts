@@ -24,7 +24,10 @@ export class MistralProvider implements LLMProvider {
   constructor(model = "mistral-large-latest") {
     const apiKey = process.env.MISTRAL_API_KEY;
     if (!apiKey) throw new Error("MISTRAL_API_KEY manquant dans .env");
-    this.client = new Mistral({ apiKey });
+    this.client = new Mistral({
+      apiKey,
+      timeoutMs: 120_000, // 2 minutes timeout (TDR longs)
+    });
     this.model = model;
   }
 
@@ -47,7 +50,11 @@ export class MistralProvider implements LLMProvider {
         });
         return res;
       },
-      { retries: 2, minTimeout: 1000, maxTimeout: 5000 }
+      {
+        retries: 1, // 1 seul retry (free tier = 2 RPM)
+        minTimeout: 2000,
+        maxTimeout: 10000,
+      }
     );
 
     const tokensIn = response.usage?.promptTokens ?? 0;

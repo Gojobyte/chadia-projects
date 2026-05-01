@@ -99,12 +99,26 @@ export default function NouveauProjetPage() {
     if (!tdrAnalysis) return;
     setTdrCreating(true);
     // Trouver ou créer le bailleur
-    const bailleur = bailleurs.find(b =>
-      b.sigle.toLowerCase() === tdrAnalysis.donor.name.toLowerCase() ||
-      b.nom.toLowerCase().includes(tdrAnalysis.donor.name.toLowerCase())
-    );
+    // Alias pour matcher les noms internationaux aux sigles en base
+    const donorAliases: Record<string, string[]> = {
+      PNUD: ["UNDP", "PNUD", "Programme des Nations Unies"],
+      UE: ["EU", "UE", "EuropeAid", "Union Européenne", "European Union"],
+      AFD: ["AFD", "Agence Française"],
+      BM: ["World Bank", "Banque Mondiale", "BM", "IBRD"],
+      USAID: ["USAID"],
+      BAD: ["BAD", "AfDB", "Banque Africaine"],
+      GIZ: ["GIZ"],
+      BADEA: ["BADEA"],
+    };
+    const donorName = tdrAnalysis.donor.name.toLowerCase();
+    const bailleur = bailleurs.find(b => {
+      if (b.sigle.toLowerCase() === donorName) return true;
+      if (b.nom.toLowerCase().includes(donorName)) return true;
+      const aliases = donorAliases[b.sigle] ?? [];
+      return aliases.some(a => a.toLowerCase() === donorName);
+    });
     if (!bailleur) {
-      setTdrError(`Bailleur "${tdrAnalysis.donor.name}" non trouvé. Créez-le d'abord ou sélectionnez-en un.`);
+      setTdrError(`Bailleur "${tdrAnalysis.donor.name}" non trouvé en base. Bailleurs disponibles : ${bailleurs.map(b => b.sigle).join(", ")}`);
       setTdrCreating(false);
       return;
     }
