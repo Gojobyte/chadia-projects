@@ -41,6 +41,7 @@ model User {
   commentaires      Commentaire[]
   accounts          Account[]
   sessions          Session[]
+  llmInteractions   LLMInteraction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -124,8 +125,9 @@ model Projet {
   taches       Tache[]
   membres      ProjetMembre[]
   activites    Activite[]
-  commentaires Commentaire[]
-  analyseIA    AnalyseIA?
+  commentaires    Commentaire[]
+  analyseIA       AnalyseIA?
+  llmInteractions LLMInteraction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -166,6 +168,9 @@ enum DocumentCategorie {
   GANTT
   CV
   DOCUMENT_LEGAL
+  THEORIE_DU_CHANGEMENT
+  LETTRE_PARTENAIRE
+  ANNEXE
   AUTRE
 }
 
@@ -267,16 +272,49 @@ model Commentaire {
 // ANALYSE IA
 // ============================================================
 
+enum SourceType {
+  PDF
+  URL
+  MANUAL
+}
+
 model AnalyseIA {
   id        String @id @default(cuid())
   projetId  String @unique
+
+  // Champs existants — conservés
   appelOffreTexte String? @db.Text
-  criteres  String? @db.Text
-  exigences String? @db.Text
+  criteres        String? @db.Text
+  exigences       String? @db.Text
   documentsRequis String? @db.Text
-  budgetEstime String?
+  budgetEstime    String?
   recommandations String? @db.Text
   scoreConformite Int?
+
+  // Nouveaux champs structurés (JSON)
+  donorMetadata       Json?  // { name, program, referenceNumber }
+  timeline            Json?  // { publishDate, submissionDeadline, ... }
+  budgetConstraints   Json?  // { minAmount, maxAmount, currency, cofinancing, overhead }
+  eligibility         Json?  // { countries, organizationTypes, consortium, sectors }
+  requiredSections    Json?  // [{ id, title, description, maxPages, weight }]
+  evaluationCriteria  Json?  // [{ name, weight, subcriteria }]
+  requiredAnnexes     Json?  // [{ id, title, template }]
+  crossCutting        Json?  // { genderMarker, environmentMarker, ... }
+  keyQuestions        Json?  // string[]
+  complianceWarnings  Json?  // string[]
+
+  // Métadonnées source
+  sourceType     SourceType?
+  sourceUrl      String?
+  sourceFileName String?
+  rawText        String? @db.Text
+
+  // Métadonnées LLM
+  llmProvider  String?   // "mistral", "gemini"
+  llmModel     String?   // "mistral-large-latest", etc.
+  extractedAt  DateTime?
+  validatedAt  DateTime?
+  validatedBy  String?
 
   projet Projet @relation(fields: [projetId], references: [id], onDelete: Cascade)
 
@@ -295,6 +333,12 @@ model Bailleur {
   sigle   String  @unique
   logoUrl String?
   siteWeb String?
+
+  // Nouveaux champs Phase 1
+  rulesJson      Json?    // règles bailleur (% admin, % personnel, etc.)
+  promptHints    String?  @db.Text  // hints contextuels pour les prompts IA
+  templatesJson  Json?    // templates de sections par bailleur
+
   projets Projet[]
   @@map("bailleurs")
 }
@@ -335,4 +379,33 @@ model Notification {
   createdAt DateTime @default(now())
   @@index([userId, lu])
   @@map("notifications")
+}
+
+// ============================================================
+// LOGGING IA
+// ============================================================
+
+model LLMInteraction {
+  id          String   @id @default(cuid())
+  userId      String
+  projetId    String?
+  provider    String   // "mistral", "gemini"
+  model       String   // "mistral-large-latest", etc.
+  action      String   // "tdr_extraction", "copilot_continuer", etc.
+  inputHash   String   // hash du prompt pour déduplication
+  tokensIn    Int
+  tokensOut   Int
+  costUsd     Float
+  durationMs  Int
+  status      String   // "success", "error", "retry"
+  errorMsg    String?
+
+  user        User     @relation(fields: [userId], references: [id])
+  projet      Projet?  @relation(fields: [projetId], references: [id])
+
+  createdAt   DateTime @default(now())
+  @@index([userId])
+  @@index([projetId])
+  @@index([createdAt])
+  @@map("llm_interactions")
 }
