@@ -7,6 +7,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-guard";
+import { completeWithFallback } from "@/lib/ai/providers/factory";
+import { KEY_QUESTION_MAPPER_SYSTEM, buildKeyQuestionMapperPrompt } from "@/lib/ai/prompts/keyQuestionMapper";
 import type { TDRAnalysis } from "@/lib/ai/schemas/tdrAnalysis";
 
 // Mapping section ID → catégorie de document
@@ -126,6 +128,7 @@ export async function POST(request: Request) {
           categorie: categorie as never,
           ordre: i,
           statut: "BROUILLON",
+          sectionId: section.id, // lien avec requiredSections
         },
       });
       documentIds.push(doc.id);
@@ -175,6 +178,48 @@ export async function POST(request: Request) {
         },
       });
       tacheIds.push(t.id);
+    }
+
+    // Auto-distribuer les keyQuestions vers les sections + persister
+    if (final.keyQuestions && final.keyQuestions.length > 0) {
+      let mappings: Record<number, string> = {};
+
+      // Essayer l'auto-distribution IA (non-bloquant)
+      try {
+        const sections = final.requiredSections.map(s => ({ id: s.id, title: s.title }));
+        const mapperResponse = await completeWithFallback("quick_suggestion", {
+          messages: [
+            { role: "system", content: KEY_QUESTION_MAPPER_SYSTEM },
+            { role: "user", content: buildKeyQuestionMapperPrompt(sections, final.keyQuestions) },
+          ],
+          temperature: 0.1,
+          maxTokens: 2048,
+          jsonMode: true,
+        });
+
+        const mapperJson = JSON.parse(
+          mapperResponse.content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()
+        );
+        if (mapperJson?.mappings) {
+          for (const m of mapperJson.mappings) {
+            mappings[m.questionIndex] = m.sectionId;
+          }
+        }
+      } catch (err) {
+        console.warn("[from-tdr] Auto-distribution keyQuestions échouée, pas bloquant:", err);
+      }
+
+      // Créer les ProjetKeyQuestionAnswer
+      for (let i = 0; i < final.keyQuestions.length; i++) {
+        await prisma.projetKeyQuestionAnswer.create({
+          data: {
+            projetId: projet.id,
+            questionIndex: i,
+            questionText: final.keyQuestions[i],
+            targetSectionId: mappings[i] ?? null,
+          },
+        });
+      }
     }
 
     // Logger l'activité
