@@ -5,13 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { KanbanBoard } from "@/components/kanban-board";
 import { Icons } from "@/components/icons";
+import { StrategicChecklist } from "@/components/projets/StrategicChecklist";
 
 function daysUntil(d: string | Date): number { return Math.ceil((new Date(d).getTime() - Date.now()) / 864e5); }
 
 interface Document {
   id: string; categorie: string; titre: string; statut: string;
   fichierUrl: string | null; progression: number;
-  dateLimite: string | null;
+  dateLimite: string | null; sectionId: string | null;
   assigneA: { id: string; name: string } | null;
 }
 interface Tache { id: string; titre: string; description: string | null; statut: string; priorite: string; dateLimite: string | null; assigneA: { id: string; name: string } | null; }
@@ -194,6 +195,14 @@ export default function ProjetDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Strategic Checklist — keyQuestions du TDR */}
+      <StrategicChecklist
+        projetId={id}
+        sections={(projet.documents ?? [])
+          .filter((d: Document) => d.sectionId)
+          .map((d: Document) => ({ id: d.sectionId!, title: d.titre }))}
+      />
 
       {/* Tabs */}
       <div className="row" style={{ borderBottom: "1px solid var(--border)", marginBottom: 16, gap: 2 }}>

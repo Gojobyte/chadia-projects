@@ -41,7 +41,8 @@ model User {
   commentaires      Commentaire[]
   accounts          Account[]
   sessions          Session[]
-  llmInteractions   LLMInteraction[]
+  llmInteractions        LLMInteraction[]
+  keyQuestionAnswers     ProjetKeyQuestionAnswer[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -125,9 +126,10 @@ model Projet {
   taches       Tache[]
   membres      ProjetMembre[]
   activites    Activite[]
-  commentaires    Commentaire[]
-  analyseIA       AnalyseIA?
-  llmInteractions LLMInteraction[]
+  commentaires         Commentaire[]
+  analyseIA            AnalyseIA?
+  llmInteractions      LLMInteraction[]
+  keyQuestionAnswers   ProjetKeyQuestionAnswer[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -197,10 +199,14 @@ model Document {
   dateLimite  DateTime?
   progression Int                @default(0)
 
+  // Phase 2.1 — lien section TDR
+  sectionId       String?  // id de la section dans requiredSections de l'AnalyseIA
+
   projet       Projet        @relation(fields: [projetId], references: [id], onDelete: Cascade)
   assigneA     User?         @relation("DocumentAssigne", fields: [assigneAId], references: [id])
   taches       Tache[]
   commentaires Commentaire[]
+  sectionQA    DocumentSectionQA?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -408,4 +414,41 @@ model LLMInteraction {
   @@index([projetId])
   @@index([createdAt])
   @@map("llm_interactions")
+}
+
+// ============================================================
+// PHASE 2.1 — CO-RÉDACTION IA
+// ============================================================
+
+// Réponses aux keyQuestions stratégiques du projet
+model ProjetKeyQuestionAnswer {
+  id              String    @id @default(cuid())
+  projetId        String
+  questionIndex   Int       // index dans le tableau keyQuestions de l'AnalyseIA
+  questionText    String    @db.Text
+  answer          String?   @db.Text
+  targetSectionId String?   // section où la réponse sera mobilisée
+  answeredById    String?
+  answeredAt      DateTime?
+
+  projet          Projet    @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  answeredBy      User?     @relation(fields: [answeredById], references: [id])
+
+  @@unique([projetId, questionIndex])
+  @@map("projet_key_question_answers")
+}
+
+// Q&A par section pour la rédaction guidée
+model DocumentSectionQA {
+  id              String    @id @default(cuid())
+  documentId      String    @unique
+  sectionId       String    // ex: "executive_summary", "methodology"
+  questions       Json      // [{ id, text, category, answer, answeredAt }]
+  generatedAt     DateTime  @default(now())
+  lastDraftAt     DateTime?
+  draftCostUsd    Float?
+
+  document        Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@map("document_section_qa")
 }
