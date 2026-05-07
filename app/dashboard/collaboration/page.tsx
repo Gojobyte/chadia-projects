@@ -135,17 +135,22 @@ export default function CollaborationPage() {
             categories={budget}
             onChange={setBudget}
             devise={devise}
+            onDeviseChange={setDevise}
           />
         )}
 
         {activeTab === "team" && (
           <TeamManager
             members={sampleMembers}
-            onUpdateMemberRole={(id, role) =>
-              console.log("Update role:", id, role)
-            }
-            onRemoveMember={(id) => console.log("Remove:", id)}
-            onInvite={(email, role) => console.log("Invite:", email, role)}
+            onUpdateMemberRole={(id, role) => {
+              // TODO: Implement API call to update member role
+            }}
+            onRemoveMember={(id) => {
+              // TODO: Implement API call to remove member
+            }}
+            onInvite={(email, role) => {
+              // TODO: Implement API call to invite member
+            }}
           />
         )}
 

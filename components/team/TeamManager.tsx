@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export interface Member {
@@ -142,8 +142,9 @@ export function TeamManager({
 
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
-    if (inviteEmail.trim()) {
-      onInvite?.(inviteEmail, inviteRole);
+    const trimmedEmail = inviteEmail.trim();
+    if (trimmedEmail) {
+      onInvite?.(trimmedEmail, inviteRole);
       setInviteEmail("");
     }
   };
@@ -284,8 +285,8 @@ export function TeamManager({
             </thead>
             <tbody>
               {Object.entries(PERMISSION_CATEGORIES).map(([category, perms]) => (
-                <>
-                  <tr key={category} className="bg-muted/10">
+                <Fragment key={category}>
+                  <tr className="bg-muted/10">
                     <td
                       colSpan={Object.keys(roles).length + 1}
                       className="p-2 font-semibold text-muted-foreground"
@@ -309,7 +310,7 @@ export function TeamManager({
                       ))}
                     </tr>
                   ))}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>

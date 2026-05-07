@@ -2,8 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["pdf-parse", "mammoth", "html-to-docx"],
+  cacheComponents: true,
   experimental: {
-    ppr: "incremental",
     optimizePackageImports: [
       "@google/generative-ai",
       "@mistralai/mistralai",

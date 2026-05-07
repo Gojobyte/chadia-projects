@@ -26,6 +26,7 @@ interface BudgetGridProps {
   onChange?: (categories: BudgetCategory[]) => void;
   readOnly?: boolean;
   devise?: "FCFA" | "EUR" | "USD";
+  onDeviseChange?: (devise: "FCFA" | "EUR" | "USD") => void;
 }
 
 const DEFAULT_CATEGORIES: BudgetCategory[] = [
@@ -92,6 +93,7 @@ export function BudgetGrid({
   onChange,
   readOnly = false,
   devise = "FCFA",
+  onDeviseChange,
 }: BudgetGridProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(categories.map((c) => c.id))
@@ -201,9 +203,7 @@ export function BudgetGrid({
           {(["FCFA", "EUR", "USD"] as const).map((d) => (
             <button
               key={d}
-              onClick={() => {
-                /* devise change handled by parent */
-              }}
+              onClick={() => onDeviseChange?.(d)}
               className={cn(
                 "px-2 py-1 text-xs rounded border transition-colors",
                 devise === d
