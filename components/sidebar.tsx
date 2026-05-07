@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -26,31 +25,12 @@ const pinColors = [
 ];
 
 interface StarredProjet { id: string; titre: string; bailleur: { sigle: string }; }
-interface SidebarProps { userName: string; userRole: string; }
+interface SidebarProps { userName: string; userRole: string; starred: StarredProjet[]; }
 
-export function Sidebar({ userName, userRole }: SidebarProps) {
+export function Sidebar({ userName, userRole, starred }: SidebarProps) {
   const pathname = usePathname();
   const roleLabels: Record<string, string> = { DIRECTEUR: "Directrice des programmes", ADMIN: "Administrateur", FINANCIER: "Financier", MEMBRE: "Membre" };
   const initials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
-  const [starred, setStarred] = useState<StarredProjet[]>([]);
-
-  // Charger les projets epingles
-  useEffect(() => {
-    fetch("/api/projets/starred")
-      .then(r => r.ok ? r.json() : { projets: [] })
-      .then(d => setStarred(d.projets ?? []));
-  }, []);
-
-  // Ecouter les changements d'etoile (custom event)
-  useEffect(() => {
-    function onStarChange() {
-      fetch("/api/projets/starred")
-        .then(r => r.ok ? r.json() : { projets: [] })
-        .then(d => setStarred(d.projets ?? []));
-    }
-    window.addEventListener("star-changed", onStarChange);
-    return () => window.removeEventListener("star-changed", onStarChange);
-  }, []);
 
   return (
     <aside className="sidebar">
