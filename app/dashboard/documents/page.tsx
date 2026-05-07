@@ -1,155 +1,126 @@
 "use client";
 
-import { useState } from "react";
-import { BlockEditor } from "@/components/editor/BlockEditor";
-import { ProjectCalendar } from "@/components/calendar/ProjectCalendar";
-import { ProjectTimeline, GanttTask } from "@/components/timeline/ProjectTimeline";
+import { useState, useCallback } from "react";
+import { DocumentEditor } from "@/components/editor/DocumentEditor";
+import { Spreadsheet, CellData } from "@/components/spreadsheet/Spreadsheet";
+import { cn } from "@/lib/utils";
 
-type Tab = "editor" | "timeline" | "calendar";
+type EditorTab = "document" | "spreadsheet";
 
-const sampleTasks: GanttTask[] = [
-  {
-    id: "1",
-    name: "Analyse du cahier des charges",
-    startDate: new Date(2026, 4, 1),
-    endDate: new Date(2026, 4, 7),
-    progress: 100,
-    color: "#3b82f6",
-    category: "Analyse",
-  },
-  {
-    id: "2",
-    name: "Rédaction technique",
-    startDate: new Date(2026, 4, 5),
-    endDate: new Date(2026, 4, 18),
-    progress: 65,
-    color: "#8b5cf6",
-    category: "Rédaction",
-  },
-  {
-    id: "3",
-    name: "Budget et chiffrage",
-    startDate: new Date(2026, 4, 12),
-    endDate: new Date(2026, 4, 20),
-    progress: 30,
-    color: "#f59e0b",
-    category: "Budget",
-  },
-  {
-    id: "4",
-    name: "Relecture et validation",
-    startDate: new Date(2026, 4, 18),
-    endDate: new Date(2026, 4, 24),
-    progress: 0,
-    color: "#10b981",
-    category: "Validation",
-  },
-  {
-    id: "5",
-    name: "Soumission finale",
-    startDate: new Date(2026, 4, 24),
-    endDate: new Date(2026, 4, 26),
-    progress: 0,
-    color: "#ef4444",
-    category: "Soumission",
-  },
-];
-
-const sampleEvents = [
-  { id: "1", title: "Deadline analyse", date: new Date(2026, 4, 7), color: "bg-blue-100 text-blue-700" },
-  { id: "2", title: "Réunion équipe", date: new Date(2026, 4, 10), color: "bg-purple-100 text-purple-700" },
-  { id: "3", title: "Soumission", date: new Date(2026, 4, 26), color: "bg-red-100 text-red-700" },
-];
+const SAMPLE_BUDGET: Record<string, CellData> = {
+  "A1": { value: "Budget previsionnel", style: { bold: true, fontSize: 14, bgColor: "#dbeafe", align: "center" } },
+  "A3": { value: "Categorie", style: { bold: true, bgColor: "#e5e7eb" } },
+  "B3": { value: "Description", style: { bold: true, bgColor: "#e5e7eb" } },
+  "C3": { value: "Quantite", style: { bold: true, bgColor: "#e5e7eb" } },
+  "D3": { value: "Prix unitaire", style: { bold: true, bgColor: "#e5e7eb" } },
+  "E3": { value: "Total", style: { bold: true, bgColor: "#e5e7eb" } },
+  "A4": { value: "RH", style: { bold: true } },
+  "B4": { value: "Chef de projet (6 mois)", style: {} },
+  "C4": { value: "6", style: { format: "number", align: "right" } },
+  "D4": { value: "800000", style: { format: "currency", align: "right" } },
+  "E4": { value: "=C4*D4", style: { format: "currency", align: "right" } },
+  "A5": { value: "", style: {} },
+  "B5": { value: "Consultant technique (4 mois)", style: {} },
+  "C5": { value: "4", style: { format: "number", align: "right" } },
+  "D5": { value: "600000", style: { format: "currency", align: "right" } },
+  "E5": { value: "=C5*D5", style: { format: "currency", align: "right" } },
+  "A6": { value: "", style: {} },
+  "B6": { value: "Assistant administratif (6 mois)", style: {} },
+  "C6": { value: "6", style: { format: "number", align: "right" } },
+  "D6": { value: "300000", style: { format: "currency", align: "right" } },
+  "E6": { value: "=C6*D6", style: { format: "currency", align: "right" } },
+  "A8": { value: "Equipements", style: { bold: true } },
+  "B8": { value: "Ordinateurs portables", style: {} },
+  "C8": { value: "5", style: { format: "number", align: "right" } },
+  "D8": { value: "750000", style: { format: "currency", align: "right" } },
+  "E8": { value: "=C8*D8", style: { format: "currency", align: "right" } },
+  "A9": { value: "", style: {} },
+  "B9": { value: "Serveur local", style: {} },
+  "C9": { value: "1", style: { format: "number", align: "right" } },
+  "D9": { value: "2500000", style: { format: "currency", align: "right" } },
+  "E9": { value: "=C9*D9", style: { format: "currency", align: "right" } },
+  "A11": { value: "TOTAL", style: { bold: true, bgColor: "#fef3c7" } },
+  "E11": { value: "=SOMME(E4:E9)", style: { bold: true, format: "currency", align: "right", bgColor: "#fef3c7" } },
+};
 
 export default function DocumentsPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("editor");
-  const [editorContent, setEditorContent] = useState("<h1>Réponse à l'appel d'offres</h1><p>Commencez à rédiger votre proposition ici...</p>");
+  const [activeTab, setActiveTab] = useState<EditorTab>("document");
+  const [docContent, setDocContent] = useState("<h1>Reponse a l'appel d'offres</h1><p>Commencez a rediger votre proposition ici...</p>");
+  const [docTitle, setDocTitle] = useState("Appel d'offres - Projet Education");
+  const [spreadData, setSpreadData] = useState<Record<string, CellData>>(SAMPLE_BUDGET);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: "editor", label: "Éditeur", icon: "📝" },
-    { id: "timeline", label: "Timeline", icon: "📊" },
-    { id: "calendar", label: "Calendrier", icon: "📅" },
+  const handleSave = useCallback((html: string) => {
+    setIsSaving(true);
+    // Simulate API save
+    setTimeout(() => {
+      setIsSaving(false);
+      console.log("Document saved:", html.length, "chars");
+    }, 800);
+  }, []);
+
+  const tabs: { id: EditorTab; label: string; icon: string; desc: string }[] = [
+    { id: "document", label: "Document", icon: "📝", desc: "Editeur Word-like" },
+    { id: "spreadsheet", label: "Tableur", icon: "📊", desc: "Tableur Excel-like" },
   ];
 
   return (
-    <div className="space-y-4">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold">Documents & Planification</h1>
-        <p className="text-muted-foreground text-sm">
-          Rédigez, planifiez et suivez vos réponses aux appels d&apos;offres
-        </p>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 border-b">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              activeTab === tab.id
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab.icon} {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab content */}
-      <div>
-        {activeTab === "editor" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Éditeur de document</h2>
-              <div className="flex gap-2">
-                <button className="px-3 py-1.5 text-xs rounded-md border hover:bg-muted transition-colors">
-                  💾 Sauvegarder
-                </button>
-                <button className="px-3 py-1.5 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
-                  📤 Exporter PDF
-                </button>
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
+      {/* Tab bar */}
+      <div className="flex items-center justify-between border-b bg-card px-4 shrink-0">
+        <div className="flex gap-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px",
+                activeTab === tab.id
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <span>{tab.icon}</span>
+              <div className="text-left">
+                <p className="text-xs font-medium">{tab.label}</p>
+                <p className="text-[10px] text-muted-foreground font-normal">{tab.desc}</p>
               </div>
-            </div>
-            <BlockEditor
-              content={editorContent}
-              onChange={setEditorContent}
-              placeholder="Commencez à rédiger votre réponse à l'appel d'offres..."
-            />
-          </div>
-        )}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          {isSaving && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              Sauvegarde...
+            </span>
+          )}
+          <button
+            onClick={() => handleSave(docContent)}
+            className="px-3 py-1.5 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            Sauvegarder
+          </button>
+        </div>
+      </div>
 
-        {activeTab === "timeline" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Timeline du projet</h2>
-              <button className="px-3 py-1.5 text-xs rounded-md border hover:bg-muted transition-colors">
-                + Ajouter une tâche
-              </button>
-            </div>
-            <ProjectTimeline
-              tasks={sampleTasks}
-              onTaskClick={(task) => console.log("Task clicked:", task.name)}
-            />
-          </div>
+      {/* Editor area */}
+      <div className="flex-1 overflow-hidden">
+        {activeTab === "document" && (
+          <DocumentEditor
+            content={docContent}
+            onChange={setDocContent}
+            onSave={handleSave}
+            documentTitle={docTitle}
+            onTitleChange={setDocTitle}
+          />
         )}
-
-        {activeTab === "calendar" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Calendrier</h2>
-              <button className="px-3 py-1.5 text-xs rounded-md border hover:bg-muted transition-colors">
-                + Ajouter un événement
-              </button>
-            </div>
-            <ProjectCalendar
-              events={sampleEvents}
-              onDateClick={(date) => console.log("Date clicked:", date)}
-              onEventClick={(event) => console.log("Event clicked:", event.title)}
-            />
-          </div>
+        {activeTab === "spreadsheet" && (
+          <Spreadsheet
+            data={spreadData}
+            onDataChange={setSpreadData}
+            sheetName="Budget"
+          />
         )}
       </div>
     </div>

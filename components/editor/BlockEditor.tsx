@@ -248,7 +248,6 @@ export function BlockEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
-        horizontalRule: true,
       }),
       Link.configure({ openOnClick: false }),
       Image.configure({ inline: false }),
