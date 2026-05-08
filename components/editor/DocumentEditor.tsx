@@ -493,12 +493,19 @@ export function DocumentEditor({
   const [toolbar, setToolbar] = useState<ToolbarState>(TOOLBAR_DEFAULTS);
   const [zoom, setZoom] = useState(100);
   const [pageCount, setPageCount] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [showFindBar, setShowFindBar] = useState(false);
-  const [showReplaceInBar, setShowReplaceInBar] = useState(false);
+  const [trackChanges, setTrackChanges] = useState(false);
+  const [showHeaderFooter, setShowHeaderFooter] = useState(true);
+  const [headerContent, setHeaderContent] = useState("");
+  const [footerContent, setFooterContent] = useState("Page {page} sur {total}");
+  const [headerFocused, setHeaderFocused] = useState(false);
+  const [footerFocused, setFooterFocused] = useState(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const editorRef = useRef<HTMLDivElement>(null);
+  const docAreaRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
     extensions: [
@@ -563,12 +570,10 @@ export function DocumentEditor({
       if ((e.ctrlKey || e.metaKey) && e.key === "f") {
         e.preventDefault();
         setShowFindBar(true);
-        setShowReplaceInBar(false);
       }
       if ((e.ctrlKey || e.metaKey) && e.key === "h") {
         e.preventDefault();
         setShowFindBar(true);
-        setShowReplaceInBar(true);
       }
     };
     document.addEventListener("keydown", handler);
@@ -958,6 +963,37 @@ export function DocumentEditor({
           >
             ✕
           </TBtn>
+
+          <Divider />
+
+          {/* TOC */}
+          <TBtn
+            onClick={() => {
+              // Insert TOC placeholder
+              editor.chain().focus().insertContent('<div class="toc-placeholder" data-type="toc"><p><strong>Table des matières</strong></p><p><em>Générée automatiquement à partir des titres</em></p></div>').run();
+            }}
+            title="Insérer une table des matières"
+          >
+            TOC
+          </TBtn>
+
+          {/* Track Changes toggle */}
+          <TBtn
+            onClick={() => setTrackChanges(prev => !prev)}
+            active={trackChanges}
+            title="Mode suggestion (track changes)"
+          >
+            ✎
+          </TBtn>
+
+          {/* Header/Footer toggle */}
+          <TBtn
+            onClick={() => setShowHeaderFooter(prev => !prev)}
+            active={showHeaderFooter}
+            title="Afficher/masquer en-tête et pied de page"
+          >
+            ☰
+          </TBtn>
         </div>
       )}
 
@@ -965,24 +1001,118 @@ export function DocumentEditor({
       {!readOnly && <Ruler zoom={zoom} />}
 
       {/* ── Document Area ── */}
-      <div className="flex-1 overflow-auto bg-muted/5 p-4">
+      <div className="flex-1 overflow-auto bg-muted/5 p-4" ref={docAreaRef}>
         <div
-          className="mx-auto bg-white shadow-lg rounded-sm"
+          className="mx-auto bg-white shadow-lg rounded-sm relative"
           style={{
             width: `${(210 * zoom) / 100}mm`,
             maxWidth: "100%",
             minHeight: `${(297 * zoom) / 100}mm`,
-            padding: `${(20 * zoom) / 100}mm`,
           }}
         >
-          <EditorContent editor={editor} />
+          {/* Header zone */}
+          {showHeaderFooter && (
+          <div
+            className={cn(
+              "border-b border-dashed border-muted-foreground/20 px-4 py-2 text-[10px] text-muted-foreground text-center cursor-pointer transition-colors",
+              headerFocused && "bg-primary/5 border-primary/30"
+            )}
+            style={{ minHeight: `${(15 * zoom) / 100}mm`, marginTop: `${(5 * zoom) / 100}mm` }}
+            onDoubleClick={() => { if (!readOnly) setHeaderFocused(true); }}
+            onClick={() => { if (!readOnly && headerFocused) setHeaderFocused(true); }}
+          >
+            {headerContent ? (
+              <div dangerouslySetInnerHTML={{ __html: headerContent.replace(/\{page\}/g, String(currentPage)).replace(/\{total\}/g, String(pageCount)).replace(/\{title\}/g, documentTitle) }} />
+            ) : (
+              <span className="opacity-40">Double-cliquez pour ajouter un en-tête</span>
+            )}
+          </div>
+          )}
+
+          {/* Main content area with padding */}
+          <div style={{ padding: `${(20 * zoom) / 100}mm` }}>
+            <EditorContent editor={editor} />
+          </div>
+
+          {/* Footer zone */}
+          {showHeaderFooter && (
+          <div
+            className={cn(
+              "border-t border-dashed border-muted-foreground/20 px-4 py-2 text-[10px] text-muted-foreground text-center cursor-pointer transition-colors",
+              footerFocused && "bg-primary/5 border-primary/30"
+            )}
+            style={{ minHeight: `${(15 * zoom) / 100}mm`, marginBottom: `${(5 * zoom) / 100}mm` }}
+            onDoubleClick={() => { if (!readOnly) setFooterFocused(true); }}
+            onClick={() => { if (!readOnly && footerFocused) setFooterFocused(true); }}
+          >
+            {footerContent ? (
+              <div dangerouslySetInnerHTML={{ __html: footerContent.replace(/\{page\}/g, String(currentPage)).replace(/\{total\}/g, String(pageCount)).replace(/\{title\}/g, documentTitle) }} />
+            ) : (
+              <span className="opacity-40">
+                Double-cliquez pour ajouter un pied de page
+                {pageCount > 0 && (
+                  <span className="ml-2">· Page {currentPage}/{pageCount}</span>
+                )}
+              </span>
+            )}
+          </div>
+          )}
         </div>
 
         {/* Page break indicator */}
         <div className="text-center py-2 text-xs text-muted-foreground">
-          — Fin du document —
+          {pageCount > 1 ? `Page ${currentPage} sur ${pageCount}` : "— Fin du document —"}
         </div>
       </div>
+
+      {/* Header/Footer edit modal */}
+      {(headerFocused || footerFocused) && !readOnly && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => { setHeaderFocused(false); setFooterFocused(false); }}>
+          <div className="bg-card rounded-lg shadow-xl p-4 w-[500px] max-w-[90vw]" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-semibold mb-3">
+              {headerFocused ? "Modifier l'en-tête" : "Modifier le pied de page"}
+            </h3>
+            <textarea
+              autoFocus
+              value={headerFocused ? headerContent : footerContent}
+              onChange={e => {
+                if (headerFocused) setHeaderContent(e.target.value);
+                else setFooterContent(e.target.value);
+              }}
+              placeholder="Texte de l'en-tête... (utilisez {page} pour le numéro de page, {total} pour le total, {title} pour le titre)"
+              className="w-full h-24 px-3 py-2 text-xs rounded border bg-background resize-none focus:outline-none focus:ring-1 focus:ring-primary mb-2"
+            />
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-3">
+              <span>Raccourcis:</span>
+              <code className="px-1 rounded bg-muted">{"{page}"}</code>
+              <span>= numéro de page</span>
+              <code className="px-1 rounded bg-muted">{"{total}"}</code>
+              <span>= total</span>
+              <code className="px-1 rounded bg-muted">{"{title}"}</code>
+              <span>= titre</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <button
+                type="button"
+                onClick={() => {
+                  if (headerFocused) setHeaderContent("");
+                  else setFooterContent("");
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Effacer
+              </button>
+              <button
+                type="button"
+                onClick={() => { setHeaderFocused(false); setFooterFocused(false); }}
+                className="px-3 py-1.5 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Terminé
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Find & Replace Bar ── */}
       {showFindBar && !readOnly && (

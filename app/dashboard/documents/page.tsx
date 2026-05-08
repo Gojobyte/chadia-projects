@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { DocumentEditor } from "@/components/editor/DocumentEditor";
-import { Spreadsheet, CellData } from "@/components/spreadsheet/Spreadsheet";
+import { Spreadsheet, CellData, Sheet } from "@/components/spreadsheet/Spreadsheet";
 import { cn } from "@/lib/utils";
 
 type EditorTab = "document" | "spreadsheet";
@@ -47,7 +47,45 @@ export default function DocumentsPage() {
   const [activeTab, setActiveTab] = useState<EditorTab>("document");
   const [docContent, setDocContent] = useState("<h1>Reponse a l'appel d'offres</h1><p>Commencez a rediger votre proposition ici...</p>");
   const [docTitle, setDocTitle] = useState("Appel d'offres - Projet Education");
-  const [spreadData, setSpreadData] = useState<Record<string, CellData>>(SAMPLE_BUDGET);
+  const [sheets, setSheets] = useState<Sheet[]>([
+    {
+      id: "sheet-1",
+      name: "Budget",
+      data: SAMPLE_BUDGET,
+      frozenRows: 1,
+      frozenCols: 0,
+      conditionalRules: [
+        {
+          id: "rule-1",
+          range: "E4:E10",
+          condition: "gte",
+          value: "5000000",
+          style: { bgColor: "#fef08a", bold: true },
+        },
+        {
+          id: "rule-2",
+          range: "E4:E10",
+          condition: "lt",
+          value: "3000000",
+          style: { bgColor: "#dcfce7" },
+        },
+      ],
+    },
+    {
+      id: "sheet-2",
+      name: "Resume",
+      data: {
+        "A1": { value: "Resume du projet", style: { bold: true, fontSize: 16, bgColor: "#dbeafe" } },
+        "A3": { value: "Total budget:", style: { bold: true } },
+        "B3": { value: "=SOMME(Feuille1!E4:E10)", style: { format: "currency" } },
+        "A4": { value: "Nombre de lignes:", style: { bold: true } },
+        "B4": { value: "=COUNT(Feuille1!A4:A10)", style: {} },
+      },
+      frozenRows: 0,
+      frozenCols: 0,
+      conditionalRules: [],
+    },
+  ]);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = useCallback((html: string) => {
@@ -117,9 +155,8 @@ export default function DocumentsPage() {
         )}
         {activeTab === "spreadsheet" && (
           <Spreadsheet
-            data={spreadData}
-            onDataChange={setSpreadData}
-            sheetName="Budget"
+            sheets={sheets}
+            onSheetsChange={setSheets}
           />
         )}
       </div>
