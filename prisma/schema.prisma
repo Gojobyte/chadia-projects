@@ -90,11 +90,16 @@ model VerificationToken {
 
 enum ProjetStatut {
   BROUILLON
-  EN_COURS
-  EN_REVISION
+  REDACTION
+  RELECTURE
+  VALIDATION
+  FINALISATION
   SOUMIS
   ACCEPTE
   REJETE
+  // Legacy — conservés pour compatibilité avec les projets existants
+  EN_COURS
+  EN_REVISION
   ARCHIVE
 }
 

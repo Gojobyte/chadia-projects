@@ -1,6 +1,3 @@
-"use client";
-
-import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Icons } from "@/components/icons";
 
@@ -15,9 +12,7 @@ const routeNames: Record<string, string> = {
   "/calendrier": "Calendrier",
 };
 
-export function Topbar() {
-  const pathname = usePathname();
-
+export function Topbar({ pathname }: { pathname: string }) {
   // Generer les breadcrumbs depuis le pathname
   const segments = pathname.split("/").filter(Boolean);
   const crumbs: { label: string; href: string }[] = [{ label: "CHADIA", href: "/" }];

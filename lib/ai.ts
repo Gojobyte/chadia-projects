@@ -1,4 +1,15 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { MistralProvider } from "@/lib/ai/providers/mistral";
+import type { LLMProvider } from "@/lib/ai/client";
+
+// --------------------------------------------------------------------------
+// Provider IA principal — Mistral
+// --------------------------------------------------------------------------
+
+/** Retourne le provider LLM principal (Mistral). */
+export function getLLMProvider(model = "mistral-large-latest"): LLMProvider {
+  return new MistralProvider(model);
+}
 
 // --------------------------------------------------------------------------
 // Service IA — Google Gemini (GRATUIT)

@@ -41,12 +41,11 @@ export default async function Dashboard() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const [projets, taches, activites, totalProjets, acceptes] = await Promise.all([
+  const [projets, taches, activites, statutCounts] = await Promise.all([
     prisma.projet.findMany({
       where: { statut: { notIn: ["ACCEPTE", "REJETE", "ARCHIVE"] } },
       include: {
         bailleur: { select: { sigle: true } },
-        documents: { select: { statut: true } },
         membres: { select: { user: { select: { id: true, name: true } } }, take: 4 },
       },
       orderBy: { dateLimite: "asc" }, take: 8,
@@ -57,12 +56,28 @@ export default async function Dashboard() {
       orderBy: { dateLimite: "asc" }, take: 5,
     }),
     prisma.activite.findMany({
+      where: { projet: { membres: { some: { userId: session.user.id } } } },
       include: { user: { select: { name: true } }, projet: { select: { titre: true } } },
       orderBy: { createdAt: "desc" }, take: 6,
     }),
-    prisma.projet.count(),
-    prisma.projet.count({ where: { statut: "ACCEPTE" } }),
+    prisma.projet.groupBy({ by: ["statut"], _count: true }),
   ]);
+
+  const totalProjets = statutCounts.reduce((s, r) => s + r._count, 0);
+  const acceptes = statutCounts.find(r => r.statut === "ACCEPTE")?._count ?? 0;
+
+  const docCountRows = await prisma.document.groupBy({
+    by: ["projetId", "statut"],
+    where: { projetId: { in: projets.map(p => p.id) } },
+    _count: { _all: true },
+  });
+  const docStats = new Map<string, { total: number; valide: number }>();
+  for (const row of docCountRows) {
+    const s = docStats.get(row.projetId) ?? { total: 0, valide: 0 };
+    s.total += row._count._all;
+    if (row.statut === "VALIDE") s.valide += row._count._all;
+    docStats.set(row.projetId, s);
+  }
 
   const inFlight = projets.filter(p => !["SOUMIS"].includes(p.statut));
   const budget = projets.reduce((s, p) => s + (p.budget ?? 0), 0);
@@ -120,8 +135,9 @@ export default async function Dashboard() {
               Aucun projet. <Link href="/projets/nouveau" style={{ color: "var(--primary)" }}>Créer</Link>
             </div>
           ) : inFlight.map((p, i) => {
-            const tot = p.documents.length;
-            const val = p.documents.filter(d => d.statut === "VALIDE").length;
+            const stats = docStats.get(p.id) ?? { total: 0, valide: 0 };
+            const tot = stats.total;
+            const val = stats.valide;
             const pct = tot > 0 ? Math.round(val / tot * 100) : 0;
             const days = daysUntil(p.dateLimite);
             const urgent = days <= 7;
