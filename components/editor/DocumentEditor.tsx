@@ -22,6 +22,7 @@ import Table from "@tiptap/extension-table";
 import TableRow from "@tiptap/extension-table-row";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
+import FontFamilyExt from "@tiptap/extension-font-family";
 import {
   cn,
   FONT_FAMILIES,
@@ -60,7 +61,27 @@ interface ToolbarState {
   lineSpacing: LineSpacing;
   textColor: string;
   highlightColor: string;
+  paragraphStyle: ParagraphStyle;
 }
+
+type ParagraphStyle =
+  | "normal"
+  | "titre1"
+  | "titre2"
+  | "titre3"
+  | "sous-titre"
+  | "citation"
+  | "code-block";
+
+const PARAGRAPH_STYLE_OPTIONS: { value: ParagraphStyle; label: string }[] = [
+  { value: "normal", label: "Normal" },
+  { value: "titre1", label: "Titre 1" },
+  { value: "titre2", label: "Titre 2" },
+  { value: "titre3", label: "Titre 3" },
+  { value: "sous-titre", label: "Sous-titre" },
+  { value: "citation", label: "Citation" },
+  { value: "code-block", label: "Code" },
+];
 
 const TOOLBAR_DEFAULTS: ToolbarState = {
   bold: false,
@@ -79,6 +100,7 @@ const TOOLBAR_DEFAULTS: ToolbarState = {
   lineSpacing: "1.5",
   textColor: "#000000",
   highlightColor: "transparent",
+  paragraphStyle: "normal",
 };
 
 /* ─── Toolbar Button ─── */
@@ -177,25 +199,283 @@ function Ruler({ zoom }: { zoom: number }) {
         style={{ transform: `scaleX(${scale})`, transformOrigin: "left top" }}
       >
         {ticks.map((t, i) => (
-          <div
-            key={i}
-            className="absolute bottom-0"
-            style={{ left: `${t.pos * 24}px` }}
-          >
-            <div
-              className={cn(
-                "w-px bg-muted-foreground/40",
-                t.major ? "h-2.5" : "h-1.5"
-              )}
-            />
+          <div key={i} className="absolute bottom-0" style={{ left: `${t.pos * 24}px` }}>
+            <div className={cn("w-px bg-muted-foreground/40", t.major ? "h-2.5" : "h-1.5")} />
             {t.major && t.label && (
-              <span className="absolute -top-0.5 left-0.5 text-[7px] text-muted-foreground">
-                {t.label}
-              </span>
+              <span className="absolute -top-0.5 left-0.5 text-[7px] text-muted-foreground">{t.label}</span>
             )}
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ─── Context Menu ─── */
+
+function ContextMenu({ editor }: { editor: Editor }) {
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    const el = editor.view.dom;
+    const onContext = (e: MouseEvent) => {
+      e.preventDefault();
+      setPos({ x: e.clientX, y: e.clientY + 10 });
+      setShow(true);
+    };
+    const onClick = () => setShow(false);
+    el.addEventListener("contextmenu", onContext);
+    document.addEventListener("click", onClick);
+    return () => {
+      el.removeEventListener("contextmenu", onContext);
+      document.removeEventListener("click", onClick);
+    };
+  }, [editor]);
+
+  if (!show || !pos) return null;
+
+  const items = [
+    { label: "Couper", action: () => { document.execCommand("cut"); setShow(false); } },
+    { label: "Copier", action: () => { document.execCommand("copy"); setShow(false); } },
+    { label: "Coller", action: () => { document.execCommand("paste"); setShow(false); } },
+    { label: "separator" as string, action: null },
+    { label: "Effacer la mise en forme", action: () => { editor.chain().focus().clearNodes().unsetAllMarks().run(); setShow(false); } },
+  ];
+
+  return (
+    <div
+      className="fixed z-50 min-w-[160px] rounded-lg border bg-card shadow-xl py-1"
+      style={{ left: pos.x, top: pos.y }}
+      onContextMenu={e => e.preventDefault()}
+      onClick={() => setShow(false)}
+    >
+      {items.map((item, i) =>
+        item.action === null ? (
+          <div key={i} className="h-px bg-border my-1" />
+        ) : (
+          <button
+            key={i}
+            onMouseDown={e => { e.preventDefault(); item.action(); }}
+            className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors"
+          >
+            {item.label}
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
+/* ─── Find & Replace Bar ─── */
+
+interface FindReplaceBarProps {
+  editor: Editor;
+  onClose: () => void;
+}
+
+function FindReplaceBar({ editor, onClose }: FindReplaceBarProps) {
+  const [showReplace, setShowReplace] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [replaceValue, setReplaceValue] = useState("");
+  const [matchCount, setMatchCount] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const findInputRef = useRef<HTMLInputElement>(null);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
+
+  // Simple find using window.find API
+  const updateMatches = useCallback(
+    (text: string) => {
+      if (!text) {
+        setMatchCount(0);
+        setActiveIndex(0);
+        return;
+      }
+      // Count matches in text content
+      const editorEl = editor.view.dom;
+      const textContent = editorEl.textContent || "";
+      const searchLower = text.toLowerCase();
+      const textLower = textContent.toLowerCase();
+      let count = 0;
+      let idx = 0;
+      while ((idx = textLower.indexOf(searchLower, idx)) !== -1) {
+        count++;
+        idx += text.length;
+      }
+      setMatchCount(count);
+      setActiveIndex(0);
+    },
+    [editor],
+  );
+
+  const findText = useCallback(
+    (text: string, reverse: boolean = false) => {
+      if (!text) return;
+      // Use built-in browser find (not in TS types but works in browsers)
+      try {
+        const w = window as unknown as { find: (text: string, caseSensitive: boolean, backwards: boolean, wrapAround: boolean, wholeWord: boolean, searchInFrames: boolean, showDialog: boolean) => boolean };
+        const found = w.find(text, false, reverse, false, false, true, false);
+        if (!found) {
+          w.find(text, false, reverse, true, false, true, false);
+        }
+      } catch {
+        // window.find not supported
+      }
+    },
+    [],
+  );
+
+  const replaceText = useCallback(
+    (search: string, replace: string) => {
+      if (!search || !replace) return;
+      const { state } = editor.view;
+      const { doc } = state;
+      const matches: { from: number; to: number }[] = [];
+      doc.descendants((node, pos) => {
+        if (node.isText && node.text) {
+          const searchLower = search.toLowerCase();
+          const textLower = node.text.toLowerCase();
+          let startIndex = 0;
+          let idx = textLower.indexOf(searchLower, startIndex);
+          while (idx !== -1) {
+            matches.push({ from: pos + idx, to: pos + idx + search.length });
+            startIndex = idx + search.length;
+            idx = textLower.indexOf(searchLower, startIndex);
+          }
+        }
+      });
+      if (activeIndex >= 0 && activeIndex < matches.length) {
+        const match = matches[activeIndex];
+        const tr = state.tr.replaceWith(
+          match.from, match.to,
+          state.schema.text(replace)
+        );
+        editor.view.dispatch(tr);
+      }
+    },
+    [editor, activeIndex],
+  );
+
+  const replaceAllText = useCallback(
+    (search: string, replace: string) => {
+      if (!search || !replace) return;
+      const { state } = editor.view;
+      const { doc } = state;
+      const matches: { from: number; to: number }[] = [];
+      doc.descendants((node, pos) => {
+        if (node.isText && node.text) {
+          const searchLower = search.toLowerCase();
+          const textLower = node.text.toLowerCase();
+          let startIndex = 0;
+          let idx = textLower.indexOf(searchLower, startIndex);
+          while (idx !== -1) {
+            matches.push({ from: pos + idx, to: pos + idx + search.length });
+            startIndex = idx + search.length;
+            idx = textLower.indexOf(searchLower, startIndex);
+          }
+        }
+      });
+      let tr = state.tr;
+      [...matches].reverse().forEach((match) => {
+        tr = tr.replaceWith(match.from, match.to, state.schema.text(replace));
+      });
+      editor.view.dispatch(tr);
+      setMatchCount(0);
+    },
+    [editor],
+  );
+
+  const handleFindChange = useCallback(
+    (text: string) => {
+      setSearchText(text);
+      updateMatches(text);
+      if (text) findText(text);
+    },
+    [updateMatches, findText],
+  );
+
+  const goToNext = useCallback(() => {
+    if (matchCount === 0) return;
+    const next = (activeIndex + 1) % matchCount;
+    setActiveIndex(next);
+    findText(searchText);
+  }, [matchCount, activeIndex, searchText, findText]);
+
+  const goToPrev = useCallback(() => {
+    if (matchCount === 0) return;
+    const prev = (activeIndex - 1 + matchCount) % matchCount;
+    setActiveIndex(prev);
+    findText(searchText, true);
+  }, [matchCount, activeIndex, searchText, findText]);
+
+  const replaceOne = useCallback(() => {
+    replaceText(searchText, replaceValue);
+    setTimeout(() => updateMatches(searchText), 50);
+  }, [searchText, replaceValue, replaceText, updateMatches]);
+
+  const replaceAllFn = useCallback(() => {
+    replaceAllText(searchText, replaceValue);
+    setSearchText("");
+  }, [searchText, replaceValue, replaceAllText]);
+
+  const toggleReplace = useCallback(() => {
+    setShowReplace((prev) => {
+      const next = !prev;
+      if (next) setTimeout(() => replaceInputRef.current?.focus(), 50);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    findInputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (document.activeElement === replaceInputRef.current) replaceOne();
+        else if (e.shiftKey) goToPrev();
+        else goToNext();
+      }
+      if (e.key === "Escape") { e.preventDefault(); onClose(); }
+      if (e.key === "F3") { e.preventDefault(); e.shiftKey ? goToPrev() : goToNext(); }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [goToNext, goToPrev, replaceOne, onClose]);
+
+  return (
+    <div className="border-t bg-card px-3 py-2 flex items-center gap-2 shrink-0 relative">
+      <div className="flex items-center gap-1 flex-1">
+        <input ref={findInputRef} type="text" value={searchText}
+          onChange={(e) => handleFindChange(e.target.value)}
+          placeholder="Rechercher..."
+          className="h-7 px-2 rounded border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary w-48" />
+        <span className="text-[10px] text-muted-foreground min-w-[40px] text-center">
+          {matchCount > 0 ? `${activeIndex + 1} sur ${matchCount}` : searchText ? "0 resultat" : ""}
+        </span>
+      </div>
+      <button type="button" onClick={goToPrev} disabled={matchCount === 0} title="Precedent"
+        className={cn("w-6 h-6 rounded flex items-center justify-center text-xs", matchCount === 0 ? "opacity-30 cursor-not-allowed" : "hover:bg-muted")}> ▲ </button>
+      <button type="button" onClick={goToNext} disabled={matchCount === 0} title="Suivant"
+        className={cn("w-6 h-6 rounded flex items-center justify-center text-xs", matchCount === 0 ? "opacity-30 cursor-not-allowed" : "hover:bg-muted")}> ▼ </button>
+      <button type="button" onClick={toggleReplace} title="Remplacer"
+        className={cn("h-6 px-2 rounded text-xs", showReplace ? "bg-primary text-primary-foreground" : "hover:bg-muted")}> Remplacer </button>
+      <button type="button" onClick={onClose} title="Fermer"
+        className="w-6 h-6 rounded flex items-center justify-center text-xs hover:bg-muted"> x </button>
+      {showReplace && (
+        <div className="absolute bottom-full right-0 mb-0 border-t border-l bg-card px-3 py-2 flex items-center gap-2 rounded-tl-md shadow-lg z-50">
+          <input ref={replaceInputRef} type="text" value={replaceValue}
+            onChange={(e) => setReplaceValue(e.target.value)}
+            placeholder="Remplacer par..."
+            className="h-7 px-2 rounded border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary w-48" />
+          <button type="button" onClick={replaceOne} disabled={matchCount === 0}
+            className={cn("h-6 px-2 rounded text-xs", matchCount === 0 ? "opacity-30" : "bg-primary text-primary-foreground hover:bg-primary/90")}> Remplacer </button>
+          <button type="button" onClick={replaceAllFn} disabled={matchCount === 0}
+            className={cn("h-6 px-2 rounded text-xs", matchCount === 0 ? "opacity-30" : "bg-destructive text-destructive-foreground hover:bg-destructive/90")}> Tout remplacer </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -215,6 +495,8 @@ export function DocumentEditor({
   const [pageCount, setPageCount] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [showFindBar, setShowFindBar] = useState(false);
+  const [showReplaceInBar, setShowReplaceInBar] = useState(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -222,6 +504,7 @@ export function DocumentEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        codeBlock: false, // We'll handle code blocks via paragraph styles
       }),
       Link.configure({ openOnClick: false, HTMLAttributes: { target: "_blank" } }),
       Image.configure({ inline: false, allowBase64: true }),
@@ -239,6 +522,7 @@ export function DocumentEditor({
       TableRow,
       TableCell,
       TableHeader,
+      FontFamilyExt,
     ],
     content,
     editable: !readOnly,
@@ -262,7 +546,7 @@ export function DocumentEditor({
     onSelectionUpdate: ({ editor }) => updateToolbarState(editor),
   });
 
-  // Ctrl+S to save
+  // Ctrl+S to save, Ctrl+F to find, Ctrl+H to find & replace
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
@@ -276,12 +560,30 @@ export function DocumentEditor({
           }, 500);
         }
       }
+      if ((e.ctrlKey || e.metaKey) && e.key === "f") {
+        e.preventDefault();
+        setShowFindBar(true);
+        setShowReplaceInBar(false);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "h") {
+        e.preventDefault();
+        setShowFindBar(true);
+        setShowReplaceInBar(true);
+      }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [editor, onSave]);
 
   function updateToolbarState(e: Editor) {
+    // Detect current paragraph style
+    let paragraphStyle: ParagraphStyle = "normal";
+    if (e.isActive("heading", { level: 1 })) paragraphStyle = "titre1";
+    else if (e.isActive("heading", { level: 2 })) paragraphStyle = "titre2";
+    else if (e.isActive("heading", { level: 3 })) paragraphStyle = "titre3";
+    else if (e.isActive("blockquote")) paragraphStyle = "citation";
+    else if (e.isActive("codeBlock")) paragraphStyle = "code-block";
+
     setToolbar({
       bold: e.isActive("bold"),
       italic: e.isActive("italic"),
@@ -291,18 +593,18 @@ export function DocumentEditor({
       heading: e.isActive("heading", { level: 1 })
         ? 1
         : e.isActive("heading", { level: 2 })
-        ? 2
-        : e.isActive("heading", { level: 3 })
-        ? 3
-        : 0,
+          ? 2
+          : e.isActive("heading", { level: 3 })
+            ? 3
+            : 0,
       alignment:
         e.isActive({ textAlign: "center" })
           ? "center"
           : e.isActive({ textAlign: "right" })
-          ? "right"
-          : e.isActive({ textAlign: "justify" })
-          ? "justify"
-          : "left",
+            ? "right"
+            : e.isActive({ textAlign: "justify" })
+              ? "justify"
+              : "left",
       bulletList: e.isActive("bulletList"),
       orderedList: e.isActive("orderedList"),
       blockquote: e.isActive("blockquote"),
@@ -312,8 +614,48 @@ export function DocumentEditor({
       lineSpacing: "1.5",
       textColor: "#000000",
       highlightColor: "transparent",
+      paragraphStyle,
     });
   }
+
+  // Apply paragraph style
+  const applyParagraphStyle = useCallback(
+    (style: ParagraphStyle) => {
+      if (!editor) return;
+
+      switch (style) {
+        case "normal":
+          editor.chain().focus().setParagraph().run();
+          break;
+        case "titre1":
+          editor.chain().focus().toggleHeading({ level: 1 }).run();
+          break;
+        case "titre2":
+          editor.chain().focus().toggleHeading({ level: 2 }).run();
+          break;
+        case "titre3":
+          editor.chain().focus().toggleHeading({ level: 3 }).run();
+          break;
+        case "sous-titre": {
+          // Apply as paragraph with italic + gray color + 12pt
+          editor.chain().focus().setParagraph().run();
+          editor.chain().focus().setFontSize("12pt").run();
+          editor.chain().focus().toggleItalic().run();
+          editor.chain().focus().setColor("#6b7280").run();
+          break;
+        }
+        case "citation": {
+          editor.chain().focus().toggleBlockquote().run();
+          break;
+        }
+        case "code-block": {
+          editor.chain().focus().toggleCodeBlock().run();
+          break;
+        }
+      }
+    },
+    [editor]
+  );
 
   if (!editor) return null;
 
@@ -363,13 +705,23 @@ export function DocumentEditor({
 
           <Divider />
 
+          {/* Paragraph Style Dropdown */}
+          <TSelect
+            value={toolbar.paragraphStyle}
+            options={PARAGRAPH_STYLE_OPTIONS}
+            onChange={(v) => applyParagraphStyle(v)}
+            title="Style de paragraphe"
+            className="min-w-[90px]"
+          />
+
+          <Divider />
+
           {/* Font family */}
           <TSelect
             value={toolbar.fontFamily}
             options={FONT_FAMILIES}
             onChange={(v) => {
-              // Apply font family via TextStyle mark
-              editor.chain().focus().extendMarkRange("textStyle").setFontFamily ? editor.chain().focus().extendMarkRange("textStyle").setFontFamily(v).run() : null;
+              editor.chain().focus().setFontFamily(v).run();
             }}
             title="Police"
           />
@@ -378,9 +730,10 @@ export function DocumentEditor({
           <TSelect
             value={toolbar.fontSize}
             options={FONT_SIZES}
-            onChange={(v) =>
-              editor.chain().focus().setFontSize(v + "pt").run()
-            }
+          onChange={(v) => {
+            // Apply font size via textStyle mark
+            editor.chain().focus().setMark("textStyle", { fontSize: v + "pt" }).run();
+          }}
             title="Taille"
           />
 
@@ -630,6 +983,17 @@ export function DocumentEditor({
           — Fin du document —
         </div>
       </div>
+
+      {/* ── Find & Replace Bar ── */}
+      {showFindBar && !readOnly && (
+        <FindReplaceBar
+          editor={editor}
+          onClose={() => setShowFindBar(false)}
+        />
+      )}
+
+      {/* ── Context Menu ── */}
+      <ContextMenu editor={editor} />
 
       {/* ── Status Bar ── */}
       <div className="border-t bg-card px-4 py-1 flex items-center justify-between text-[10px] text-muted-foreground shrink-0">
