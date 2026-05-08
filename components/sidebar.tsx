@@ -9,7 +9,10 @@ import { Icons } from "@/components/icons";
 const navItems = [
   { label: "Tableau de bord", href: "/", icon: Icons.Dashboard },
   { label: "Projets", href: "/projets", icon: Icons.Folder },
-  { label: "Boîte de réception", href: "/inbox", icon: Icons.Inbox, countValue: 3 },
+  { label: "Appels d'offres", href: "/appels-offres", icon: Icons.Gavel },
+  { label: "Fournisseurs", href: "/fournisseurs", icon: Icons.Building },
+  { label: "Resultats", href: "/resultats", icon: Icons.Award },
+  { label: "Boite de reception", href: "/inbox", icon: Icons.Inbox, countValue: 3 },
   { label: "Calendrier", href: "/calendrier", icon: Icons.Calendar },
   { label: "Analytics", href: "/analytics", icon: Icons.Chart },
 ];
