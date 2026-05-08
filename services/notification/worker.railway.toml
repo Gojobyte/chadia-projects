@@ -1,0 +1,12 @@
+# Railway Configuration — Notification Worker
+# https://railway.app
+
+[build]
+builder = "DOCKERFILE"
+
+[deploy]
+startCommand = "node src/worker.js"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

@@ -1,9 +1,6 @@
 version: "3.9"
 
 services:
-  # ============================================================
-  # INFRASTRUCTURE
-  # ============================================================
   postgres:
     image: postgres:16-alpine
     environment:
@@ -28,31 +25,22 @@ services:
     volumes:
       - redisdata:/data
 
-  # ============================================================
-  # MICROSERVICES
-  # ============================================================
   auth-service:
-    build:
-      context: ./services/auth
-      dockerfile: Dockerfile
+    build: ./services/auth
     environment:
       DATABASE_URL: postgresql://chadia:chadia_secret@postgres:5432/chadia?schema=auth
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET:-chadia-jwt-secret-change-me}
+      JWT_SECRET: chadia-jwt-secret-local
       PORT: 3001
     ports:
       - "3001:3001"
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_started
     restart: unless-stopped
 
   tender-service:
-    build:
-      context: ./services/tender
-      dockerfile: Dockerfile
+    build: ./services/tender
     environment:
       DATABASE_URL: postgresql://chadia:chadia_secret@postgres:5432/chadia?schema=tender
       REDIS_URL: redis://redis:6379
@@ -64,46 +52,32 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_started
       auth-service:
         condition: service_started
     restart: unless-stopped
 
   notification-service:
-    build:
-      context: ./services/notification
-      dockerfile: Dockerfile
+    build: ./services/notification
     environment:
       DATABASE_URL: postgresql://chadia:chadia_secret@postgres:5432/chadia?schema=notification
       REDIS_URL: redis://redis:6379
       RESEND_API_KEY: ${RESEND_API_KEY:-}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
       PORT: 3003
     ports:
       - "3003:3003"
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_started
     restart: unless-stopped
 
-  # ============================================================
-  # API GATEWAY (Next.js frontend + proxy)
-  # ============================================================
   gateway:
-    build:
-      context: ./services/gateway
-      dockerfile: Dockerfile
+    build: ./services/gateway
     environment:
       AUTH_SERVICE_URL: http://auth-service:3001
       TENDER_SERVICE_URL: http://tender-service:3002
       NOTIFICATION_SERVICE_URL: http://notification-service:3003
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-chadia-nextauth-secret}
+      INTERNAL_SERVICE_TOKEN: internal-service-token-local
+      NEXTAUTH_SECRET: chadia-nextauth-secret-local
       NEXTAUTH_URL: http://localhost:3000
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
