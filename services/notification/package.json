@@ -1,0 +1,22 @@
+{
+  "name": "chadia-notification-service",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "db:generate": "npx prisma generate",
+    "db:push": "npx prisma db push",
+    "worker": "node src/worker.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "resend": "^4.0.0",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "prisma": "^7.0.0"
+  }
+}

@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CHADIA — Architecture Microservices
 
-## Getting Started
+Plateforme de gestion de marchés publics — inspirée des meilleurs systèmes mondiaux (SAM.gov, TED, GeM, KONEPS).
 
-First, run the development server:
+## Architecture
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      API GATEWAY (Next.js)                  │
+│                      Port 3000 — Frontend + Proxy           │
+├──────────────┬──────────────────┬───────────────────────────┤
+│  Auth Svc    │   Tender Svc     │   Notification Svc        │
+│  Port 3001   │   Port 3002      │   Port 3003               │
+│  ──────────  │   ────────────   │   ──────────────────      │
+│  JWT/Session │   AO/Soumissions │   In-app + Email (Resend) │
+│  Users/Roles │   Fournisseurs   │   Alertes/Abonnements     │
+│  Audit Log   │   Documents      │   Worker (outbox)         │
+│  S2S Tokens  │   Evaluations    │                           │
+│              │   Analytics      │                           │
+├──────────────┴──────────────────┴───────────────────────────┤
+│                      PostgreSQL (schémas isolés)             │
+│                      Port 5432                              │
+├─────────────────────────────────────────────────────────────┤
+│                      Redis (cache + sessions)                │
+│                      Port 6379                              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Démarrage rapide
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# 1. Cloner et configurer
+cp .env.example .env
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# 2. Lancer l'infrastructure
+docker-compose up -d postgres redis
 
-## Learn More
+# 3. Initialiser les bases de données
+cd services/auth && npm install && npx prisma db push && node prisma/seed.js
+cd ../tender && npm install && npx prisma db push
+cd ../notification && npm install && npx prisma db push
 
-To learn more about Next.js, take a look at the following resources:
+# 4. Lancer les services (un terminal par service)
+cd services/auth && npm run dev
+cd services/tender && npm run dev
+cd services/notification && npm run dev
+cd services/notification && npm run worker
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# 5. Lancer le gateway
+cd services/gateway && npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Schémas de base de données
 
-## Deploy on Vercel
+| Service | Schéma Prisma | Tables |
+|---------|--------------|--------|
+| Auth | `auth` | users, sessions, refresh_tokens, audit_logs, service_tokens |
+| Tender | `tender` | fournisseurs, bailleurs, appels_offres, soumissions, documents, evaluations, resultats, outbox_events |
+| Notification | `notification` | notifications, alertes, abonnements, email_logs |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Communication inter-services
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **HTTP REST** — Le gateway proxifie les requêtes vers les services
+2. **Pattern Outbox** — Le tender service publie des events dans `tender.outbox_events`
+3. **Worker** — Le notification service poll l'outbox toutes les 10s et déclenche les notifications
+4. **Service Tokens** — Tokens JWT pour authentifier les services entre eux
+
+## API Endpoints
+
+### Auth Service (3001)
+- `POST /auth/register` — Inscription
+- `POST /auth/login` — Connexion
+- `GET /auth/me` — Profil
+- `GET /auth/users` — Liste (admin)
+- `GET /auth/validate` — Validation token (interne)
+
+### Tender Service (3002)
+- `GET/POST /fournisseurs` — CRUD fournisseurs
+- `PATCH /fournisseurs/:id/verify` — Vérification
+- `GET/POST /appels-offres` — CRUD appels d'offres
+- `PATCH /appels-offres/:id/publish` — Publication
+- `GET/POST /soumissions` — Dépôt/consultation soumissions
+- `PUT /soumissions/:id/evaluate` — Évaluation
+- `PATCH /soumissions/:id/retain` — Attribution marché
+- `GET/POST /documents` — Gestion documents
+- `GET /analytics` — Statistiques
+
+### Notification Service (3003)
+- `GET/POST /notifications` — Notifications
+- `POST /notifications/bulk` — Notification en masse
+- `GET/POST /alertes` — Alertes
+- `GET/POST /abonnements` — Abonnements
+- `POST /email/send` — Envoi email

@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // "tender.created", "tender.published", "submission.received", "tender.attributed", "deadline.reminder"
+  titre     String
+  message   String
+  lien      String?
+  metadata  Json?
+
+  lu        Boolean  @default(false)
+  emailSent Boolean  @default(false)
+  emailSentAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, lu])
+  @@index([type])
+  @@map("notifications")
+}
+
+model Alerte {
+  id          String    @id @default(cuid())
+  userId      String
+  type        String
+  titre       String
+  message     String
+  lien        String?
+  lu          Boolean   @default(false)
+  planifiePour DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId, lu])
+  @@index([planifiePour])
+  @@map("alertes")
+}
+
+model Abonnement {
+  id          String   @id @default(cuid())
+  userId      String
+  typeFiltre  String   // "secteur", "bailleur", "categorie"
+  valeurFiltre String
+  actif       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, typeFiltre, valeurFiltre])
+  @@map("abonnements")
+}
+
+model EmailLog {
+  id        String   @id @default(cuid())
+  to        String
+  subject   String
+  body      String?
+  status    String   // "sent", "failed", "queued"
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([to])
+  @@index([status])
+  @@map("email_logs")
+}
