@@ -7,13 +7,14 @@ export function middleware(request: NextRequest) {
     request.cookies.has("next-auth.session-token") ||
     request.cookies.has("__Secure-next-auth.session-token");
 
-  // Proteger toutes les pages sauf /login
-  if (!pathname.startsWith("/login") && !pathname.startsWith("/api/auth")) {
-    if (!hasSession) {
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("callbackUrl", pathname);
-      return NextResponse.redirect(loginUrl);
-    }
+  // Routes publiques (pas d'auth requise)
+  const PUBLIC_PATHS = ["/login", "/api/auth", "/resultats"];
+  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+
+  if (!isPublic && !hasSession) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("callbackUrl", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   // Si deja connecte et sur /login → rediriger vers dashboard

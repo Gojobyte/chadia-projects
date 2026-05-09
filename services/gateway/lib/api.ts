@@ -42,6 +42,8 @@ export const AuthAPI = {
   // Service-to-service: lookup user by email (uses x-service-token automatically)
   getUserByEmail: (email: string) =>
     apiFetch(AUTH_URL, `/auth/users?email=${encodeURIComponent(email)}`),
+  listUsers: (token: string) =>
+    apiFetch(AUTH_URL, "/auth/users", { token }),
   // Service-to-service: upsert/link Google account, returns { user, token }
   googleUpsert: (body: { email: string; name?: string; image?: string; providerAccountId: string }) =>
     apiFetch(AUTH_URL, "/auth/oauth/google", { method: "POST", body }),
@@ -100,6 +102,12 @@ export const TenderAPI = {
   // Analytics
   getAnalytics: (token?: string) =>
     apiFetch(TENDER_URL, "/analytics", { token }),
+
+  // Résultats publics (marchés attribués)
+  listResultats: (params?: Record<string, string>) => {
+    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
+    return apiFetch(TENDER_URL, `/resultats${qs}`);
+  },
 };
 
 // Notification API

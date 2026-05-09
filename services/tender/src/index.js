@@ -246,6 +246,34 @@ app.patch("/appels-offres/:id/publish", auth, requireRole("ADMIN", "DIRECTEUR"),
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// GET /resultats — page publique : marchés attribués
+app.get("/resultats", async (req, res) => {
+  try {
+    const { bailleurId, secteur, limit = "50" } = req.query;
+    const where = { estPublic: true };
+    if (bailleurId || secteur) {
+      where.appelOffre = {};
+      if (bailleurId) where.appelOffre.bailleurId = bailleurId;
+      if (secteur) where.appelOffre.secteur = secteur;
+    }
+    const resultats = await prisma.appelOffreResultat.findMany({
+      where,
+      include: {
+        appelOffre: {
+          select: {
+            reference: true, titre: true, type: true, categorie: true, secteur: true,
+            budgetEstime: true, devise: true, datePublication: true,
+            bailleur: { select: { nom: true, sigle: true } },
+          },
+        },
+      },
+      orderBy: { publieAt: "desc" },
+      take: parseInt(limit),
+    });
+    res.json({ resultats, total: resultats.length });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ============================================================
 // SOUMISSIONS
 // ============================================================
