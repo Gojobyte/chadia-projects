@@ -40,22 +40,27 @@ export const authOptions: NextAuthOptions = {
             // On stocke le JWT du service auth pour pouvoir le forwarder ensuite
             authServiceToken: token,
           } as AuthUser & { authServiceToken: string };
-        } catch {
+        } catch (e) {
+          console.error("[auth] login failed:", e instanceof Error ? e.message : e);
           return null;
         }
       },
     }),
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-      authorization: {
-        params: {
-          scope: "openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/documents",
-          access_type: "offline",
-          prompt: "consent",
-        },
-      },
-    }),
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [
+          GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            authorization: {
+              params: {
+                scope: "openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/documents",
+                access_type: "offline",
+                prompt: "consent",
+              },
+            },
+          }),
+        ]
+      : []),
   ],
   callbacks: {
     async signIn({ user, account }) {
@@ -113,6 +118,3 @@ export async function auth() {
   const { getServerSession } = await import("next-auth/next");
   return getServerSession(authOptions);
 }
-
-export const signIn = () => null;
-export const signOut = () => null;
