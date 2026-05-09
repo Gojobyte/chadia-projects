@@ -10,13 +10,13 @@
     "worker": "node src/worker.js"
   },
   "dependencies": {
-    "@prisma/client": "^7.0.0",
+    "@prisma/client": "^6.6.0",
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "resend": "^4.0.0",
     "node-cron": "^3.0.3"
   },
   "devDependencies": {
-    "prisma": "^7.0.0"
+    "prisma": "^6.6.0"
   }
 }
