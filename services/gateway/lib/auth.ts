@@ -110,8 +110,7 @@ export const authOptions: NextAuthOptions = {
 };
 
 const nextAuthHandler = NextAuth(authOptions);
-export const { GET: authGET, POST: authPOST } = nextAuthHandler;
-export const handlers = { GET: authGET, POST: authPOST };
+export const handlers = { GET: nextAuthHandler, POST: nextAuthHandler };
 
 // Server-side auth helper
 export async function auth() {
