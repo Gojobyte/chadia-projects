@@ -130,6 +130,33 @@ app.patch("/fournisseurs/:id/verify", auth, requireRole("ADMIN", "DIRECTEUR"), a
 });
 
 // ============================================================
+// BAILLEURS
+// ============================================================
+
+// GET /bailleurs — liste (publique pour permettre le rendu de la page nouveau AO)
+app.get("/bailleurs", async (req, res) => {
+  try {
+    const bailleurs = await prisma.bailleur.findMany({
+      select: { id: true, nom: true, sigle: true, logoUrl: true, siteWeb: true },
+      orderBy: { sigle: "asc" },
+    });
+    res.json({ bailleurs });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /bailleurs — création (admin/directeur)
+app.post("/bailleurs", auth, requireRole("ADMIN", "DIRECTEUR"), async (req, res) => {
+  try {
+    const { nom, sigle, logoUrl, siteWeb } = req.body;
+    if (!nom || !sigle) return res.status(400).json({ error: "nom and sigle required" });
+    const existing = await prisma.bailleur.findUnique({ where: { sigle } });
+    if (existing) return res.status(409).json({ error: "Sigle already exists" });
+    const bailleur = await prisma.bailleur.create({ data: { nom, sigle, logoUrl, siteWeb } });
+    res.status(201).json({ bailleur });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================================================
 // APPELS D'OFFRES
 // ============================================================
 

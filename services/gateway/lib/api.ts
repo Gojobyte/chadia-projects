@@ -72,7 +72,7 @@ export const TenderAPI = {
     apiFetch(TENDER_URL, `/appels-offres/${id}`),
   createAppelOffre: (body: Record<string, unknown>, token?: string) =>
     apiFetch(TENDER_URL, "/appels-offres", { method: "POST", body, token }),
-  publishAppelOffre: (id: string, token?: string) =>
+  publishAppelOffre: (id: string, token: string) =>
     apiFetch(TENDER_URL, `/appels-offres/${id}/publish`, { method: "PATCH", token }),
 
   // Soumissions
@@ -108,6 +108,11 @@ export const TenderAPI = {
     const qs = params ? "?" + new URLSearchParams(params).toString() : "";
     return apiFetch(TENDER_URL, `/resultats${qs}`);
   },
+
+  // Bailleurs
+  listBailleurs: () => apiFetch(TENDER_URL, "/bailleurs"),
+  createBailleur: (body: Record<string, unknown>, token?: string) =>
+    apiFetch(TENDER_URL, "/bailleurs", { method: "POST", body, token }),
 };
 
 // Notification API
