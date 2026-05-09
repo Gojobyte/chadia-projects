@@ -1,19 +1,43 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Instrument_Serif, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import "./sahel-tokens.css";
 import "./globals.css";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const display = Instrument_Serif({
+  variable: "--font-display-next",
+  subsets: ["latin"],
+  weight: ["400"],
+  style: ["normal", "italic"],
+  display: "swap",
+});
+
+const sans = Plus_Jakarta_Sans({
+  variable: "--font-sans-next",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+const mono = JetBrains_Mono({
+  variable: "--font-mono-next",
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "CHADIA Projects",
-  description: "Plateforme de montage de projets — ONG CHADIA",
+  description: "Plateforme de gestion de marchés publics — ONG CHADIA",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="fr" className={`${display.variable} ${sans.variable} ${mono.variable}`}>
+      <head>
+        <link href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" rel="stylesheet" />
+        <link href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css" rel="stylesheet" />
+      </head>
+      <body>{children}</body>
     </html>
   );
 }

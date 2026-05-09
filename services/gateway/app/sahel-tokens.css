@@ -1,0 +1,124 @@
+/* ============================================================
+   CHADIA Projects · Direction Sahel
+   Design tokens — fondations partagées par toute l'application.
+   Reprend la philosophie Sahel : papier mat, encre profonde,
+   terre cuite comme unique accent d'action, serif éditorial
+   pour les titres et les chiffres.
+   ============================================================ */
+
+:root {
+  /* ---------- Couleurs · Neutres ---------- */
+  --color-page:        #faf7f1;   /* fond principal · papier */
+  --color-canvas:      #f4efe6;   /* fond secondaire · toile */
+  --color-surface:     #fefcf7;   /* cartes, tableaux */
+  --color-surface-2:   #f7f2e8;   /* surfaces enfoncées */
+  --color-line:        #ece4d2;   /* filets fins */
+  --color-line-strong: #d9d0bb;   /* filets de séparation */
+  --color-mineral:     #b8a98f;   /* texte tertiaire */
+  --color-stone:       #8a7d6e;   /* texte secondaire faible */
+  --color-shale:       #6b5d4f;   /* texte secondaire */
+  --color-sepia:       #3d362e;   /* texte fort */
+  --color-ink:         #1a1612;   /* texte principal · titres */
+
+  /* ---------- Couleurs · Accent ---------- */
+  --color-terracotta:        #b85c3a;   /* action · marque */
+  --color-terracotta-hover:  #a04e30;
+  --color-terracotta-press:  #8a4128;
+  --color-terracotta-soft:   rgba(184, 92, 58, 0.12);
+  --color-terracotta-line:   rgba(184, 92, 58, 0.28);
+
+  /* ---------- Couleurs · Sémantiques ---------- */
+  --color-success:       #5b8a3a;
+  --color-success-soft:  rgba(91, 138, 58, 0.14);
+  --color-warning:       #c8923d;
+  --color-warning-soft:  rgba(200, 146, 61, 0.16);
+  --color-danger:        #a32d2d;
+  --color-danger-soft:   rgba(163, 45, 45, 0.12);
+  --color-info:          #2c5d6f;
+  --color-info-soft:     rgba(44, 93, 111, 0.12);
+
+  /* ---------- Statuts métier ---------- */
+  --status-draft:      var(--color-stone);
+  --status-published:  var(--color-success);
+  --status-review:     var(--color-terracotta);
+  --status-awarded:    var(--color-info);
+  --status-closed:     var(--color-shale);
+  --status-canceled:   var(--color-danger);
+
+  /* ---------- Typographie ---------- */
+  --font-display: 'Instrument Serif', 'Source Serif 4', Georgia, serif;
+  --font-sans:    'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+
+  /* échelle modulaire — pas de 1.20 */
+  --text-2xs:  10px;
+  --text-xs:   11px;
+  --text-sm:   13px;
+  --text-base: 14px;
+  --text-md:   15px;
+  --text-lg:   18px;
+  --text-xl:   22px;
+  --text-2xl:  28px;
+  --text-3xl:  36px;
+  --text-4xl:  48px;
+  --text-5xl:  64px;
+  --text-6xl:  88px;
+
+  --leading-tight:  1.1;
+  --leading-snug:   1.3;
+  --leading-normal: 1.5;
+  --leading-relax:  1.65;
+
+  --tracking-tight: -0.02em;
+  --tracking-flat:   0;
+  --tracking-wide:   0.04em;
+  --tracking-eyebrow: 0.16em;
+
+  /* ---------- Espacement · grille 4 ---------- */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-7:  32px;
+  --space-8:  40px;
+  --space-9:  56px;
+  --space-10: 72px;
+  --space-11: 96px;
+
+  /* ---------- Rayons ---------- */
+  --radius-xs:  2px;
+  --radius-sm:  4px;
+  --radius-md:  6px;
+  --radius-lg:  10px;
+  --radius-xl:  16px;
+  --radius-pill: 999px;
+
+  /* ---------- Élévations ---------- */
+  --shadow-flat:  0 0 0 1px var(--color-line);
+  --shadow-1:     0 1px 0 rgba(26, 22, 18, 0.04), 0 1px 2px rgba(26, 22, 18, 0.04);
+  --shadow-2:     0 1px 0 rgba(26, 22, 18, 0.04), 0 6px 14px -6px rgba(26, 22, 18, 0.12);
+  --shadow-3:     0 1px 0 rgba(26, 22, 18, 0.04), 0 18px 36px -16px rgba(26, 22, 18, 0.18);
+  --shadow-4:     0 24px 60px -20px rgba(26, 22, 18, 0.28);
+  --shadow-focus: 0 0 0 3px var(--color-terracotta-soft);
+
+  /* ---------- Transitions ---------- */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 280ms;
+
+  /* ---------- Hauteurs de contrôle ---------- */
+  --h-control-sm: 28px;
+  --h-control-md: 36px;
+  --h-control-lg: 44px;
+
+  /* ---------- Z-index ---------- */
+  --z-sticky:  10;
+  --z-overlay: 100;
+  --z-modal:   200;
+  --z-toast:   300;
+  --z-cmdk:    400;
+}
