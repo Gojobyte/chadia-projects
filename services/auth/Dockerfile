@@ -2,9 +2,9 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# Install dependencies
+# Install dependencies (npm install — lockfile manquant pour npm ci)
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 # Copy prisma and generate client
 COPY prisma/ ./prisma/
