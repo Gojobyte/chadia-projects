@@ -14,40 +14,84 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); setError(""); setLoading(true);
+    e.preventDefault();
+    setError("");
+    setLoading(true);
     const result = await signIn("credentials", { email, password, redirect: false });
     setLoading(false);
-    if (result?.error) { setError("Email ou mot de passe incorrect."); return; }
+    if (result?.error) {
+      setError("Email ou mot de passe incorrect.");
+      return;
+    }
     router.push(callbackUrl);
   }
 
+  const accessDenied = searchParams.get("error");
+
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)" }}>
-      <div className="card" style={{ width: "100%", maxWidth: 420, padding: 32 }}>
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div className="brand-mark" style={{ margin: "0 auto 12px", width: 40, height: 40, fontSize: 14 }}>CP</div>
-          <h1 style={{ fontSize: 20, fontWeight: 600, letterSpacing: "-0.01em" }}>CHADIA Projects</h1>
-          <p style={{ fontSize: 13, color: "var(--text-3)", marginTop: 4 }}>Plateforme de montage de projets</p>
+    <div className="login-shell">
+      <div className="login-card">
+        <div className="login-brand">
+          <span className="login-mark" aria-hidden="true">C</span>
+          <h1 className="login-title">CHADIA <em>Projects</em></h1>
+          <p className="login-sub">Plateforme de gestion des marchés publics</p>
         </div>
 
-        {error && <div style={{ padding: "10px 14px", background: "var(--danger-soft)", color: "var(--danger)", borderRadius: "var(--radius)", fontSize: 13, marginBottom: 16 }} role="alert">{error}</div>}
-        {searchParams.get("error") && <div style={{ padding: "10px 14px", background: "var(--danger-soft)", color: "var(--danger)", borderRadius: "var(--radius)", fontSize: 13, marginBottom: 16 }} role="alert">Acces refuse.</div>}
+        {(error || accessDenied) && (
+          <div className="login-error" role="alert">
+            <i className="ph ph-warning-circle" aria-hidden="true"></i>
+            <span>{error || "Accès refusé."}</span>
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div>
-            <label htmlFor="email" style={{ display: "block", fontSize: 12.5, fontWeight: 500, color: "var(--text-2)", marginBottom: 4 }}>Email</label>
-            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email"
-              style={{ width: "100%", padding: "8px 12px", border: "1px solid var(--border-strong)", borderRadius: "var(--radius)", fontSize: 13 }} placeholder="votre@email.com" />
+        <form onSubmit={handleSubmit} className="login-form">
+          <div className="field">
+            <label htmlFor="email" className="field-label">
+              Email
+              <span className="req" aria-hidden="true">*</span>
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+              autoFocus
+              className="input"
+              placeholder="vous@organisation.org"
+            />
           </div>
-          <div>
-            <label htmlFor="password" style={{ display: "block", fontSize: 12.5, fontWeight: 500, color: "var(--text-2)", marginBottom: 4 }}>Mot de passe</label>
-            <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password"
-              style={{ width: "100%", padding: "8px 12px", border: "1px solid var(--border-strong)", borderRadius: "var(--radius)", fontSize: 13 }} placeholder="••••••••" />
+
+          <div className="field">
+            <label htmlFor="password" className="field-label">
+              Mot de passe
+              <span className="req" aria-hidden="true">*</span>
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+              className="input"
+              placeholder="••••••••"
+            />
           </div>
-          <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: "100%", justifyContent: "center", padding: "10px", marginTop: 4 }}>
-            {loading ? "Connexion..." : "Se connecter"}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className={`btn btn--primary btn--lg login-submit ${loading ? "btn--loading" : ""}`}
+          >
+            {loading ? "Connexion…" : "Se connecter"}
           </button>
         </form>
+
+        <p className="login-foot">
+          Plateforme institutionnelle. Accès réservé aux membres autorisés.
+        </p>
       </div>
     </div>
   );

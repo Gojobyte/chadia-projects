@@ -1,130 +1,97 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { Icons } from "@/components/icons";
 
 const navItems = [
-  { label: "Tableau de bord", href: "/", icon: Icons.Dashboard },
-  { label: "Projets", href: "/projets", icon: Icons.Folder },
-  { label: "Appels d'offres", href: "/appels-offres", icon: Icons.Gavel },
-  { label: "Fournisseurs", href: "/fournisseurs", icon: Icons.Building },
-  { label: "Resultats", href: "/resultats", icon: Icons.Award },
-  { label: "Boite de reception", href: "/inbox", icon: Icons.Inbox, countValue: 3 },
-  { label: "Calendrier", href: "/calendrier", icon: Icons.Calendar },
-  { label: "Analytics", href: "/analytics", icon: Icons.Chart },
+  { label: "Tableau de bord",  href: "/",                icon: "ph-house" },
+  { label: "Appels d'offres",  href: "/appels-offres",   icon: "ph-gavel" },
+  { label: "Soumissions",      href: "/soumissions",     icon: "ph-paper-plane-tilt" },
+  { label: "Fournisseurs",     href: "/fournisseurs",    icon: "ph-buildings" },
+  { label: "Résultats",        href: "/resultats",       icon: "ph-medal" },
+  { label: "Projets",          href: "/projets",         icon: "ph-folder" },
+  { label: "Analytique",       href: "/analytics",       icon: "ph-chart-bar" },
 ];
 
 const workspaceItems = [
-  { label: "Équipe", href: "/equipe", icon: Icons.Users },
-  { label: "Templates", href: "/templates", icon: Icons.Doc },
-  { label: "Paramètres", href: "/settings", icon: Icons.Settings },
+  { label: "Équipe",      href: "/equipe",    icon: "ph-users-three" },
+  { label: "Templates",   href: "/templates", icon: "ph-files" },
+  { label: "Paramètres",  href: "/parametres",icon: "ph-gear" },
 ];
 
-const pinColors = [
-  "oklch(0.55 0.18 270)", "oklch(0.55 0.18 245)", "oklch(0.55 0.15 30)",
-  "oklch(0.55 0.15 0)", "oklch(0.55 0.15 165)",
-];
+const ROLE_LABELS: Record<string, string> = {
+  DIRECTEUR: "Direction",
+  ADMIN: "Administration",
+  FINANCIER: "Finance",
+  MEMBRE: "Membre",
+};
 
-interface StarredProjet { id: string; titre: string; bailleur: { sigle: string }; }
-interface SidebarProps { userName: string; userRole: string; }
+interface SidebarProps {
+  userName: string;
+  userRole: string;
+}
 
 export function Sidebar({ userName, userRole }: SidebarProps) {
   const pathname = usePathname();
-  const roleLabels: Record<string, string> = { DIRECTEUR: "Directrice des programmes", ADMIN: "Administrateur", FINANCIER: "Financier", MEMBRE: "Membre" };
-  const initials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
-  const [starred, setStarred] = useState<StarredProjet[]>([]);
+  const initials = userName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
 
-  // Charger les projets epingles
-  useEffect(() => {
-    fetch("/api/projets/starred")
-      .then(r => r.ok ? r.json() : { projets: [] })
-      .then(d => setStarred(d.projets ?? []));
-  }, []);
-
-  // Ecouter les changements d'etoile (custom event)
-  useEffect(() => {
-    function onStarChange() {
-      fetch("/api/projets/starred")
-        .then(r => r.ok ? r.json() : { projets: [] })
-        .then(d => setStarred(d.projets ?? []));
-    }
-    window.addEventListener("star-changed", onStarChange);
-    return () => window.removeEventListener("star-changed", onStarChange);
-  }, []);
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
 
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <svg width="32" height="32" viewBox="0 0 28 28">
-          <rect width="28" height="28" rx="8" fill="var(--primary)" />
-          <path d="M9 14 l3 3 l7 -7" stroke="white" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <span className="brand-mark" aria-hidden="true">C</span>
         <div>
           <div className="brand-name">CHADIA</div>
-          <div className="brand-org">Projects · v2.0</div>
+          <div className="brand-org">Projects</div>
         </div>
       </div>
 
       <div className="sidebar-section">
-        {navItems.map((item) => {
-          const Ic = item.icon;
-          const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-          return (
-            <Link key={item.href} href={item.href} className={`nav-item ${isActive ? "active" : ""}`}>
-              <Ic className="nav-icon" />
-              <span>{item.label}</span>
-              {item.countValue != null && <span className="nav-count">{item.countValue}</span>}
-            </Link>
-          );
-        })}
+        {navItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`nav-item ${isActive(item.href) ? "active" : ""}`}
+          >
+            <i className={`ph ${item.icon} nav-icon`} aria-hidden="true"></i>
+            <span>{item.label}</span>
+          </Link>
+        ))}
       </div>
-
-      {/* Épinglés — dynamique */}
-      {starred.length > 0 && (
-        <div className="sidebar-section">
-          <div className="sidebar-section-title">Épinglés</div>
-          {starred.map((p, i) => {
-            const isActive = pathname === `/projets/${p.id}`;
-            return (
-              <Link key={p.id} href={`/projets/${p.id}`} className={`nav-item ${isActive ? "active" : ""}`}>
-                <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 2, background: pinColors[i % pinColors.length] }} />
-                </span>
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.titre}</span>
-              </Link>
-            );
-          })}
-        </div>
-      )}
 
       <div className="sidebar-section" style={{ marginTop: "auto" }}>
         <div className="sidebar-section-title">Espace de travail</div>
-        {workspaceItems.map((item) => {
-          const Ic = item.icon;
-          const isActive = pathname.startsWith(item.href);
-          return (
-            <Link key={item.href} href={item.href} className={`nav-item ${isActive ? "active" : ""}`}>
-              <Ic className="nav-icon" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+        {workspaceItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`nav-item ${isActive(item.href) ? "active" : ""}`}
+          >
+            <i className={`ph ${item.icon} nav-icon`} aria-hidden="true"></i>
+            <span>{item.label}</span>
+          </Link>
+        ))}
       </div>
 
       <div className="sidebar-footer">
-        <div className="user-chip">
-          <div className="avatar" style={{ background: "oklch(0.6 0.15 165)" }}>{initials}</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{userName}</div>
-            <div style={{ fontSize: 11, color: "var(--text-3)" }}>{roleLabels[userRole] ?? userRole}</div>
+        <div className="user-chip" role="button" tabIndex={0}>
+          <div className="avatar avatar--sm avatar--terracotta">{initials}</div>
+          <div className="meta">
+            <div className="name">{userName}</div>
+            <div className="role">{ROLE_LABELS[userRole] ?? userRole}</div>
           </div>
-          <Icons.ChevronDown size={14} style={{ color: "var(--text-4)" }} />
+          <i className="ph ph-caret-up-down" aria-hidden="true" style={{ color: "var(--color-mineral)", fontSize: 14 }}></i>
         </div>
-        <button onClick={() => signOut({ callbackUrl: "/login" })} className="nav-item" style={{ marginTop: 4, fontSize: 12, color: "var(--text-3)" }}>
-          Déconnexion
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="nav-item"
+          style={{ marginTop: 4, fontSize: "var(--text-xs)", color: "var(--color-stone)", width: "100%" }}
+        >
+          <i className="ph ph-sign-out nav-icon" aria-hidden="true"></i>
+          <span>Déconnexion</span>
         </button>
       </div>
     </aside>

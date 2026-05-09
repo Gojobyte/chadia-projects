@@ -2,67 +2,66 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Icons } from "@/components/icons";
 
-const routeNames: Record<string, string> = {
+const ROUTE_NAMES: Record<string, string> = {
   "/": "Tableau de bord",
+  "/appels-offres": "Appels d'offres",
+  "/soumissions": "Soumissions",
+  "/fournisseurs": "Fournisseurs",
+  "/resultats": "Résultats",
   "/projets": "Projets",
-  "/analytics": "Analytics",
-  "/templates": "Templates",
+  "/analytics": "Analytique",
   "/equipe": "Équipe",
-  "/settings": "Paramètres",
-  "/inbox": "Boîte de réception",
-  "/calendrier": "Calendrier",
+  "/templates": "Templates",
+  "/parametres": "Paramètres",
 };
 
 export function Topbar() {
   const pathname = usePathname();
-
-  // Generer les breadcrumbs depuis le pathname
   const segments = pathname.split("/").filter(Boolean);
-  const crumbs: { label: string; href: string }[] = [{ label: "CHADIA", href: "/" }];
 
+  const crumbs: { label: string; href: string }[] = [{ label: "CHADIA", href: "/" }];
   if (segments.length === 0) {
     crumbs.push({ label: "Tableau de bord", href: "/" });
   } else {
     const base = `/${segments[0]}`;
-    crumbs.push({ label: routeNames[base] ?? segments[0], href: base });
-    // On n'affiche pas les sous-segments dynamiques pour garder ça propre
+    crumbs.push({ label: ROUTE_NAMES[base] ?? segments[0], href: base });
+    if (segments.length === 2 && segments[1] === "nouveau") {
+      crumbs.push({ label: "Nouveau", href: pathname });
+    } else if (segments.length >= 2) {
+      crumbs.push({ label: "Détail", href: pathname });
+    }
   }
 
   return (
     <header className="topbar">
-      {/* Breadcrumbs */}
-      <div className="crumbs">
+      <nav className="crumbs" aria-label="Fil d'ariane">
         {crumbs.map((c, i) => (
-          <span key={i}>
-            {i > 0 && <span className="sep" style={{ margin: "0 2px" }}>/</span>}
+          <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            {i > 0 && <span className="sep">/</span>}
             {i === crumbs.length - 1 ? (
-              <span className="current">{c.label}</span>
+              <span className="cur">{c.label}</span>
             ) : (
-              <Link href={c.href} style={{ color: "var(--text-3)", textDecoration: "none" }}>{c.label}</Link>
+              <Link href={c.href}>{c.label}</Link>
             )}
           </span>
         ))}
-      </div>
+      </nav>
 
-      {/* Search bar */}
-      <div className="search">
-        <Icons.Search size={14} />
-        <input placeholder="Rechercher un projet, document, personne..." />
+      <label className="search">
+        <i className="ph ph-magnifying-glass" aria-hidden="true"></i>
+        <input placeholder="Rechercher un AO, fournisseur, projet…" />
         <kbd>⌘K</kbd>
-      </div>
+      </label>
 
-      {/* Notifications */}
-      <button className="icon-btn" title="Notifications">
-        <Icons.Bell size={16} />
+      <button className="icon-btn" title="Notifications" aria-label="Notifications">
+        <i className="ph ph-bell" aria-hidden="true" style={{ fontSize: 16 }}></i>
         <span className="dot" />
       </button>
 
-      {/* Nouveau projet */}
-      <Link href="/projets/nouveau" className="btn btn-primary btn-sm" style={{ whiteSpace: "nowrap" }}>
-        <Icons.Plus size={14} /> Nouveau projet
-      </Link>
+      <button className="icon-btn" title="Aide" aria-label="Aide">
+        <i className="ph ph-question" aria-hidden="true" style={{ fontSize: 16 }}></i>
+      </button>
     </header>
   );
 }

@@ -2,17 +2,22 @@ import { auth } from "@/lib/auth";
 import { TenderAPI } from "@/lib/api";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import Link from "next/link";
 
-const statutLabels: Record<string, string> = {
+const STATUT_BADGE: Record<string, string> = {
+  BROUILLON: "badge--draft",
+  PUBLIE: "badge--published",
+  EN_COURS: "badge--review",
+  CLOTURE: "badge--closed",
+  EN_EVALUATION: "badge--review",
+  ATTRIBUE: "badge--awarded",
+  ANNULE: "badge--canceled",
+  ARCHIVE: "badge--archived",
+};
+const STATUT_LABEL: Record<string, string> = {
   BROUILLON: "Brouillon", PUBLIE: "Publié", EN_COURS: "En cours",
   CLOTURE: "Clôturé", EN_EVALUATION: "En évaluation", ATTRIBUE: "Attribué",
   ANNULE: "Annulé", ARCHIVE: "Archivé",
-};
-
-const statutColors: Record<string, string> = {
-  BROUILLON: "var(--text-3)", PUBLIE: "var(--info)", EN_COURS: "var(--primary)",
-  CLOTURE: "var(--warning)", EN_EVALUATION: "var(--secondary, var(--accent))",
-  ATTRIBUE: "var(--success)", ANNULE: "var(--danger)", ARCHIVE: "var(--text-3)",
 };
 
 interface AppelOffre {
@@ -37,7 +42,6 @@ function fmtMoney(n: number | null | undefined, cur = "FCFA"): string {
   if (n == null) return "—";
   return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n)} ${cur}`;
 }
-
 function fmtDate(d: string | null | undefined): string {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
@@ -74,72 +78,123 @@ export default async function AppelOffreDetailPage({
 
   if (errorMsg || !ao) {
     return (
-      <div className="card" style={{ padding: 48, textAlign: "center", color: "var(--text-3)" }}>
-        {errorMsg ?? "Appel d'offre introuvable."}
+      <div className="empty">
+        <div className="ic"><i className="ph ph-warning-octagon" aria-hidden="true"></i></div>
+        <h3 className="t">Appel d&apos;offre <em>introuvable</em></h3>
+        <p className="s">{errorMsg ?? "Cet identifiant ne correspond à aucun appel d'offre."}</p>
+        <Link href="/appels-offres" className="btn btn--secondary">Retour à la liste</Link>
       </div>
     );
   }
 
-  const canPublish = (session.user.role === "ADMIN" || session.user.role === "DIRECTEUR") && ao.statut === "BROUILLON";
+  const canPublish =
+    (session.user.role === "ADMIN" || session.user.role === "DIRECTEUR") &&
+    ao.statut === "BROUILLON";
   const publish = publishAction.bind(null, ao.id);
+  const typeLabel = ao.type.replace(/_/g, " ").toLowerCase();
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, gap: 16 }}>
-        <div>
-          <div style={{ fontSize: 11, color: "var(--text-3)", fontFamily: "ui-monospace, monospace", marginBottom: 4 }}>{ao.reference}</div>
-          <h1 style={{ fontSize: 22, fontWeight: 600, color: "var(--text)", marginBottom: 6, letterSpacing: "-0.015em" }}>{ao.titre}</h1>
-          <div style={{ display: "flex", gap: 12, fontSize: 13, color: "var(--text-3)", flexWrap: "wrap" }}>
-            <span>{ao.bailleur.sigle}</span>
-            <span>·</span>
-            <span>{ao.type.replace(/_/g, " ").toLowerCase()}</span>
-            <span>·</span>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 32, paddingBottom: 24, borderBottom: "1px solid var(--color-line)" }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div className="page-eyebrow">{ao.reference}</div>
+          <h1 className="page-title" style={{ marginTop: 4 }}>{ao.titre}</h1>
+          <div style={{ display: "flex", gap: 12, marginTop: 12, fontSize: "var(--text-sm)", color: "var(--color-shale)", flexWrap: "wrap" }}>
+            <span style={{ fontWeight: 600, color: "var(--color-ink)" }}>{ao.bailleur.sigle}</span>
+            <span style={{ color: "var(--color-mineral)" }}>·</span>
+            <span style={{ textTransform: "capitalize" }}>{typeLabel}</span>
+            <span style={{ color: "var(--color-mineral)" }}>·</span>
             <span>{ao.categorie}</span>
-            {ao.secteur && <><span>·</span><span>{ao.secteur}</span></>}
+            {ao.secteur && (<><span style={{ color: "var(--color-mineral)" }}>·</span><span>{ao.secteur}</span></>)}
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <span style={{ fontSize: 11.5, fontWeight: 600, padding: "4px 10px", borderRadius: 4, background: `${statutColors[ao.statut]}1a`, color: statutColors[ao.statut] }}>
-            {statutLabels[ao.statut] ?? ao.statut}
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}>
+          <span className={`badge badge--lg ${STATUT_BADGE[ao.statut] ?? "badge--draft"}`}>
+            <span className="dot"></span>
+            {STATUT_LABEL[ao.statut] ?? ao.statut}
           </span>
           {canPublish && (
             <form action={publish}>
-              <button type="submit" className="btn btn-primary">Publier</button>
+              <button type="submit" className="btn btn--accent">
+                <i className="ph ph-paper-plane-tilt" aria-hidden="true"></i>
+                Publier
+              </button>
             </form>
           )}
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
-        <div className="card" style={{ padding: 14 }}>
-          <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 4 }}>Budget estimé</div>
-          <div style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>{fmtMoney(ao.budgetEstime, ao.devise ?? "FCFA")}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
+        <div className="kpi-card">
+          <div className="lbl">Budget estimé</div>
+          <div className="val">
+            {ao.budgetEstime != null
+              ? <>{new Intl.NumberFormat("fr-FR").format(ao.budgetEstime)}<span className="unit"> {ao.devise ?? "FCFA"}</span></>
+              : "—"}
+          </div>
         </div>
-        <div className="card" style={{ padding: 14 }}>
-          <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 4 }}>Date limite</div>
-          <div style={{ fontSize: 18, fontWeight: 600, color: "var(--text)" }}>{fmtDate(ao.dateLimiteDepot)}</div>
+        <div className="kpi-card">
+          <div className="lbl">Date limite</div>
+          <div className="val" style={{ fontSize: "var(--text-xl)" }}>{fmtDate(ao.dateLimiteDepot)}</div>
         </div>
-        <div className="card" style={{ padding: 14 }}>
-          <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 4 }}>Soumissions</div>
-          <div style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>{ao._count?.soumissions ?? 0}</div>
+        <div className="kpi-card">
+          <div className="lbl">Soumissions</div>
+          <div className="val tabular-nums">{ao._count?.soumissions ?? 0}</div>
         </div>
-        <div className="card" style={{ padding: 14 }}>
-          <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 4 }}>Publication</div>
-          <div style={{ fontSize: 18, fontWeight: 600, color: "var(--text)" }}>{ao.statut === "BROUILLON" ? "—" : fmtDate(ao.datePublication)}</div>
+        <div className="kpi-card">
+          <div className="lbl">Publication</div>
+          <div className="val" style={{ fontSize: "var(--text-xl)" }}>
+            {ao.statut === "BROUILLON" ? "—" : fmtDate(ao.datePublication)}
+          </div>
         </div>
       </div>
 
-      <div className="card" style={{ padding: 16, marginBottom: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 8 }}>Description</div>
-        <div style={{ fontSize: 13, color: "var(--text-2)", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{ao.description}</div>
-      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 24 }}>
+        <section className="card" style={{ padding: 24 }}>
+          <div className="eyebrow" style={{ color: "var(--color-ink)", marginBottom: 12 }}>Description</div>
+          <div style={{ fontSize: "var(--text-sm)", color: "var(--color-sepia)", lineHeight: "var(--leading-relax)", whiteSpace: "pre-wrap" }}>
+            {ao.description}
+          </div>
+        </section>
 
-      {ao.lieuExecution && (
-        <div className="card" style={{ padding: 16, marginBottom: 16 }}>
-          <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 4 }}>Lieu d&apos;exécution</div>
-          <div style={{ fontSize: 13, color: "var(--text)" }}>{ao.lieuExecution}</div>
-        </div>
-      )}
+        <aside className="sheet" style={{ width: "100%", borderRadius: "var(--radius-md)" }}>
+          <div className="sheet-h">
+            <h4>Informations</h4>
+          </div>
+          <div className="sheet-b">
+            <dl style={{ margin: 0 }}>
+              <div className="sheet-row">
+                <dt>Bailleur</dt>
+                <dd>{ao.bailleur.nom}</dd>
+              </div>
+              <div className="sheet-row">
+                <dt>Type</dt>
+                <dd style={{ textTransform: "capitalize" }}>{typeLabel}</dd>
+              </div>
+              <div className="sheet-row">
+                <dt>Catégorie</dt>
+                <dd>{ao.categorie}</dd>
+              </div>
+              {ao.secteur && (
+                <div className="sheet-row">
+                  <dt>Secteur</dt>
+                  <dd>{ao.secteur}</dd>
+                </div>
+              )}
+              {ao.lieuExecution && (
+                <div className="sheet-row">
+                  <dt>Lieu</dt>
+                  <dd>{ao.lieuExecution}</dd>
+                </div>
+              )}
+              <div className="sheet-row">
+                <dt>Référence</dt>
+                <dd className="mono" style={{ fontSize: "var(--text-xs)" }}>{ao.reference}</dd>
+              </div>
+            </dl>
+          </div>
+        </aside>
+      </div>
     </>
   );
 }

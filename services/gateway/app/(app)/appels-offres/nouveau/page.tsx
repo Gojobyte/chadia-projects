@@ -34,8 +34,10 @@ export default async function NouveauAppelOffrePage() {
 
   if (session.user.role !== "ADMIN" && session.user.role !== "DIRECTEUR") {
     return (
-      <div className="card" style={{ padding: 48, textAlign: "center", color: "var(--text-3)" }}>
-        Vous devez être ADMIN ou DIRECTEUR pour créer un appel d&apos;offre.
+      <div className="empty">
+        <div className="ic"><i className="ph ph-lock-key" aria-hidden="true"></i></div>
+        <h3 className="t">Accès <em>réservé</em></h3>
+        <p className="s">Seuls les rôles ADMIN ou DIRECTEUR peuvent créer un appel d&apos;offre.</p>
       </div>
     );
   }
@@ -49,98 +51,139 @@ export default async function NouveauAppelOffrePage() {
     bailleursError = e instanceof Error ? e.message : "Erreur de chargement des bailleurs";
   }
 
-  const inputStyle = { padding: "8px 12px", border: "1px solid var(--border)", borderRadius: 6, fontSize: 13, background: "var(--surface)", color: "var(--text)", width: "100%", fontFamily: "inherit" };
-  const labelStyle = { display: "block", fontSize: 11.5, fontWeight: 600, color: "var(--text-2)", marginBottom: 6 };
-
   return (
     <>
       <div className="page-header">
         <div>
-          <div className="page-title">Nouvel appel d&apos;offre</div>
-          <div className="page-subtitle">Créer un appel d&apos;offre. Une référence sera générée automatiquement.</div>
+          <div className="page-eyebrow">Création</div>
+          <h1 className="page-title">Nouvel appel d&apos;<em>offre</em></h1>
+          <p className="page-subtitle">
+            Renseignez les informations principales. La référence sera générée automatiquement et l&apos;appel pourra être publié plus tard.
+          </p>
         </div>
       </div>
 
       {bailleursError && (
-        <div className="card" style={{ padding: 16, marginBottom: 16, background: "var(--danger-soft, #fee)", color: "var(--danger)" }}>
+        <div className="card" style={{ padding: 16, marginBottom: 16, background: "var(--color-danger-soft)", color: "var(--color-danger)", borderColor: "rgba(163,45,45,0.18)" }}>
           Service tender : {bailleursError}
         </div>
       )}
 
-      <form action={createAppelOffre} className="card" style={{ padding: 24, display: "grid", gap: 16, maxWidth: 760 }}>
-        <div>
-          <label htmlFor="titre" style={labelStyle}>Titre *</label>
-          <input id="titre" name="titre" type="text" required style={inputStyle} placeholder="Construction d&apos;un centre de santé à NDjamena" />
+      <form action={createAppelOffre} className="card" style={{ padding: 32, display: "grid", gap: 20, maxWidth: 820 }}>
+        <div className="field">
+          <label htmlFor="titre" className="field-label">
+            Titre de l&apos;appel d&apos;offre <span className="req">*</span>
+          </label>
+          <input
+            id="titre"
+            name="titre"
+            type="text"
+            required
+            className="input"
+            placeholder="Construction d'un centre de santé à NDjamena"
+          />
         </div>
 
-        <div>
-          <label htmlFor="description" style={labelStyle}>Description *</label>
-          <textarea id="description" name="description" required rows={5} style={{ ...inputStyle, fontFamily: "inherit", resize: "vertical" }} placeholder="Décrivez l&apos;objet de l&apos;appel d&apos;offre, le contexte, les attendus..." />
+        <div className="field">
+          <label htmlFor="description" className="field-label">
+            Description <span className="req">*</span>
+          </label>
+          <textarea
+            id="description"
+            name="description"
+            required
+            rows={5}
+            className="textarea"
+            placeholder="Décrivez l'objet de l'appel d'offre, le contexte, les attendus, les critères qualifiants…"
+          />
+          <span className="field-hint">Cette description sera publique au moment de la publication.</span>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <div>
-            <label htmlFor="bailleurId" style={labelStyle}>Bailleur *</label>
-            <select id="bailleurId" name="bailleurId" required style={inputStyle} defaultValue="">
-              <option value="" disabled>Sélectionner un bailleur</option>
-              {bailleurs.map(b => <option key={b.id} value={b.id}>{b.sigle} — {b.nom}</option>)}
-            </select>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div className="field">
+            <label htmlFor="bailleurId" className="field-label">Bailleur <span className="req">*</span></label>
+            <div className="select-wrap">
+              <select id="bailleurId" name="bailleurId" required className="select" defaultValue="">
+                <option value="" disabled>Sélectionner un bailleur</option>
+                {bailleurs.map((b) => (
+                  <option key={b.id} value={b.id}>{b.sigle} — {b.nom}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div>
-            <label htmlFor="type" style={labelStyle}>Type</label>
-            <select id="type" name="type" style={inputStyle} defaultValue="APPEL_OFFRES_OUVERT">
-              <option value="APPEL_OFFRES_OUVERT">Appel d&apos;offres ouvert</option>
-              <option value="APPEL_OFFRES_RESTREINT">Appel d&apos;offres restreint</option>
-              <option value="MARCHE_NEGOCIE">Marché négocié</option>
-              <option value="CONSULTATION">Consultation</option>
-              <option value="GRE_A_GRE">Gré à gré</option>
-            </select>
-          </div>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <div>
-            <label htmlFor="categorie" style={labelStyle}>Catégorie</label>
-            <select id="categorie" name="categorie" style={inputStyle} defaultValue="SERVICES">
-              <option value="TRAVAUX">Travaux</option>
-              <option value="FOURNITURES">Fournitures</option>
-              <option value="SERVICES">Services</option>
-              <option value="MIXTE">Mixte</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="secteur" style={labelStyle}>Secteur</label>
-            <input id="secteur" name="secteur" type="text" style={inputStyle} placeholder="Santé, éducation, agriculture..." />
-          </div>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 12 }}>
-          <div>
-            <label htmlFor="budgetEstime" style={labelStyle}>Budget estimé</label>
-            <input id="budgetEstime" name="budgetEstime" type="number" min="0" step="1000" style={inputStyle} placeholder="50000000" />
-          </div>
-          <div>
-            <label htmlFor="devise" style={labelStyle}>Devise</label>
-            <select id="devise" name="devise" style={inputStyle} defaultValue="FCFA">
-              <option value="FCFA">FCFA</option>
-              <option value="EUR">EUR</option>
-              <option value="USD">USD</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="dateLimiteDepot" style={labelStyle}>Date limite *</label>
-            <input id="dateLimiteDepot" name="dateLimiteDepot" type="date" required style={inputStyle} />
+          <div className="field">
+            <label htmlFor="type" className="field-label">Type</label>
+            <div className="select-wrap">
+              <select id="type" name="type" className="select" defaultValue="APPEL_OFFRES_OUVERT">
+                <option value="APPEL_OFFRES_OUVERT">Appel d&apos;offres ouvert</option>
+                <option value="APPEL_OFFRES_RESTREINT">Appel d&apos;offres restreint</option>
+                <option value="MARCHE_NEGOCIE">Marché négocié</option>
+                <option value="CONSULTATION">Consultation</option>
+                <option value="GRE_A_GRE">Gré à gré</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div>
-          <label htmlFor="lieuExecution" style={labelStyle}>Lieu d&apos;exécution</label>
-          <input id="lieuExecution" name="lieuExecution" type="text" style={inputStyle} placeholder="NDjamena, Tchad" />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div className="field">
+            <label htmlFor="categorie" className="field-label">Catégorie</label>
+            <div className="select-wrap">
+              <select id="categorie" name="categorie" className="select" defaultValue="SERVICES">
+                <option value="TRAVAUX">Travaux</option>
+                <option value="FOURNITURES">Fournitures</option>
+                <option value="SERVICES">Services</option>
+                <option value="MIXTE">Mixte</option>
+              </select>
+            </div>
+          </div>
+          <div className="field">
+            <label htmlFor="secteur" className="field-label">Secteur</label>
+            <input id="secteur" name="secteur" type="text" className="input" placeholder="Santé, éducation, agriculture…" />
+          </div>
         </div>
 
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
-          <a href="/appels-offres" className="btn btn-secondary">Annuler</a>
-          <button type="submit" className="btn btn-primary">Créer le brouillon</button>
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 16 }}>
+          <div className="field">
+            <label htmlFor="budgetEstime" className="field-label">Budget estimé</label>
+            <input
+              id="budgetEstime"
+              name="budgetEstime"
+              type="number"
+              min="0"
+              step="1000"
+              className="input tabular-nums"
+              placeholder="50 000 000"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="devise" className="field-label">Devise</label>
+            <div className="select-wrap">
+              <select id="devise" name="devise" className="select" defaultValue="FCFA">
+                <option value="FCFA">FCFA</option>
+                <option value="EUR">EUR</option>
+                <option value="USD">USD</option>
+              </select>
+            </div>
+          </div>
+          <div className="field">
+            <label htmlFor="dateLimiteDepot" className="field-label">Date limite <span className="req">*</span></label>
+            <input id="dateLimiteDepot" name="dateLimiteDepot" type="date" required className="input" />
+          </div>
+        </div>
+
+        <div className="field">
+          <label htmlFor="lieuExecution" className="field-label">Lieu d&apos;exécution</label>
+          <input id="lieuExecution" name="lieuExecution" type="text" className="input" placeholder="NDjamena, Tchad" />
+          <span className="field-hint">Optionnel. Précisez la zone géographique du marché si pertinent.</span>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12, paddingTop: 20, borderTop: "1px solid var(--color-line)" }}>
+          <a href="/appels-offres" className="btn btn--ghost">Annuler</a>
+          <button type="submit" className="btn btn--primary">
+            <i className="ph ph-floppy-disk" aria-hidden="true"></i>
+            Créer le brouillon
+          </button>
         </div>
       </form>
     </>
