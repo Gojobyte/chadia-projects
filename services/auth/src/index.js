@@ -28,9 +28,16 @@ function auth(req, res, next) {
 }
 
 // Middleware: verify service-to-service token
+// Accepts env-based shared secret (INTERNAL_SERVICE_TOKEN) for dev/simple deploys,
+// falls back to DB-stored ServiceToken for rotated tokens.
+const INTERNAL_SERVICE_TOKEN = process.env.INTERNAL_SERVICE_TOKEN || "";
 async function serviceAuth(req, res, next) {
   const token = req.headers["x-service-token"];
   if (!token) return res.status(401).json({ error: "Missing service token" });
+  if (INTERNAL_SERVICE_TOKEN && token === INTERNAL_SERVICE_TOKEN) {
+    req.serviceScopes = ["*"];
+    return next();
+  }
   const svc = await prisma.serviceToken.findUnique({ where: { token } });
   if (!svc || !svc.isActive) return res.status(401).json({ error: "Invalid service token" });
   req.serviceScopes = svc.scopes;
@@ -76,11 +83,93 @@ app.get("/auth/me", auth, async (req, res) => {
   res.json({ user });
 });
 
-// GET /auth/users — list users (admin)
-app.get("/auth/users", auth, async (req, res) => {
+// GET /auth/users — list users (admin) ou ?email=... pour lookup (service-to-service)
+app.get("/auth/users", async (req, res) => {
+  // Lookup par email — autorisé pour les services internes (s2s token)
+  if (req.query.email) {
+    const svcToken = req.headers["x-service-token"];
+    if (!svcToken) return res.status(401).json({ error: "Service token required for email lookup" });
+    const svc = await prisma.serviceToken.findUnique({ where: { token: svcToken } });
+    if (!svc || !svc.isActive) return res.status(401).json({ error: "Invalid service token" });
+    const user = await prisma.user.findUnique({
+      where: { email: String(req.query.email) },
+      select: { id: true, email: true, name: true, role: true, image: true, googleId: true, isActive: true },
+    });
+    return res.json({ user });
+  }
+
+  // Sinon liste — réservée admin/directeur
+  return auth(req, res, async () => {
+    if (req.user.role !== "ADMIN" && req.user.role !== "DIRECTEUR") return res.status(403).json({ error: "Forbidden" });
+    const users = await prisma.user.findMany({
+      select: { id: true, email: true, name: true, role: true, isActive: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json({ users });
+  });
+});
+
+// PATCH /auth/users/:id — update (admin/directeur)
+app.patch("/auth/users/:id", auth, async (req, res) => {
   if (req.user.role !== "ADMIN" && req.user.role !== "DIRECTEUR") return res.status(403).json({ error: "Forbidden" });
-  const users = await prisma.user.findMany({ select: { id: true, email: true, name: true, role: true, isActive: true, createdAt: true }, orderBy: { createdAt: "desc" } });
-  res.json({ users });
+  const { name, role, isActive, image } = req.body;
+  const data = {};
+  if (name !== undefined) data.name = name;
+  if (role !== undefined) data.role = role;
+  if (isActive !== undefined) data.isActive = isActive;
+  if (image !== undefined) data.image = image;
+  try {
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data,
+      select: { id: true, email: true, name: true, role: true, isActive: true },
+    });
+    await prisma.auditLog.create({ data: { userId: req.user.id, action: "USER_UPDATE", resource: req.params.id, details: data } });
+    res.json({ user });
+  } catch (e) {
+    res.status(404).json({ error: "User not found" });
+  }
+});
+
+// DELETE /auth/users/:id — soft delete (directeur seulement)
+app.delete("/auth/users/:id", auth, async (req, res) => {
+  if (req.user.role !== "DIRECTEUR") return res.status(403).json({ error: "Forbidden" });
+  if (req.params.id === req.user.id) return res.status(400).json({ error: "Cannot delete self" });
+  try {
+    await prisma.user.update({ where: { id: req.params.id }, data: { isActive: false } });
+    await prisma.auditLog.create({ data: { userId: req.user.id, action: "USER_DEACTIVATE", resource: req.params.id } });
+    res.json({ ok: true });
+  } catch {
+    res.status(404).json({ error: "User not found" });
+  }
+});
+
+// POST /auth/oauth/google — upsert/link user après login Google côté gateway
+// Service-to-service: appelé par le gateway dans le callback NextAuth signIn
+app.post("/auth/oauth/google", serviceAuth, async (req, res) => {
+  try {
+    const { email, name, image, providerAccountId } = req.body;
+    if (!email || !providerAccountId) return res.status(400).json({ error: "Missing email or providerAccountId" });
+
+    const existing = await prisma.user.findUnique({ where: { email } });
+    // Politique: seuls les utilisateurs déjà inscrits peuvent se connecter via Google
+    if (!existing) return res.status(404).json({ error: "User not registered" });
+    if (!existing.isActive) return res.status(403).json({ error: "User inactive" });
+
+    let user = existing;
+    if (!existing.googleId) {
+      user = await prisma.user.update({
+        where: { email },
+        data: { googleId: providerAccountId, image: image || existing.image, name: name || existing.name },
+      });
+    }
+
+    await prisma.auditLog.create({ data: { userId: user.id, action: "LOGIN_GOOGLE" } });
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
+    res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role, image: user.image }, token });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // POST /auth/service-token — create service-to-service token

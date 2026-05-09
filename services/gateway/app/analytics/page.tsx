@@ -1,23 +1,41 @@
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { TenderAPI } from "@/lib/api";
 
 export default async function AnalyticsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const [totalProjets, soumis, acceptes, rejetes, bailleurs, projets] = await Promise.all([
-    prisma.projet.count(),
-    prisma.projet.count({ where: { statut: "SOUMIS" } }),
-    prisma.projet.count({ where: { statut: "ACCEPTE" } }),
-    prisma.projet.count({ where: { statut: "REJETE" } }),
-    prisma.bailleur.findMany({ include: { _count: { select: { projets: true } } }, orderBy: { projets: { _count: "desc" } }, take: 6 }),
-    prisma.projet.findMany({ select: { budget: true, devise: true, statut: true, bailleur: { select: { sigle: true } } } }),
-  ]);
+  // Fetch all projects from tender service for analytics
+  let projets: Array<{ budget: number | null; devise: string; statut: string; bailleur: { sigle: string } | null }> = [];
+  let bailleurs: Array<{ id: string; sigle: string; _count: { projets: number } }> = [];
 
+  try {
+    const [aoData, fournisseursData] = await Promise.allSettled([
+      TenderAPI.listAppelsOffres({ limit: "1000" }, session.user.id),
+      TenderAPI.listFournisseurs({}, session.user.id),
+    ]);
+
+    if (aoData.status === "fulfilled") {
+      const aos = aoData.value?.appelsOffres || [];
+      projets = aos.map((ao: Record<string, unknown>) => ({
+        budget: (ao.budget as number) || null,
+        devise: (ao.devise as string) || "XAF",
+        statut: (ao.statut as string) || "BROUILLON",
+        bailleur: { sigle: (ao.bailleur as string) || "N/A" },
+      }));
+    }
+  } catch (e) {
+    console.error("Analytics fetch error:", e);
+  }
+
+  const totalProjets = projets.length;
+  const soumis = projets.filter(p => p.statut === "PUBLIE" || p.statut === "EN_COURS").length;
+  const acceptes = projets.filter(p => p.statut === "ATTRIBUE").length;
+  const rejetes = projets.filter(p => p.statut === "ANNULE").length;
   const totalSoumissions = soumis + acceptes + rejetes;
   const tauxAcceptation = totalSoumissions > 0 ? Math.round((acceptes / totalSoumissions) * 100) : 0;
-  const montantGagne = projets.filter(p => p.statut === "ACCEPTE").reduce((s, p) => s + (p.budget ?? 0), 0);
+  const montantGagne = projets.filter(p => p.statut === "ATTRIBUE").reduce((s, p) => s + (p.budget ?? 0), 0);
 
   return (
     <>
@@ -54,10 +72,9 @@ export default async function AnalyticsPage() {
             {[
               { label: "Brouillon", count: projets.filter(p => p.statut === "BROUILLON").length, color: "var(--st-brouillon)" },
               { label: "En cours", count: projets.filter(p => p.statut === "EN_COURS").length, color: "var(--st-redaction)" },
-              { label: "En revision", count: projets.filter(p => p.statut === "EN_REVISION").length, color: "var(--st-relecture)" },
-              { label: "Soumis", count: soumis, color: "var(--st-soumis)" },
-              { label: "Accepte", count: acceptes, color: "var(--st-accepte)" },
-              { label: "Rejete", count: rejetes, color: "var(--st-rejete)" },
+              { label: "Publie", count: projets.filter(p => p.statut === "PUBLIE").length, color: "var(--st-soumis)" },
+              { label: "Attribue", count: acceptes, color: "var(--st-accepte)" },
+              { label: "Annule", count: rejetes, color: "var(--st-rejete)" },
             ].map((s, i) => (
               <div key={i} style={{ marginBottom: 10 }}>
                 <div className="row" style={{ marginBottom: 4 }}>

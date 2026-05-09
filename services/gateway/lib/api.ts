@@ -39,6 +39,12 @@ export const AuthAPI = {
     apiFetch(AUTH_URL, "/auth/me", { token }),
   validate: (token: string) =>
     apiFetch(AUTH_URL, "/auth/validate", { token }),
+  // Service-to-service: lookup user by email (uses x-service-token automatically)
+  getUserByEmail: (email: string) =>
+    apiFetch(AUTH_URL, `/auth/users?email=${encodeURIComponent(email)}`),
+  // Service-to-service: upsert/link Google account, returns { user, token }
+  googleUpsert: (body: { email: string; name?: string; image?: string; providerAccountId: string }) =>
+    apiFetch(AUTH_URL, "/auth/oauth/google", { method: "POST", body }),
 };
 
 // Tender API

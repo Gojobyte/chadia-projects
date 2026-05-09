@@ -1,11 +1,10 @@
 generator client {
   provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  output   = "../app/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum UserRole {
@@ -42,7 +41,6 @@ model Session {
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
   @@map("sessions")
 }
 
@@ -54,7 +52,6 @@ model RefreshToken {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
 
-  @@index([userId])
   @@map("refresh_tokens")
 }
 
@@ -77,9 +74,9 @@ model AuditLog {
 
 model ServiceToken {
   id          String   @id @default(cuid())
-  serviceName String   @unique
+  serviceName String
   token       String   @unique
-  scopes      String[] // ["tender:read", "tender:write", "notification:send"]
+  scopes      String[]
   isActive    Boolean  @default(true)
   expiresAt   DateTime?
   createdAt   DateTime @default(now())

@@ -31,6 +31,7 @@ services:
       DATABASE_URL: postgresql://chadia:chadia_secret@postgres:5432/chadia?schema=auth
       REDIS_URL: redis://redis:6379
       JWT_SECRET: chadia-jwt-secret-local
+      INTERNAL_SERVICE_TOKEN: internal-service-token-local
       PORT: 3001
     ports:
       - "3001:3001"

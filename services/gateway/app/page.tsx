@@ -28,9 +28,9 @@ export default async function Dashboard() {
   if (!session?.user) redirect("/login");
 
   // Fetch data from microservices
-  let kpis = { totalAO: 0, actifs: 0, attribues: 0, tauxAttribution: 0, totalSoumissions: 0, totalFournisseurs: 0, budgetTotal: 0 };
-  let appelsOffres: unknown[] = [];
-  let notifications: unknown[] = [];
+  let kpis = { totalAO: 0, actifs: 0, attribues: 0, tauxAttribution: 0, totalSoumissions: 0, totalFournisseurs: 0, budgetTotal: 0, budgetAttribue: 0 };
+  let appelsOffres: Record<string, unknown>[] = [];
+  let notifications: Record<string, unknown>[] = [];
 
   try {
     const [analytics, aoList, notifs] = await Promise.allSettled([
@@ -99,7 +99,7 @@ export default async function Dashboard() {
                   }}>
                     <div style={{
                       width: 32, height: 32, borderRadius: 6,
-                      background: bailleurColors[(ao.bailleur as Record<string, string>)] || "oklch(0.55 0.13 200)",
+                      background: bailleurColors[ao.bailleur as string] || "oklch(0.55 0.13 200)",
                       color: "white", display: "flex", alignItems: "center", justifyContent: "center",
                       fontWeight: 700, fontSize: 10,
                     }}>
