@@ -8,7 +8,16 @@ export function middleware(request: NextRequest) {
     request.cookies.has("__Secure-next-auth.session-token");
 
   // Routes publiques (pas d'auth requise)
-  const PUBLIC_PATHS = ["/login", "/api/auth", "/resultats"];
+  const PUBLIC_PATHS = [
+    "/login",
+    "/api/auth",
+    "/marches",
+    "/resultats",
+    "/mission",
+    "/gouvernance",
+    "/rapports",
+    "/contact",
+  ];
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
   if (!isPublic && !hasSession) {
