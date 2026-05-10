@@ -101,9 +101,28 @@ app.get("/auth/users", async (req, res) => {
   // Sinon liste — réservée admin/directeur
   return auth(req, res, async () => {
     if (req.user.role !== "ADMIN" && req.user.role !== "DIRECTEUR") return res.status(403).json({ error: "Forbidden" });
+    // Filtres optionnels : instance (CA, BUREAU…), zone, q
+    const { instance, zone, q, active } = req.query;
+    const where = {};
+    if (instance) where.instance = instance;
+    if (zone) where.zone = { contains: zone, mode: "insensitive" };
+    if (active === "true") where.isActive = true;
+    if (active === "false") where.isActive = false;
+    if (q) {
+      where.OR = [
+        { name: { contains: q, mode: "insensitive" } },
+        { email: { contains: q, mode: "insensitive" } },
+        { fonction: { contains: q, mode: "insensitive" } },
+      ];
+    }
     const users = await prisma.user.findMany({
-      select: { id: true, email: true, name: true, role: true, isActive: true, createdAt: true },
-      orderBy: { createdAt: "desc" },
+      where,
+      select: {
+        id: true, email: true, name: true, role: true, isActive: true,
+        fonction: true, zone: true, telephone: true, instance: true,
+        bio: true, image: true, dateEmbauche: true, createdAt: true,
+      },
+      orderBy: [{ instance: "asc" }, { name: "asc" }],
     });
     res.json({ users });
   });

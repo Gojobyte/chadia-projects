@@ -42,8 +42,10 @@ export const AuthAPI = {
   // Service-to-service: lookup user by email (uses x-service-token automatically)
   getUserByEmail: (email: string) =>
     apiFetch(AUTH_URL, `/auth/users?email=${encodeURIComponent(email)}`),
-  listUsers: (token: string) =>
-    apiFetch(AUTH_URL, "/auth/users", { token }),
+  listUsers: (token: string, params?: Record<string, string>) => {
+    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
+    return apiFetch(AUTH_URL, `/auth/users${qs}`, { token });
+  },
   // Service-to-service: upsert/link Google account, returns { user, token }
   googleUpsert: (body: { email: string; name?: string; image?: string; providerAccountId: string }) =>
     apiFetch(AUTH_URL, "/auth/oauth/google", { method: "POST", body }),

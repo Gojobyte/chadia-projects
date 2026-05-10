@@ -15,6 +15,17 @@ enum UserRole {
   MEMBRE
 }
 
+// Instance de gouvernance à laquelle le membre appartient.
+// CA = Conseil d'administration · BUREAU = Bureau Exécutif
+// PROGRAMMES = équipe opérationnelle · VOLONTAIRE = service civique / stagiaire
+enum UserInstance {
+  CA
+  BUREAU
+  PROGRAMMES
+  VOLONTAIRE
+  EXTERNE
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -25,6 +36,14 @@ model User {
   googleId     String?  @unique
   isActive     Boolean  @default(true)
 
+  // Informations métier ONG CHADIA
+  fonction      String?         // Coordinateur, Trésorier, Responsable communication...
+  zone          String?         // N'Djamena, Mongo, Bitkine...
+  telephone     String?
+  instance      UserInstance    @default(PROGRAMMES)
+  dateEmbauche  DateTime?
+  bio           String?         // Phrase courte affichée sur /equipe
+
   sessions     Session[]
   refreshTokens RefreshToken[]
   auditLogs    AuditLog[]
@@ -32,6 +51,8 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  @@index([instance])
+  @@index([isActive])
   @@map("users")
 }
 
