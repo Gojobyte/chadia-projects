@@ -6,18 +6,18 @@ import { signOut } from "next-auth/react";
 
 const navItems = [
   { label: "Tableau de bord",  href: "/",                icon: "ph-house" },
-  { label: "Appels d'offres",  href: "/appels-offres",   icon: "ph-gavel" },
-  { label: "Soumissions",      href: "/soumissions",     icon: "ph-paper-plane-tilt" },
+  { label: "Appels d'offres",  href: "/appels-offres",   icon: "ph-megaphone" },
+  { label: "Soumissions",      href: "/soumissions",     icon: "ph-tray-arrow-down" },
   { label: "Fournisseurs",     href: "/fournisseurs",    icon: "ph-buildings" },
-  { label: "Registre public",  href: "/marches",         icon: "ph-medal" },
-  { label: "Projets",          href: "/projets",         icon: "ph-folder" },
-  { label: "Analytique",       href: "/analytics",       icon: "ph-chart-bar" },
+  { label: "Projets",          href: "/projets",         icon: "ph-folders" },
+  { label: "Bibliothèque",     href: "/bibliotheque",    icon: "ph-files" },
+  { label: "Analyses",         href: "/analyses",        icon: "ph-chart-line" },
 ];
 
 const workspaceItems = [
-  { label: "Équipe",      href: "/equipe",    icon: "ph-users-three" },
-  { label: "Templates",   href: "/templates", icon: "ph-files" },
-  { label: "Paramètres",  href: "/parametres",icon: "ph-gear" },
+  { label: "Équipe",          href: "/equipe",     icon: "ph-users-three" },
+  { label: "Registre public", href: "/marches",    icon: "ph-medal" },
+  { label: "Paramètres",      href: "/parametres", icon: "ph-gear-six" },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
