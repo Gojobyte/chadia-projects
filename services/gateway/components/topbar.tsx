@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 
 const ROUTE_NAMES: Record<string, string> = {
-  "/": "Tableau de bord",
+  "/dashboard": "Tableau de bord",
   "/appels-offres": "Appels d'offres",
   "/soumissions": "Soumissions",
   "/fournisseurs": "Fournisseurs",
@@ -20,9 +20,9 @@ export function Topbar() {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
 
-  const crumbs: { label: string; href: string }[] = [{ label: "CHADIA", href: "/" }];
-  if (segments.length === 0) {
-    crumbs.push({ label: "Tableau de bord", href: "/" });
+  const crumbs: { label: string; href: string }[] = [{ label: "CHADIA", href: "/dashboard" }];
+  if (segments.length === 0 || segments[0] === "dashboard") {
+    crumbs.push({ label: "Tableau de bord", href: "/dashboard" });
   } else {
     const base = `/${segments[0]}`;
     crumbs.push({ label: ROUTE_NAMES[base] ?? segments[0], href: base });

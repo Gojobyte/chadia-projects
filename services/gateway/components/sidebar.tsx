@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 
 const navItems = [
-  { label: "Tableau de bord",  href: "/",                icon: "ph-house" },
+  { label: "Tableau de bord",  href: "/dashboard",       icon: "ph-house" },
   { label: "Appels d'offres",  href: "/appels-offres",   icon: "ph-megaphone" },
   { label: "Soumissions",      href: "/soumissions",     icon: "ph-tray-arrow-down" },
   { label: "Fournisseurs",     href: "/fournisseurs",    icon: "ph-buildings" },

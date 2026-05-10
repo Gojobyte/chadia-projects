@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV = [
-  { href: "/mission", label: "Notre mission" },
+  { href: "/", label: "Notre mission", exact: true },
   { href: "/marches", label: "Marchés publiés" },
   { href: "/resultats", label: "Résultats" },
   { href: "/rapports", label: "Rapports financiers" },
@@ -16,15 +16,20 @@ export function PublicNav() {
   const pathname = usePathname() ?? "";
   return (
     <nav className="main-nav">
-      {NAV.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          className={pathname.startsWith(item.href) ? "on" : undefined}
-        >
-          {item.label}
-        </Link>
-      ))}
+      {NAV.map((item) => {
+        const active = item.exact
+          ? pathname === item.href
+          : pathname.startsWith(item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={active ? "on" : undefined}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }

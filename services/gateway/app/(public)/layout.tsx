@@ -32,6 +32,10 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <a href="#" className="on">FR</a>
             <a href="#">EN</a>
             <a href="#">عر</a>
+            <Link href="/login" className="site-login">
+              <i className="ph ph-sign-in" aria-hidden="true"></i>
+              Se connecter
+            </Link>
           </div>
         </div>
       </header>
