@@ -6,6 +6,9 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
     <>
       <div className="gov-banner">
         <div className="wrap">
+          <Link href="/login" className="gov-login">
+            <i className="ph ph-lock-key"></i> Espace pro
+          </Link>
           <span>
             République du Tchad · CHADIA — ONG pour le développement du Tchad —
             référencée n° <strong>RCS-TCD-2014-128</strong>
@@ -13,7 +16,6 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           <div className="right">
             <Link href="/contact"><i className="ph ph-question"></i> Aide</Link>
             <Link href="/contact"><i className="ph ph-shield-check"></i> Signaler une irrégularité</Link>
-            <Link href="/login"><i className="ph ph-arrow-square-out"></i> Espace partenaires</Link>
           </div>
         </div>
       </div>
@@ -32,10 +34,6 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <a href="#" className="on">FR</a>
             <a href="#">EN</a>
             <a href="#">عر</a>
-            <Link href="/login" className="site-login">
-              <i className="ph ph-sign-in" aria-hidden="true"></i>
-              Se connecter
-            </Link>
           </div>
         </div>
       </header>

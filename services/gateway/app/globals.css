@@ -1788,6 +1788,14 @@ a { color: inherit; text-decoration: none; }
 .gov-banner .wrap .right { margin-left: auto; display: flex; gap: 12px; }
 .gov-banner .wrap a { color: var(--color-page); opacity: 0.7; text-decoration: none; }
 .gov-banner .wrap a:hover { opacity: 1; }
+/* Bouton "Espace pro" — placé en début de barre, couleur dorée (sable
+   sahélien) pour se détacher du texte officiel sans agresser. */
+.gov-banner .wrap a.gov-login {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: oklch(0.85 0.08 65);
+  opacity: 0.95;
+}
+.gov-banner .wrap a.gov-login:hover { opacity: 1; color: var(--color-page); }
 @media (max-width: 720px) { .gov-banner .wrap .right { display: none; } }
 
 .site {
@@ -1828,26 +1836,6 @@ a { color: inherit; text-decoration: none; }
 .lang a { color: var(--color-shale); text-decoration: none; padding: 4px 6px; border-radius: 3px; }
 .lang a.on { background: var(--color-canvas); color: var(--color-ink); }
 
-/* Bouton Se connecter dans le header public. Sépare visuellement de la
-   bascule de langue avec un trait fin et un fond accent terracotta. */
-.lang .site-login {
-  display: inline-flex; align-items: center; gap: 6px;
-  height: 32px; padding: 0 14px;
-  margin-left: 8px;
-  border-left: 1px solid var(--color-line-strong);
-  padding-left: 16px;
-  background: var(--color-ink);
-  color: var(--color-page);
-  font: 600 12px var(--font-sans);
-  letter-spacing: 0;
-  border-radius: 0 4px 4px 0;
-  transition: background var(--dur-fast) var(--ease-out);
-}
-.lang .site-login:hover { background: var(--color-terracotta); }
-.lang .site-login i { font-size: 14px; }
-@media (max-width: 640px) {
-  .lang .site-login { padding: 0 10px; margin-left: 4px; padding-left: 10px; border-left: none; }
-}
 @media (max-width: 980px) {
   .main-nav { display: none; }
 }
