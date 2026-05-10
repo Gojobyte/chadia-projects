@@ -89,8 +89,13 @@ app.get("/auth/users", async (req, res) => {
   if (req.query.email) {
     const svcToken = req.headers["x-service-token"];
     if (!svcToken) return res.status(401).json({ error: "Service token required for email lookup" });
-    const svc = await prisma.serviceToken.findUnique({ where: { token: svcToken } });
-    if (!svc || !svc.isActive) return res.status(401).json({ error: "Invalid service token" });
+    // Accepte soit un token global INTERNAL_SERVICE_TOKEN, soit un token
+    // par service en base (table service_tokens).
+    const isGlobal = process.env.INTERNAL_SERVICE_TOKEN && svcToken === process.env.INTERNAL_SERVICE_TOKEN;
+    if (!isGlobal) {
+      const svc = await prisma.serviceToken.findUnique({ where: { token: svcToken } });
+      if (!svc || !svc.isActive) return res.status(401).json({ error: "Invalid service token" });
+    }
     const user = await prisma.user.findUnique({
       where: { email: String(req.query.email) },
       select: { id: true, email: true, name: true, role: true, image: true, googleId: true, isActive: true },

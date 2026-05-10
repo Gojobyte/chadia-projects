@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { NotificationBell } from "./NotificationBell";
 
 const ROUTE_NAMES: Record<string, string> = {
   "/dashboard": "Tableau de bord",
@@ -54,10 +55,7 @@ export function Topbar() {
         <kbd>⌘K</kbd>
       </label>
 
-      <button className="icon-btn" title="Notifications" aria-label="Notifications">
-        <i className="ph ph-bell" aria-hidden="true" style={{ fontSize: 16 }}></i>
-        <span className="dot" />
-      </button>
+      <NotificationBell />
 
       <button className="icon-btn" title="Aide" aria-label="Aide">
         <i className="ph ph-question" aria-hidden="true" style={{ fontSize: 16 }}></i>

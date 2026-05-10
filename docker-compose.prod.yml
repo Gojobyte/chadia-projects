@@ -98,7 +98,10 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://chadia:${POSTGRES_PASSWORD}@postgres:5432/chadia?schema=notification
       REDIS_URL: redis://redis:6379
+      AUTH_SERVICE_URL: http://auth-service:3001
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL}
       PORT: 3003
     depends_on:
       postgres:
