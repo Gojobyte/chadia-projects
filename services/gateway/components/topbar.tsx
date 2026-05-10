@@ -8,7 +8,7 @@ const ROUTE_NAMES: Record<string, string> = {
   "/appels-offres": "Appels d'offres",
   "/soumissions": "Soumissions",
   "/fournisseurs": "Fournisseurs",
-  "/resultats": "Résultats",
+  "/marches": "Registre public",
   "/projets": "Projets",
   "/analytics": "Analytique",
   "/equipe": "Équipe",

@@ -9,7 +9,7 @@ const navItems = [
   { label: "Appels d'offres",  href: "/appels-offres",   icon: "ph-gavel" },
   { label: "Soumissions",      href: "/soumissions",     icon: "ph-paper-plane-tilt" },
   { label: "Fournisseurs",     href: "/fournisseurs",    icon: "ph-buildings" },
-  { label: "Résultats",        href: "/resultats",       icon: "ph-medal" },
+  { label: "Registre public",  href: "/marches",         icon: "ph-medal" },
   { label: "Projets",          href: "/projets",         icon: "ph-folder" },
   { label: "Analytique",       href: "/analytics",       icon: "ph-chart-bar" },
 ];
