@@ -1,7 +1,11 @@
-import { redirect } from "next/navigation";
+import { MissionContent } from "@/components/public/MissionContent";
 
-// La page Notre mission est devenue la home. /mission redirige donc vers /
-// pour ne pas casser les liens externes existants.
-export default function MissionRedirect(): never {
-  redirect("/");
+export const metadata = {
+  title: "Notre mission · ONG CHADIA",
+  description:
+    "Notre mission : contribuer au développement économique et social du Tchad par la formation professionnelle, l'eau-assainissement, l'agriculture et la santé.",
+};
+
+export default function MissionPage() {
+  return <MissionContent />;
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV = [
-  { href: "/", label: "Notre mission", exact: true },
+  { href: "/mission", label: "Notre mission" },
   { href: "/marches", label: "Marchés publiés" },
   { href: "/resultats", label: "Résultats" },
   { href: "/rapports", label: "Rapports financiers" },
