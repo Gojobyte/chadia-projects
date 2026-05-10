@@ -1,15 +1,14 @@
 # =====================================================================
 # Caddyfile · CHADIA Projects
 #
-# Phase 1 (actuelle) : déploiement sur IP nue 188.245.42.63 sans SSL.
-# Phase 2 (quand domaine acheté) : remplacer le bloc `:80` par
-#   `chadia.org` et Caddy obtiendra le certificat Let's Encrypt
-#   automatiquement.
+# Caddy obtient automatiquement les certificats Let's Encrypt pour
+# ong-chadia.com dès que les DNS pointeront vers ce serveur. La résolution
+# du défi ACME utilise le port 80 — il doit donc être ouvert.
 # =====================================================================
 
 {
-    # Pas de HTTPS auto tant qu'on n'a pas de domaine.
-    auto_https off
+    # Email pour les notifications Let's Encrypt (expiration de cert, etc.).
+    email chadiaong@gmail.com
 
     # Logs JSON sur stdout (Docker capture automatiquement).
     log {
@@ -19,43 +18,32 @@
     }
 }
 
-:80 {
+# Domaine principal · racine + www, avec HTTPS auto.
+ong-chadia.com, www.ong-chadia.com {
     # Reverse proxy vers le gateway Next.js dans le network Docker.
     reverse_proxy gateway:3000
 
     # Compression gzip pour réduire le poids des pages servies.
     encode gzip
 
-    # En-têtes de sécurité de base.
+    # En-têtes de sécurité (Caddy ajoute déjà Strict-Transport-Security
+    # automatiquement quand HTTPS est actif).
     header {
-        # Empêche le navigateur de tenter de deviner le type MIME.
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
         X-Content-Type-Options "nosniff"
-        # Bloque l'iframing hors du même domaine (anti-clickjacking).
         X-Frame-Options "DENY"
-        # Désactive le referrer cross-origin.
         Referrer-Policy "strict-origin-when-cross-origin"
-        # Nettoie l'en-tête Server par défaut de Caddy.
         -Server
     }
 
-    # Logs d'accès JSON sur stdout pour debug.
     log {
         output stdout
     }
 }
 
-# =====================================================================
-# Phase 2 — décommenter quand le domaine pointera vers 188.245.42.63
-# =====================================================================
-#
-# chadia.org, www.chadia.org {
-#     reverse_proxy gateway:3000
-#     encode gzip
-#     header {
-#         Strict-Transport-Security "max-age=31536000; includeSubDomains"
-#         X-Content-Type-Options "nosniff"
-#         X-Frame-Options "DENY"
-#         Referrer-Policy "strict-origin-when-cross-origin"
-#         -Server
-#     }
-# }
+# Accès direct par IP — fallback HTTP, utile pour debug et tests internes.
+# Tant que les DNS ne sont pas propagés, on continue à servir sur l'IP nue.
+http://188.245.42.63 {
+    reverse_proxy gateway:3000
+    encode gzip
+}
