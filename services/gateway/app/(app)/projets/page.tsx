@@ -1,142 +1,94 @@
 import { auth } from "@/lib/auth";
+import { TenderAPI } from "@/lib/api";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
 interface Projet {
   id: string;
-  ref: string;
-  zone: string;
-  domaine: string;
+  reference: string;
   titre: string;
-  emTitre?: string;
-  titreAfterEm?: string;
-  desc: string;
-  pct: number;
-  bailleurs: Array<{ tone: "pnud" | "ue" | "cf" | "uni" | "fonds"; label: string }>;
-  team: Array<{ initials: string; tone: "terracotta" | "ink" | "info" | "success" | "mineral" }>;
-  deadline: string;
-  urgent?: boolean;
-  fini?: boolean;
-  montage?: boolean;
-  progressLabel?: string;
+  description?: string | null;
+  zone?: string | null;
+  domaine: string;
+  statut: "MONTAGE" | "ACTIF" | "ACHEVE" | "SUSPENDU" | "ANNULE";
+  urgent: boolean;
+  bailleurs: string[];
+  team: string[];
+  echeance?: string | null;
+  avancement: number;
+  etapeLabel?: string | null;
+  budgetEstime?: number | null;
 }
 
-const PROJETS: Projet[] = [
-  {
-    id: "PRJ-2026-08", ref: "PRJ-2026-08", zone: "Mongo, Guéra", domaine: "Urgence",
-    titre: "Réponse aux ", emTitre: "inondations", titreAfterEm: " dans le bassin du Batha.",
-    desc: "Distribution de kits hygiène, abris d'urgence et réhabilitation de 6 forages affectés. Coordination avec la cellule OCHA Tchad et les autorités du Batha.",
-    pct: 62, bailleurs: [{ tone: "ue", label: "UE/ECHO" }, { tone: "pnud", label: "PNUD" }],
-    team: [{ initials: "AS", tone: "terracotta" }, { initials: "MM", tone: "ink" }, { initials: "FH", tone: "success" }],
-    deadline: "Échéance dans 18j", urgent: true,
-  },
-  {
-    id: "PRJ-2025-14", ref: "PRJ-2025-14", zone: "N'Djaména", domaine: "Jeunesse",
-    titre: "Formation ", emTitre: "professionnelle", titreAfterEm: " de 240 jeunes vulnérables.",
-    desc: "Cycle de 9 mois en couture, mécanique, maraîchage et boulangerie pour des jeunes déscolarisés des arrondissements 7, 8 et 9. Stage en entreprise et kit d'installation à la sortie.",
-    pct: 78, bailleurs: [{ tone: "pnud", label: "PNUD" }, { tone: "cf", label: "Coop. Fr." }],
-    team: [{ initials: "MM", tone: "ink" }, { initials: "RD", tone: "info" }, { initials: "AB", tone: "terracotta" }],
-    deadline: "Clôture · 30 sept.",
-  },
-  {
-    id: "PRJ-2025-09", ref: "PRJ-2025-09", zone: "Guéra", domaine: "Genre",
-    titre: "Lutte contre les ", emTitre: "VBG", titreAfterEm: " en milieu rural.",
-    desc: "Sensibilisation communautaire dans 14 villages, formation de 32 paralégaux et appui psycho-social aux survivantes. Partenariat avec les autorités traditionnelles et les ATPC de la province.",
-    pct: 54, bailleurs: [{ tone: "ue", label: "UE" }],
-    team: [{ initials: "FH", tone: "terracotta" }, { initials: "+3", tone: "mineral" }],
-    deadline: "Clôture · 14 nov.",
-  },
-  {
-    id: "PRJ-2024-11", ref: "PRJ-2024-11", zone: "Mongo, Guéra", domaine: "Femmes",
-    titre: "Autonomisation économique de ", emTitre: "180 femmes.",
-    desc: "Formation à l'entreprenariat, mise en place de 12 groupements d'épargne villageois (AVEC) et accompagnement à la transformation des produits agricoles locaux (sésame, arachide, karité).",
-    pct: 82, bailleurs: [{ tone: "pnud", label: "PNUD" }],
-    team: [{ initials: "FH", tone: "terracotta" }, { initials: "AB", tone: "success" }],
-    deadline: "Clôture · 12 juil.",
-  },
-  {
-    id: "PRJ-2025-04", ref: "PRJ-2025-04", zone: "N'Djaména", domaine: "Éducation",
-    titre: "Soutien ", emTitre: "scolaire", titreAfterEm: " aux enfants vulnérables.",
-    desc: "Cours de remédiation, fournitures et bourses pour 420 élèves du primaire dans 6 quartiers défavorisés. Collaboration avec 4 écoles publiques partenaires.",
-    pct: 71, bailleurs: [{ tone: "cf", label: "Coop. Fr." }, { tone: "fonds", label: "Fonds propres" }],
-    team: [{ initials: "RD", tone: "info" }, { initials: "+2", tone: "ink" }],
-    deadline: "Année scolaire",
-  },
-  {
-    id: "PRJ-2025-12", ref: "PRJ-2025-12", zone: "Mongo, Guéra", domaine: "Eau",
-    titre: "Eau, hygiène et ", emTitre: "assainissement", titreAfterEm: " en zone rurale.",
-    desc: "Réhabilitation de 8 forages communautaires, construction de 24 latrines familiales et formation de 14 comités de gestion. Volet sensibilisation à l'hygiène menstruelle dans 3 collèges.",
-    pct: 38, bailleurs: [{ tone: "cf", label: "Coop. Fr." }],
-    team: [{ initials: "MM", tone: "ink" }, { initials: "DH", tone: "success" }],
-    deadline: "Clôture · 28 fév. 2027",
-  },
-  {
-    id: "PRJ-2026-02", ref: "PRJ-2026-02", zone: "N'Djaména", domaine: "Santé",
-    titre: "Soins de santé ", emTitre: "primaires", titreAfterEm: " pour familles précaires.",
-    desc: "Consultations gratuites, dépistage paludisme et nutrition dans 3 centres de santé urbains partenaires. 4 800 bénéficiaires attendus sur l'année.",
-    pct: 22, bailleurs: [{ tone: "pnud", label: "PNUD" }, { tone: "fonds", label: "Fonds propres" }],
-    team: [{ initials: "RD", tone: "info" }, { initials: "AS", tone: "terracotta" }],
-    deadline: "Clôture · 31 déc.",
-  },
-  {
-    id: "PRJ-2024-06", ref: "PRJ-2024-06", zone: "Guéra", domaine: "Cohésion",
-    titre: "PRECOM — Renforcement ", emTitre: "communautaire.",
-    desc: "Programme triennal de cohésion sociale autour de 3 communes du Guéra. Comités locaux de paix, dialogue intercommunautaire éleveurs-agriculteurs, médiation des conflits fonciers.",
-    pct: 66, bailleurs: [{ tone: "ue", label: "UE" }],
-    team: [{ initials: "FH", tone: "terracotta" }, { initials: "+4", tone: "mineral" }],
-    deadline: "Clôture · 30 juin 2027",
-  },
-  {
-    id: "PRJ-2023-03", ref: "PRJ-2023-03", zone: "N'Djaména", domaine: "Achevé",
-    titre: "Réinsertion de ", emTitre: "96 jeunes", titreAfterEm: " déscolarisés.",
-    desc: "Pilote sur 18 mois — formation, accompagnement individuel et amorçage. 78% des bénéficiaires en activité 6 mois après la sortie. Rapport final livré.",
-    pct: 100, bailleurs: [{ tone: "pnud", label: "PNUD" }],
-    team: [{ initials: "MM", tone: "ink" }],
-    deadline: "Achevé · 14 fév. 2025", fini: true, progressLabel: "Clôturé",
-  },
-  {
-    id: "PRJ-2022-08", ref: "PRJ-2022-08", zone: "Mongo, Guéra", domaine: "Achevé",
-    titre: "Microfinance ", emTitre: "solidaire", titreAfterEm: " pour 11 groupements.",
-    desc: "Mise en place de caisses villageoises, formation à la gestion et suivi sur 24 mois. Taux de remboursement final : 91%. Étude d'impact externe livrée à la Coop. Française.",
-    pct: 100, bailleurs: [{ tone: "cf", label: "Coop. Fr." }],
-    team: [{ initials: "AB", tone: "success" }],
-    deadline: "Achevé · 30 sept. 2024", fini: true, progressLabel: "Clôturé",
-  },
-  {
-    id: "PRJ-2026-12", ref: "PRJ-2026-12 · MONTAGE", zone: "Guéra", domaine: "",
-    titre: "Scolarisation ", emTitre: "des filles", titreAfterEm: " en milieu rural.",
-    desc: "Note conceptuelle déposée le 22 mars 2026 auprès de la Coopération Française. Réponse attendue mi-juin. Projet pilote sur 3 villages cibles, 380 filles.",
-    pct: 25, bailleurs: [{ tone: "cf", label: "Coop. Fr. — pressenti" }],
-    team: [], deadline: "Décision juin 2026", montage: true,
-    progressLabel: "Note conceptuelle déposée",
-  },
-  {
-    id: "PRJ-2026-15", ref: "PRJ-2026-15 · MONTAGE", zone: "N'Djaména", domaine: "",
-    titre: "Plaidoyer ", emTitre: "citoyenneté", titreAfterEm: " et participation des jeunes.",
-    desc: "Concept en co-construction avec 4 OSC partenaires de N'Djaména. Recherche de bailleur en cours — pistes UE Délégation Tchad et fondations privées.",
-    pct: 10, bailleurs: [], team: [], deadline: "Bailleur à identifier", montage: true,
-    progressLabel: "Recherche bailleur",
-  },
-];
+const DOMAINE_LABEL: Record<string, string> = {
+  URGENCE: "Urgence",
+  JEUNESSE: "Jeunesse",
+  GENRE: "Genre",
+  FEMMES: "Femmes",
+  EDUCATION: "Éducation",
+  EAU: "Eau",
+  SANTE: "Santé",
+  COHESION: "Cohésion",
+  FORMATION: "Formation",
+  AGRICULTURE: "Agriculture",
+  AUTRE: "Autre",
+};
 
-export default async function ProjetsPage() {
+function donorTone(b: string): "pnud" | "ue" | "cf" | "uni" | "fonds" {
+  const k = b.toUpperCase();
+  if (k.startsWith("PNUD") || k.startsWith("UN")) return "pnud";
+  if (k.startsWith("UE") || k.includes("EUROP")) return "ue";
+  if (k.startsWith("CF") || k.includes("FRAN")) return "cf";
+  if (k.includes("ONU") || k.includes("UNICEF")) return "uni";
+  return "fonds";
+}
+
+function teamTone(initials: string): "terracotta" | "ink" | "info" | "success" | "mineral" {
+  const t = ["terracotta", "ink", "info", "success", "mineral"] as const;
+  let h = 0;
+  for (const c of initials) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return t[h % t.length];
+}
+
+export default async function ProjetsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ statut?: string; domaine?: string; q?: string }>;
+}) {
   const session = await auth();
   if (!session?.user) redirect("/login");
+  const token = (session as { authServiceToken?: string }).authServiceToken;
 
-  const actifs = PROJETS.filter((p) => !p.fini && !p.montage).length;
-  const montage = PROJETS.filter((p) => p.montage).length;
-  const acheves = PROJETS.filter((p) => p.fini).length;
+  const { statut, domaine, q } = await searchParams;
+  const params: Record<string, string> = {};
+  if (statut) params.statut = statut;
+  if (domaine) params.domaine = domaine;
+  if (q) params.q = q;
+
+  let projets: Projet[] = [];
+  let total = 0;
+  let errorMsg: string | null = null;
+  try {
+    const data = await TenderAPI.listProjets(params, token);
+    projets = data.projets ?? [];
+    total = data.total ?? projets.length;
+  } catch (e) {
+    errorMsg = e instanceof Error ? e.message : "Erreur de chargement";
+  }
+
+  const actifs = projets.filter((p) => p.statut === "ACTIF").length;
+  const montage = projets.filter((p) => p.statut === "MONTAGE").length;
+  const acheves = projets.filter((p) => p.statut === "ACHEVE").length;
+  const volume = projets.reduce((s, p) => s + (p.budgetEstime ?? 0), 0);
 
   return (
     <div className="pg">
       <header className="pg-h">
         <div>
-          <div className="pg-eyebrow">{PROJETS.length} projets · 3 zones d&apos;intervention</div>
+          <div className="pg-eyebrow">{total} projet{total > 1 ? "s" : ""} · 3 zones d&apos;intervention</div>
           <h1 className="pg-title">Le portefeuille <em>de programmes.</em></h1>
           <p className="pg-sub">
-            L&apos;ensemble des projets portés par CHADIA depuis 2018 dans les régions de
-            N&apos;Djaména, du Guéra et du Batha (Mongo). Filtrage par zone, partenaire
-            financier et statut d&apos;avancement.
+            L&apos;ensemble des projets portés par ONG CHADIA dans les régions de N&apos;Djaména, du Guéra et du Batha. Données chargées en temps réel depuis le service tender.
           </p>
         </div>
         <div className="pg-actions">
@@ -149,112 +101,146 @@ export default async function ProjetsPage() {
         </div>
       </header>
 
+      {errorMsg && (
+        <div className="card" style={{ padding: 16, marginTop: 16, background: "var(--color-danger-soft)", color: "var(--color-danger)", borderColor: "rgba(163,45,45,0.18)" }}>
+          Service tender : {errorMsg}
+        </div>
+      )}
+
       <div className="pj-head-extra">
         <div className="pj-stat">
           <div className="l">Projets actifs</div>
           <div className="v">{actifs}</div>
-          <div className="d">+2 ce trimestre</div>
+          <div className="d">en cours d&apos;exécution</div>
         </div>
         <div className="pj-stat">
           <div className="l">En montage</div>
           <div className="v">{montage}</div>
-          <div className="d">Recherche de financement</div>
+          <div className="d">recherche de financement</div>
         </div>
         <div className="pj-stat">
           <div className="l">Achevés</div>
           <div className="v">{acheves}</div>
-          <div className="d">Rapports déposés</div>
+          <div className="d">rapports déposés</div>
         </div>
         <div className="pj-stat">
           <div className="l">Volume sous gestion</div>
-          <div className="v">187 <em>M FCFA</em></div>
-          <div className="d">Engagements 2026</div>
+          <div className="v">
+            {volume > 0 ? (
+              <>{Math.round(volume / 1_000_000)} <em>M FCFA</em></>
+            ) : "—"}
+          </div>
+          <div className="d">budgets cumulés</div>
         </div>
         <div className="pj-stat">
-          <div className="l">Bénéficiaires touchés</div>
-          <div className="v">12 <em>k+</em></div>
-          <div className="d">Cumulé 2018–2026</div>
+          <div className="l">Source</div>
+          <div className="v">DB <em>live</em></div>
+          <div className="d">Postgres · schéma tender</div>
         </div>
       </div>
 
-      <div className="pj-bar">
+      <form method="get" className="pj-bar">
         <label className="search">
           <i className="ph ph-magnifying-glass"></i>
-          <input type="text" placeholder="Rechercher un projet, une zone, un partenaire…" />
+          <input
+            name="q"
+            type="text"
+            defaultValue={q ?? ""}
+            placeholder="Rechercher un projet, une zone, un partenaire…"
+          />
         </label>
-        <button className="pill on">Tous <span className="ct">{PROJETS.length}</span></button>
-        <button className="pill">Actifs <span className="ct">{actifs}</span></button>
-        <button className="pill">En montage <span className="ct">{montage}</span></button>
-        <button className="pill">Achevés <span className="ct">{acheves}</span></button>
+        <Link href="/projets" className={`pill ${!statut ? "on" : ""}`}>
+          Tous <span className="ct">{projets.length}</span>
+        </Link>
+        <Link href="/projets?statut=ACTIF" className={`pill ${statut === "ACTIF" ? "on" : ""}`}>
+          Actifs <span className="ct">{actifs}</span>
+        </Link>
+        <Link href="/projets?statut=MONTAGE" className={`pill ${statut === "MONTAGE" ? "on" : ""}`}>
+          En montage <span className="ct">{montage}</span>
+        </Link>
+        <Link href="/projets?statut=ACHEVE" className={`pill ${statut === "ACHEVE" ? "on" : ""}`}>
+          Achevés <span className="ct">{acheves}</span>
+        </Link>
         <span className="sep"></span>
-        <button className="pill"><i className="ph ph-map-pin"></i> Toutes zones <i className="ph ph-caret-down"></i></button>
-        <button className="pill"><i className="ph ph-bank"></i> Tous partenaires <i className="ph ph-caret-down"></i></button>
-      </div>
+        <select name="domaine" defaultValue={domaine ?? ""} style={{ height: 28, padding: "0 12px", fontSize: 12, border: "1px solid var(--color-line-strong)", borderRadius: 999, background: "transparent", color: "var(--color-sepia)" }}>
+          <option value="">Tous domaines</option>
+          {Object.entries(DOMAINE_LABEL).map(([k, v]) => (
+            <option key={k} value={k}>{v}</option>
+          ))}
+        </select>
+        <button type="submit" className="pill" style={{ background: "var(--color-ink)", color: "var(--color-page)", borderColor: "var(--color-ink)" }}>Filtrer</button>
+      </form>
 
-      <div className="pj-grid">
-        {PROJETS.map((p) => {
-          const cls = ["pj-card"];
-          if (p.urgent) cls.push("urgent");
-          if (p.fini) cls.push("fini");
-          if (p.montage) cls.push("montage");
-          const barCls = p.fini ? "bar s" : p.pct < 40 ? "bar w" : "bar";
-          return (
-            <Link key={p.id} href={`/projets/${p.id}`} className={cls.join(" ")}>
-              <div className="ref">
-                {p.ref}
-                {p.zone && (
-                  <>
-                    <span className="dot">·</span> <span className="zone">{p.zone}</span>
-                  </>
-                )}
-                {p.domaine && (
-                  <>
-                    <span className="dot">·</span> <span>{p.domaine}</span>
-                  </>
-                )}
-              </div>
-              <h3>
-                {p.titre}
-                {p.emTitre && <em>{p.emTitre}</em>}
-                {p.titreAfterEm}
-              </h3>
-              <p className="desc">{p.desc}</p>
-              <div className="pj-progress">
-                <div className="row">
-                  <span className="l">{p.progressLabel ?? "Avancement"}</span>
-                  <span className="v">
-                    {p.montage && p.progressLabel
-                      ? p.progressLabel
-                      : <>{p.pct}<em>%</em></>}
-                  </span>
+      {projets.length === 0 ? (
+        <div className="empty" style={{ marginTop: 32 }}>
+          <div className="ic"><i className="ph ph-folder-open"></i></div>
+          <h3 className="t">Aucun <em>projet</em> trouvé</h3>
+          <p className="s">{q || statut || domaine ? "Aucun projet ne correspond à ces filtres." : "Aucun projet n'a encore été créé."}</p>
+          <Link href="/projets/nouveau" className="btn btn--primary">
+            <i className="ph ph-plus"></i> Créer un projet
+          </Link>
+        </div>
+      ) : (
+        <div className="pj-grid">
+          {projets.map((p) => {
+            const cls = ["pj-card"];
+            if (p.urgent) cls.push("urgent");
+            if (p.statut === "ACHEVE") cls.push("fini");
+            if (p.statut === "MONTAGE") cls.push("montage");
+            const barCls = p.statut === "ACHEVE" ? "bar s" : p.avancement < 40 ? "bar w" : "bar";
+            return (
+              <Link key={p.id} href={`/projets/${p.id}`} className={cls.join(" ")}>
+                <div className="ref">
+                  {p.reference}
+                  {p.zone && (
+                    <>
+                      <span className="dot">·</span> <span className="zone">{p.zone}</span>
+                    </>
+                  )}
+                  {p.domaine && p.domaine !== "AUTRE" && (
+                    <>
+                      <span className="dot">·</span> <span>{DOMAINE_LABEL[p.domaine] ?? p.domaine}</span>
+                    </>
+                  )}
                 </div>
-                <div className={barCls}><span style={{ width: `${p.pct}%` }}></span></div>
-              </div>
-              <div className="pj-foot">
-                {p.bailleurs.map((b) => (
-                  <span key={b.label} className={`donor ${b.tone}`}>{b.label}</span>
-                ))}
-                {p.team.length > 0 && (
-                  <div className="team">
-                    {p.team.map((t, i) => (
-                      <span key={i} className={`avatar avatar--xs avatar--${t.tone}`}>{t.initials}</span>
-                    ))}
+                <h3>{p.titre}</h3>
+                {p.description && <p className="desc">{p.description}</p>}
+                <div className="pj-progress">
+                  <div className="row">
+                    <span className="l">{p.statut === "ACHEVE" ? "Clôturé" : p.statut === "MONTAGE" ? "Étape" : "Avancement"}</span>
+                    <span className="v">
+                      {p.statut === "MONTAGE" && p.etapeLabel
+                        ? p.etapeLabel
+                        : <>{p.avancement}<em>%</em></>}
+                    </span>
                   </div>
-                )}
-                <span className={`deadline ${p.urgent ? "urgent" : ""}`} style={p.bailleurs.length === 0 ? { color: "var(--color-mineral)" } : undefined}>
-                  {p.urgent && <i className="ph ph-warning"></i>} {p.deadline}
-                </span>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-
-      <div style={{ textAlign: "center", padding: "32px 0 0" }}>
-        <button className="btn btn--ghost">
-          Voir les 3 autres projets <i className="ph ph-caret-down"></i>
-        </button>
-      </div>
+                  <div className={barCls}><span style={{ width: `${p.avancement}%` }}></span></div>
+                </div>
+                <div className="pj-foot">
+                  {p.bailleurs.map((b) => (
+                    <span key={b} className={`donor ${donorTone(b)}`}>{b}</span>
+                  ))}
+                  {p.team.length > 0 && (
+                    <div className="team">
+                      {p.team.slice(0, 3).map((t, i) => (
+                        <span key={i} className={`avatar avatar--xs avatar--${teamTone(t)}`}>{t}</span>
+                      ))}
+                      {p.team.length > 3 && (
+                        <span className="avatar avatar--xs avatar--mineral">+{p.team.length - 3}</span>
+                      )}
+                    </div>
+                  )}
+                  {p.echeance && (
+                    <span className={`deadline ${p.urgent ? "urgent" : ""}`}>
+                      {p.urgent && <i className="ph ph-warning"></i>} {p.echeance}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

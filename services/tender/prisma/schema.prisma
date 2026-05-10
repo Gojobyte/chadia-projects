@@ -317,6 +317,75 @@ model AppelOffreResultat {
 }
 
 // ============================================================
+// PROJETS (programmes portés par l'ONG)
+// ============================================================
+
+enum ProjetStatut {
+  MONTAGE      // En montage / recherche de financement
+  ACTIF        // En exécution
+  ACHEVE       // Clôturé / rapport déposé
+  SUSPENDU     // Suspendu temporairement
+  ANNULE       // Annulé
+}
+
+enum ProjetDomaine {
+  URGENCE
+  JEUNESSE
+  GENRE
+  FEMMES
+  EDUCATION
+  EAU
+  SANTE
+  COHESION
+  FORMATION
+  AGRICULTURE
+  AUTRE
+}
+
+model Projet {
+  id              String        @id @default(cuid())
+  reference       String        @unique             // PRJ-2026-08
+  titre           String
+  description     String?
+  zone            String?                            // N'Djamena, Mongo, Guéra, Batha…
+  domaine         ProjetDomaine @default(AUTRE)
+  statut          ProjetStatut  @default(MONTAGE)
+  urgent          Boolean       @default(false)
+
+  // Partenaires financiers (tableau de sigles ex: ["PNUD", "UE", "CF"])
+  bailleurs       String[]      @default([])
+  // Liste des équipiers affectés (initiales ou IDs utilisateurs)
+  team            String[]      @default([])
+
+  // Calendrier
+  dateDebut       DateTime?
+  dateFin         DateTime?
+  dateCloture     DateTime?     // date effective d'achèvement
+  echeance        String?       // libellé libre : "Clôture 30 sept.", "Échéance dans 18j"
+
+  // Avancement (0-100)
+  avancement      Int           @default(0)
+  // Étiquette libre pour les projets en montage : "Note conceptuelle déposée", "Recherche bailleur"
+  etapeLabel      String?
+
+  // Métriques agrégées (optionnelles)
+  budgetEstime    Float?
+  budgetRealise   Float?
+  devise          String        @default("FCFA")
+  beneficiaires   Int?
+
+  // Métadonnées
+  createdBy       String?       // userId
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([statut])
+  @@index([domaine])
+  @@index([zone])
+  @@map("projets")
+}
+
+// ============================================================
 // OUTBOX PATTERN (communication inter-services)
 // ============================================================
 

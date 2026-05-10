@@ -508,6 +508,146 @@ app.get("/analytics", auth, async (req, res) => {
 });
 
 // ============================================================
+// PROJETS (programmes portés par l'ONG)
+// ============================================================
+
+// GET /projets — liste avec filtres et tri par défaut récent → ancien
+app.get("/projets", auth, async (req, res) => {
+  try {
+    const { q, statut, domaine, zone, urgent } = req.query;
+    const where = {};
+    if (statut) where.statut = statut;
+    if (domaine) where.domaine = domaine;
+    if (zone) where.zone = { contains: zone, mode: "insensitive" };
+    if (urgent === "true") where.urgent = true;
+    if (q) {
+      where.OR = [
+        { titre: { contains: q, mode: "insensitive" } },
+        { description: { contains: q, mode: "insensitive" } },
+        { reference: { contains: q, mode: "insensitive" } },
+      ];
+    }
+    const [projets, total] = await Promise.all([
+      prisma.projet.findMany({ where, orderBy: [{ urgent: "desc" }, { createdAt: "desc" }] }),
+      prisma.projet.count({ where }),
+    ]);
+    res.json({ projets, total });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /projets/:id — détail d'un projet
+app.get("/projets/:id", auth, async (req, res) => {
+  try {
+    const projet = await prisma.projet.findUnique({ where: { id: req.params.id } });
+    if (!projet) return res.status(404).json({ error: "Projet introuvable" });
+    res.json({ projet });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /projets — créer un projet (ADMIN ou DIRECTEUR)
+app.post("/projets", auth, requireRole("ADMIN", "DIRECTEUR"), async (req, res) => {
+  try {
+    const data = req.body || {};
+    // Génération auto de la référence si non fournie : PRJ-{ANNEE}-{NUM:2}
+    let reference = data.reference;
+    if (!reference) {
+      const annee = new Date().getFullYear();
+      const last = await prisma.projet.findFirst({
+        where: { reference: { startsWith: `PRJ-${annee}-` } },
+        orderBy: { reference: "desc" },
+      });
+      const lastNum = last ? parseInt(last.reference.split("-").pop(), 10) || 0 : 0;
+      reference = `PRJ-${annee}-${String(lastNum + 1).padStart(2, "0")}`;
+    }
+    const projet = await prisma.projet.create({
+      data: {
+        reference,
+        titre: data.titre,
+        description: data.description || null,
+        zone: data.zone || null,
+        domaine: data.domaine || "AUTRE",
+        statut: data.statut || "MONTAGE",
+        urgent: data.urgent === true,
+        bailleurs: Array.isArray(data.bailleurs) ? data.bailleurs : [],
+        team: Array.isArray(data.team) ? data.team : [],
+        dateDebut: data.dateDebut ? new Date(data.dateDebut) : null,
+        dateFin: data.dateFin ? new Date(data.dateFin) : null,
+        echeance: data.echeance || null,
+        avancement: typeof data.avancement === "number" ? data.avancement : 0,
+        etapeLabel: data.etapeLabel || null,
+        budgetEstime: data.budgetEstime ?? null,
+        budgetRealise: data.budgetRealise ?? null,
+        devise: data.devise || "FCFA",
+        beneficiaires: data.beneficiaires ?? null,
+        createdBy: req.user?.id || null,
+      },
+    });
+    // Outbox event pour le service notification
+    await prisma.outboxEvent.create({
+      data: {
+        eventType: "projet.created",
+        payload: { projetId: projet.id, reference: projet.reference, titre: projet.titre },
+      },
+    });
+    res.status(201).json({ projet });
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// PUT /projets/:id — mise à jour complète (ADMIN ou DIRECTEUR)
+app.put("/projets/:id", auth, requireRole("ADMIN", "DIRECTEUR"), async (req, res) => {
+  try {
+    const data = req.body || {};
+    const projet = await prisma.projet.update({
+      where: { id: req.params.id },
+      data: {
+        ...(data.titre !== undefined && { titre: data.titre }),
+        ...(data.description !== undefined && { description: data.description }),
+        ...(data.zone !== undefined && { zone: data.zone }),
+        ...(data.domaine !== undefined && { domaine: data.domaine }),
+        ...(data.statut !== undefined && { statut: data.statut }),
+        ...(data.urgent !== undefined && { urgent: data.urgent }),
+        ...(Array.isArray(data.bailleurs) && { bailleurs: data.bailleurs }),
+        ...(Array.isArray(data.team) && { team: data.team }),
+        ...(data.dateDebut !== undefined && { dateDebut: data.dateDebut ? new Date(data.dateDebut) : null }),
+        ...(data.dateFin !== undefined && { dateFin: data.dateFin ? new Date(data.dateFin) : null }),
+        ...(data.dateCloture !== undefined && { dateCloture: data.dateCloture ? new Date(data.dateCloture) : null }),
+        ...(data.echeance !== undefined && { echeance: data.echeance }),
+        ...(data.avancement !== undefined && { avancement: data.avancement }),
+        ...(data.etapeLabel !== undefined && { etapeLabel: data.etapeLabel }),
+        ...(data.budgetEstime !== undefined && { budgetEstime: data.budgetEstime }),
+        ...(data.budgetRealise !== undefined && { budgetRealise: data.budgetRealise }),
+        ...(data.devise !== undefined && { devise: data.devise }),
+        ...(data.beneficiaires !== undefined && { beneficiaires: data.beneficiaires }),
+      },
+    });
+    res.json({ projet });
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// PATCH /projets/:id/avancement — quick update (avancement seul)
+app.patch("/projets/:id/avancement", auth, async (req, res) => {
+  try {
+    const { avancement, etapeLabel } = req.body || {};
+    const projet = await prisma.projet.update({
+      where: { id: req.params.id },
+      data: {
+        ...(typeof avancement === "number" && { avancement }),
+        ...(etapeLabel !== undefined && { etapeLabel }),
+      },
+    });
+    res.json({ projet });
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// DELETE /projets/:id — suppression (DIRECTEUR uniquement)
+app.delete("/projets/:id", auth, requireRole("DIRECTEUR"), async (req, res) => {
+  try {
+    await prisma.projet.delete({ where: { id: req.params.id } });
+    res.json({ message: "Projet supprimé" });
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// ============================================================
 // OUTBOX (pour le notification service)
 // ============================================================
 

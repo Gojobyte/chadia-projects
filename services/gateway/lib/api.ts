@@ -113,6 +113,22 @@ export const TenderAPI = {
   listBailleurs: () => apiFetch(TENDER_URL, "/bailleurs"),
   createBailleur: (body: Record<string, unknown>, token?: string) =>
     apiFetch(TENDER_URL, "/bailleurs", { method: "POST", body, token }),
+
+  // Projets
+  listProjets: (params?: Record<string, string>, token?: string) => {
+    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
+    return apiFetch(TENDER_URL, `/projets${qs}`, { token });
+  },
+  getProjet: (id: string, token?: string) =>
+    apiFetch(TENDER_URL, `/projets/${id}`, { token }),
+  createProjet: (body: Record<string, unknown>, token?: string) =>
+    apiFetch(TENDER_URL, "/projets", { method: "POST", body, token }),
+  updateProjet: (id: string, body: Record<string, unknown>, token?: string) =>
+    apiFetch(TENDER_URL, `/projets/${id}`, { method: "PUT", body, token }),
+  updateProjetAvancement: (id: string, body: { avancement?: number; etapeLabel?: string }, token?: string) =>
+    apiFetch(TENDER_URL, `/projets/${id}/avancement`, { method: "PATCH", body, token }),
+  deleteProjet: (id: string, token?: string) =>
+    apiFetch(TENDER_URL, `/projets/${id}`, { method: "DELETE", token }),
 };
 
 // Notification API
