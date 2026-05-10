@@ -96,10 +96,17 @@ export const TenderAPI = {
     const qs = params ? "?" + new URLSearchParams(params).toString() : "";
     return apiFetch(TENDER_URL, `/documents${qs}`, { token });
   },
+  getDocument: (id: string, token?: string) =>
+    apiFetch(TENDER_URL, `/documents/${id}`, { token }),
   createDocument: (body: Record<string, unknown>, token?: string) =>
     apiFetch(TENDER_URL, "/documents", { method: "POST", body, token }),
+  patchDocument: (id: string, body: Record<string, unknown>, token?: string) =>
+    apiFetch(TENDER_URL, `/documents/${id}`, { method: "PATCH", body, token }),
   deleteDocument: (id: string, token?: string) =>
     apiFetch(TENDER_URL, `/documents/${id}`, { method: "DELETE", token }),
+  // Upload multipart : la requête transite par /api/[...service]/route.ts qui
+  // forward le FormData au tender avec le token JWT.
+  documentFileUrl: (id: string) => `/api/tender/documents/${id}/file`,
 
   // Analytics
   getAnalytics: (token?: string) =>

@@ -1,10 +1,59 @@
 const express = require("express");
 const cors = require("cors");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+const crypto = require("crypto");
 const { PrismaClient } = require("./generated/prisma");
 
 const prisma = new PrismaClient();
 const app = express();
 const PORT = process.env.PORT || 3002;
+
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, "..", "uploads");
+const MAX_UPLOAD_SIZE = parseInt(process.env.MAX_UPLOAD_SIZE || "10485760", 10); // 10 MB par défaut
+
+// S'assurer que le dossier d'upload existe
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+// MIME types autorisés (sécurité de base)
+const ALLOWED_MIMES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "image/jpeg", "image/png", "image/webp", "image/gif",
+  "text/plain", "text/csv", "text/markdown",
+  "application/zip", "application/x-zip-compressed",
+  "application/json",
+]);
+
+const uploadStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    // Subfolder par entité (projet/AO/fournisseur) si fourni
+    const sub = req.body?.projetId || req.body?.appelOffreId || req.body?.fournisseurId || "lib";
+    const dir = path.join(UPLOAD_DIR, sub.replace(/[^a-zA-Z0-9_-]/g, ""));
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const id = crypto.randomBytes(16).toString("hex");
+    cb(null, `${id}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage: uploadStorage,
+  limits: { fileSize: MAX_UPLOAD_SIZE, files: 1 },
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED_MIMES.has(file.mimetype)) return cb(null, true);
+    cb(new Error(`MIME type non autorisé : ${file.mimetype}`));
+  },
+});
 
 app.use(cors());
 app.use(express.json());
@@ -417,53 +466,160 @@ app.patch("/soumissions/:id/retain", auth, requireRole("DIRECTEUR"), async (req,
 // DOCUMENTS (gestion fluide)
 // ============================================================
 
-// GET /documents
+// GET /documents — liste avec filtres + visibilité
 app.get("/documents", auth, async (req, res) => {
   try {
-    const { appelOffreId, soumissionId, fournisseurId, type, page = "1", limit = "20" } = req.query;
+    const { appelOffreId, soumissionId, fournisseurId, projetId, type, category, visibility, q, isPinned, page = "1", limit = "50" } = req.query;
     const where = {};
     if (appelOffreId) where.appelOffreId = appelOffreId;
     if (soumissionId) where.soumissionId = soumissionId;
     if (fournisseurId) where.fournisseurId = fournisseurId;
+    if (projetId) where.projetId = projetId;
     if (type) where.type = type;
+    if (category) where.category = category;
+    if (visibility) where.visibility = visibility;
+    if (isPinned === "true") where.isPinned = true;
+    if (q) {
+      where.OR = [
+        { nom: { contains: q, mode: "insensitive" } },
+        { originalName: { contains: q, mode: "insensitive" } },
+        { description: { contains: q, mode: "insensitive" } },
+      ];
+    }
+    // Contrôle d'accès : CONFIDENTIEL réservé ADMIN/DIRECTEUR
+    if (!["ADMIN", "DIRECTEUR"].includes(req.user.role)) {
+      where.visibility = where.visibility ? where.visibility : { in: ["PUBLIC", "INTERNE"] };
+    }
 
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     const [documents, total] = await Promise.all([
-      prisma.document.findMany({ where, orderBy: { createdAt: "desc" }, skip: (pageNum - 1) * limitNum, take: limitNum }),
+      prisma.document.findMany({
+        where,
+        orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
+        skip: (pageNum - 1) * limitNum,
+        take: limitNum,
+      }),
       prisma.document.count({ where }),
     ]);
     res.json({ documents, total, page: pageNum, pages: Math.ceil(total / limitNum) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// POST /documents — enregistrer un document (upload via le gateway)
+// POST /documents/upload — upload multipart (fichier + metadata)
+app.post("/documents/upload", auth, upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu" });
+
+    // Calcul hash SHA-256 pour dédoublonnage éventuel
+    let hash = null;
+    try {
+      const buf = fs.readFileSync(req.file.path);
+      hash = crypto.createHash("sha256").update(buf).digest("hex");
+    } catch { /* ignore */ }
+
+    const data = {
+      nom: req.body?.nom || req.file.originalname,
+      originalName: req.file.originalname,
+      type: req.body?.type || "AUTRE",
+      category: req.body?.category || "AUTRE",
+      visibility: req.body?.visibility || "INTERNE",
+      mimeType: req.file.mimetype,
+      taille: req.file.size,
+      cheminLocal: req.file.path,
+      url: `/documents/${req.file.filename}`,
+      hash,
+      version: req.body?.version || "1.0",
+      description: req.body?.description || null,
+      tags: req.body?.tags ? String(req.body.tags).split(",").map(t => t.trim()).filter(Boolean) : [],
+      isPinned: req.body?.isPinned === "true",
+      appelOffreId: req.body?.appelOffreId || null,
+      soumissionId: req.body?.soumissionId || null,
+      fournisseurId: req.body?.fournisseurId || null,
+      projetId: req.body?.projetId || null,
+      uploadedBy: req.user.id,
+    };
+
+    const doc = await prisma.document.create({ data });
+    res.status(201).json({ document: doc });
+  } catch (e) {
+    // Cleanup du fichier si insertion DB a échoué
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      try { fs.unlinkSync(req.file.path); } catch { /* ignore */ }
+    }
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /documents — création par metadata seule (sans fichier, ex: lien externe)
 app.post("/documents", auth, async (req, res) => {
   try {
-    const body = req.body;
-    if (!body.nom || !body.url || !body.type) return res.status(400).json({ error: "nom, url, type required" });
+    const body = req.body || {};
+    if (!body.nom || !body.url) return res.status(400).json({ error: "nom et url requis" });
     const doc = await prisma.document.create({
       data: { ...body, uploadedBy: req.user.id },
     });
     res.status(201).json({ document: doc });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
-// GET /documents/:id
+// GET /documents/:id — métadonnées
 app.get("/documents/:id", auth, async (req, res) => {
   try {
     const doc = await prisma.document.findUnique({ where: { id: req.params.id } });
-    if (!doc) return res.status(404).json({ error: "Not found" });
+    if (!doc) return res.status(404).json({ error: "Document introuvable" });
+    if (doc.visibility === "CONFIDENTIEL" && !["ADMIN", "DIRECTEUR"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Accès confidentiel refusé" });
+    }
     res.json({ document: doc });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// DELETE /documents/:id
+// GET /documents/:id/file — servir le fichier binaire
+app.get("/documents/:id/file", auth, async (req, res) => {
+  try {
+    const doc = await prisma.document.findUnique({ where: { id: req.params.id } });
+    if (!doc) return res.status(404).json({ error: "Document introuvable" });
+    if (doc.visibility === "CONFIDENTIEL" && !["ADMIN", "DIRECTEUR"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Accès confidentiel refusé" });
+    }
+    if (!doc.cheminLocal || !fs.existsSync(doc.cheminLocal)) {
+      return res.status(404).json({ error: "Fichier physique introuvable" });
+    }
+    res.setHeader("Content-Type", doc.mimeType || "application/octet-stream");
+    res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(doc.originalName || doc.nom)}"`);
+    fs.createReadStream(doc.cheminLocal).pipe(res);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// PATCH /documents/:id — édition métadonnées (renommer, pin, changer visibilité)
+app.patch("/documents/:id", auth, async (req, res) => {
+  try {
+    const { nom, description, tags, isPinned, visibility, category, type } = req.body || {};
+    const data = {};
+    if (nom !== undefined) data.nom = nom;
+    if (description !== undefined) data.description = description;
+    if (Array.isArray(tags)) data.tags = tags;
+    if (isPinned !== undefined) data.isPinned = isPinned;
+    if (visibility !== undefined) data.visibility = visibility;
+    if (category !== undefined) data.category = category;
+    if (type !== undefined) data.type = type;
+    const doc = await prisma.document.update({ where: { id: req.params.id }, data });
+    res.json({ document: doc });
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// DELETE /documents/:id — suppression (fichier + DB)
 app.delete("/documents/:id", auth, async (req, res) => {
   try {
+    const doc = await prisma.document.findUnique({ where: { id: req.params.id } });
+    if (!doc) return res.status(404).json({ error: "Document introuvable" });
+    if (doc.cheminLocal && fs.existsSync(doc.cheminLocal)) {
+      try { fs.unlinkSync(doc.cheminLocal); } catch { /* ignore */ }
+    }
     await prisma.document.delete({ where: { id: req.params.id } });
-    res.json({ message: "Deleted" });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+    res.json({ message: "Document supprimé" });
+  } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
 // ============================================================

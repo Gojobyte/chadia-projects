@@ -78,7 +78,11 @@ services:
       AUTH_SERVICE_URL: http://auth-service:3001
       NOTIFICATION_SERVICE_URL: http://notification-service:3003
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      UPLOAD_DIR: /app/uploads
+      MAX_UPLOAD_SIZE: 10485760
       PORT: 3002
+    volumes:
+      - uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -128,6 +132,7 @@ volumes:
   redisdata:
   caddy_data:
   caddy_config:
+  uploads:
 
 networks:
   chadia:

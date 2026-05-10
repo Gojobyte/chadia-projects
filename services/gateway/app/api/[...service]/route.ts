@@ -1,14 +1,21 @@
 import { forward } from "@/lib/services";
 import type { NextRequest } from "next/server";
 
-// Proxy handler for all microservice routes
+// Proxy handler générique pour tous les microservices.
+// Le forwarder dans lib/services.ts détecte automatiquement multipart/form-data
+// et streame le body sans le JSON-parser. Les réponses binaires (PDF, images)
+// sont aussi streamées telles quelles.
 async function handler(req: NextRequest, { params }: { params: Promise<Record<string, string | string[]>> }) {
   const p = await params;
   const service = p.service as string;
   const slug = p.slug as string[];
   const path = "/" + (slug || []).join("/");
+
+  const ct = req.headers.get("content-type") || "";
+  const isMultipart = ct.startsWith("multipart/form-data");
+
   let body: unknown = null;
-  if (!["GET", "HEAD"].includes(req.method)) {
+  if (!["GET", "HEAD"].includes(req.method) && !isMultipart) {
     try { body = await req.json(); } catch { /* ignore */ }
   }
   return forward(service, path, req, body);

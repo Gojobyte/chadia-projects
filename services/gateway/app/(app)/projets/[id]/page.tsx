@@ -3,6 +3,8 @@ import { TenderAPI } from "@/lib/api";
 import { redirect, notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
+import { DocumentUploader } from "@/components/DocumentUploader";
+import { DocumentList } from "@/components/DocumentList";
 
 interface Projet {
   id: string;
@@ -92,6 +94,29 @@ export default async function ProjetDetailPage({ params }: { params: Promise<{ i
     projet = null;
   }
   if (!projet) notFound();
+
+  // Documents attachés au projet
+  let documents: Array<{
+    id: string;
+    nom: string;
+    originalName?: string | null;
+    type: string;
+    category: string;
+    visibility: "PUBLIC" | "INTERNE" | "CONFIDENTIEL";
+    mimeType?: string | null;
+    taille?: number | null;
+    url: string;
+    version?: string | null;
+    tags: string[];
+    isPinned: boolean;
+    description?: string | null;
+    createdAt: string;
+    uploadedBy?: string | null;
+  }> = [];
+  try {
+    const docs = await TenderAPI.listDocuments({ projetId: projet.id }, token);
+    documents = docs.documents ?? [];
+  } catch { /* silencieux */ }
 
   const updateAction = updateAvancementAction.bind(null, projet.id);
 
@@ -203,16 +228,38 @@ export default async function ProjetDetailPage({ params }: { params: Promise<{ i
             </div>
           </div>
 
-          {/* Bloc squelette : sous-modules à venir */}
+          {/* Bloc documents du projet */}
+          <div className="group-card">
+            <div className="sec-head">
+              <div>
+                <h2>Documents <em>du projet</em></h2>
+                <p>
+                  {documents.length === 0
+                    ? "Aucun document attaché pour l'instant."
+                    : `${documents.length} document${documents.length > 1 ? "s" : ""} attaché${documents.length > 1 ? "s" : ""}.`}
+                </p>
+              </div>
+              <DocumentUploader
+                projetId={projet.id}
+                defaultCategory="PROJETS"
+                defaultType="RAPPORT_ACTIVITE"
+                buttonLabel="Téléverser"
+                compact
+              />
+            </div>
+            <DocumentList documents={documents} emptyMessage="Aucun document attaché. Utilisez le bouton ci-dessus pour téléverser le premier." />
+          </div>
+
+          {/* Sous-modules futurs */}
           <div className="group-card" style={{ background: "var(--color-canvas)" }}>
             <div className="sec-head">
               <div>
-                <h2>Sous-modules <em>à venir</em></h2>
-                <p>Budget détaillé, jalons, documents et rapports d&apos;activité.</p>
+                <h2>Autres sous-modules <em>à venir</em></h2>
+                <p>Budget détaillé et jalons / kanban dans les prochains chantiers.</p>
               </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-              <Link href={`/projets/${projet.id}/budget`} className="doc-card" style={{ pointerEvents: "auto" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+              <Link href={`/projets/${projet.id}/budget`} className="doc-card">
                 <span className="ic"><i className="ph ph-coins"></i></span>
                 <span className="nm">Budget<em> détaillé</em><small>À implémenter (P1)</small></span>
                 <i className="ph ph-arrow-up-right arrow"></i>
@@ -220,11 +267,6 @@ export default async function ProjetDetailPage({ params }: { params: Promise<{ i
               <a className="doc-card">
                 <span className="ic"><i className="ph ph-flag"></i></span>
                 <span className="nm">Jalons<em> et tâches</em><small>Kanban à implémenter (P2)</small></span>
-                <i className="ph ph-arrow-up-right arrow"></i>
-              </a>
-              <a className="doc-card">
-                <span className="ic"><i className="ph ph-files"></i></span>
-                <span className="nm">Documents<em> du projet</em><small>Upload à implémenter (P0)</small></span>
                 <i className="ph ph-arrow-up-right arrow"></i>
               </a>
             </div>

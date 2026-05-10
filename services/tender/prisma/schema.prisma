@@ -232,17 +232,49 @@ enum DocumentType {
   PROCES_VERBAL
   AVIS_ATTRIBUTION
   CONTRAT
+  RAPPORT_ACTIVITE
+  BUDGET
+  STATUT
+  MANUEL
+  PHOTO_TERRAIN
+  TEMPLATE
   AUTRE
 }
 
+// Catégorie de classement bibliothèque (différente du type métier)
+enum DocumentCategory {
+  MODELES_AO
+  STATUTS_JURIDIQUE
+  PROJETS
+  CONVENTIONS_BAILLEURS
+  COMPTABILITE
+  MEDIAS_TERRAIN
+  RAPPORTS
+  AUTRE
+}
+
+enum DocumentVisibility {
+  PUBLIC          // Affiché sur le site public (registre / résultats)
+  INTERNE         // Visible par tous les membres connectés
+  CONFIDENTIEL    // Visible par ADMIN/DIRECTEUR uniquement
+}
+
 model Document {
-  id              String       @id @default(cuid())
-  nom             String
-  type            DocumentType @default(AUTRE)
+  id              String             @id @default(cuid())
+  nom             String                                 // Nom affiché
+  originalName    String?                                // Nom du fichier d'origine côté client
+  type            DocumentType       @default(AUTRE)
+  category        DocumentCategory   @default(AUTRE)
+  visibility      DocumentVisibility @default(INTERNE)
   mimeType        String?
   taille          Int?
-  url             String
-  cheminLocal     String?
+  url             String                                 // URL publique ou chemin relatif
+  cheminLocal     String?                                // chemin disque dans le volume uploads
+  hash            String?                                // Hash SHA-256 pour dédoublonnage
+  version         String?            @default("1.0")
+  tags            String[]           @default([])
+  isPinned        Boolean            @default(false)
+  description     String?
 
   // Relations optionnelles
   appelOffreId    String?
@@ -251,6 +283,8 @@ model Document {
   soumission      Soumission?  @relation(fields: [soumissionId], references: [id], onDelete: Cascade)
   fournisseurId   String?
   fournisseur     Fournisseur? @relation(fields: [fournisseurId], references: [id], onDelete: Cascade)
+  projetId        String?                                // pas de FK explicite — relation simple
+  // (Projet est défini plus bas, on évite la circularité en gardant juste l'ID)
 
   uploadedBy      String?
   createdAt       DateTime     @default(now())
@@ -259,6 +293,10 @@ model Document {
   @@index([appelOffreId])
   @@index([soumissionId])
   @@index([fournisseurId])
+  @@index([projetId])
+  @@index([category])
+  @@index([visibility])
+  @@index([isPinned])
   @@index([type])
   @@map("documents")
 }
