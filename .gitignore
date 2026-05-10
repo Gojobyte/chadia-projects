@@ -48,3 +48,7 @@ next-env.d.ts
 **/app/generated/prisma
 **/src/generated/
 **/node_modules/
+
+# Documents administratifs internes ONG CHADIA (source PDF/Word)
+doc-source/
+docs-source/
