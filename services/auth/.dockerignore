@@ -1,0 +1,33 @@
+# Client Prisma : toujours régénéré dans Docker via `npx prisma generate`.
+# Ne JAMAIS copier le client local (peut être obsolète et écraser le client
+# fraîchement généré au build).
+src/generated/
+
+# Dépendances locales : réinstallées via le Dockerfile
+node_modules
+
+# Build artifacts éventuels
+dist
+build
+
+# Tests
+*.test.js
+coverage
+
+# Git
+.git
+.gitignore
+
+# Logs
+*.log
+npm-debug.log*
+
+# Variables d'env locales
+.env
+.env.local
+.env.*.local
+
+# Système
+.DS_Store
+.vscode
+.idea
