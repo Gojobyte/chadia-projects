@@ -131,6 +131,18 @@ export const TenderAPI = {
     apiFetch(TENDER_URL, `/projets/${id}/avancement`, { method: "PATCH", body, token }),
   deleteProjet: (id: string, token?: string) =>
     apiFetch(TENDER_URL, `/projets/${id}`, { method: "DELETE", token }),
+
+  // Settings
+  listSettings: (token: string, params?: { category?: string; prefix?: string }) => {
+    const qs = params ? "?" + new URLSearchParams(params as Record<string, string>).toString() : "";
+    return apiFetch(TENDER_URL, `/settings${qs}`, { token });
+  },
+  getSetting: (key: string, token: string) =>
+    apiFetch(TENDER_URL, `/settings/${key}`, { token }),
+  updateSetting: (key: string, value: unknown, token: string) =>
+    apiFetch(TENDER_URL, `/settings/${key}`, { method: "PUT", body: { value }, token }),
+  updateSettings: (entries: Record<string, unknown>, token: string) =>
+    apiFetch(TENDER_URL, "/settings", { method: "PATCH", body: { entries }, token }),
 };
 
 // Notification API

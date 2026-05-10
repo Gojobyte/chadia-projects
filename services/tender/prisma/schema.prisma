@@ -386,6 +386,35 @@ model Projet {
 }
 
 // ============================================================
+// SETTINGS (paramètres clé-valeur)
+// ============================================================
+
+enum SettingCategory {
+  ORGANIZATION   // Identité juridique, dénomination, NIF, mission statutaire
+  BRANDING       // Logo, couleurs, mention bas de page
+  CONTACT        // Email, téléphone, adresse, mécanisme de plainte
+  WORKFLOW       // Toggles workflow AO (publication auto, double validation…)
+  NUMEROTATION   // Formats référence AO/Soumission/Projet, année comptable
+  INTEGRATION    // Bsic, Gmail, Cal.com, Hetzner Storage…
+  OTHER
+}
+
+model Setting {
+  id          String          @id @default(cuid())
+  key         String          @unique         // org.denomination, workflow.publication_auto…
+  value       Json                             // peut être string, bool, objet
+  category    SettingCategory @default(OTHER)
+  label       String?                          // libellé humain pour les listes
+  description String?                          // aide affichée sous le champ
+  updatedBy   String?                          // userId de la dernière modif
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([category])
+  @@map("settings")
+}
+
+// ============================================================
 // OUTBOX PATTERN (communication inter-services)
 // ============================================================
 

@@ -648,6 +648,93 @@ app.delete("/projets/:id", auth, requireRole("DIRECTEUR"), async (req, res) => {
 });
 
 // ============================================================
+// SETTINGS (paramètres clé-valeur de la plateforme)
+// ============================================================
+
+// GET /settings — toutes les settings (auth requise)
+// Filtres optionnels : category, prefix (commence par "org.", "workflow."…)
+app.get("/settings", auth, async (req, res) => {
+  try {
+    const { category, prefix } = req.query;
+    const where = {};
+    if (category) where.category = category;
+    if (prefix) where.key = { startsWith: prefix };
+    const settings = await prisma.setting.findMany({
+      where,
+      orderBy: [{ category: "asc" }, { key: "asc" }],
+    });
+    // Renvoyer en format clé-valeur pour faciliter l'usage côté UI
+    const asMap = {};
+    for (const s of settings) asMap[s.key] = s.value;
+    res.json({ settings, map: asMap });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /settings/:key — valeur d'une clé spécifique
+app.get("/settings/:key", auth, async (req, res) => {
+  try {
+    const s = await prisma.setting.findUnique({ where: { key: req.params.key } });
+    if (!s) return res.status(404).json({ error: "Setting introuvable" });
+    res.json({ setting: s });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// PUT /settings/:key — créer ou mettre à jour une clé (ADMIN/DIRECTEUR)
+app.put("/settings/:key", auth, requireRole("ADMIN", "DIRECTEUR"), async (req, res) => {
+  try {
+    const { value, category, label, description } = req.body || {};
+    const setting = await prisma.setting.upsert({
+      where: { key: req.params.key },
+      update: {
+        ...(value !== undefined && { value }),
+        ...(category !== undefined && { category }),
+        ...(label !== undefined && { label }),
+        ...(description !== undefined && { description }),
+        updatedBy: req.user?.id || null,
+      },
+      create: {
+        key: req.params.key,
+        value: value ?? null,
+        category: category || "OTHER",
+        label: label || null,
+        description: description || null,
+        updatedBy: req.user?.id || null,
+      },
+    });
+    res.json({ setting });
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// PATCH /settings — mise à jour bulk (form section entière)
+// Body : { entries: { "org.denomination": "...", "workflow.publication_auto": true } }
+app.patch("/settings", auth, requireRole("ADMIN", "DIRECTEUR"), async (req, res) => {
+  try {
+    const { entries } = req.body || {};
+    if (!entries || typeof entries !== "object") {
+      return res.status(400).json({ error: "Body doit contenir un objet `entries`" });
+    }
+    const updated = [];
+    for (const [key, value] of Object.entries(entries)) {
+      const setting = await prisma.setting.upsert({
+        where: { key },
+        update: { value, updatedBy: req.user?.id || null },
+        create: { key, value, updatedBy: req.user?.id || null, category: "OTHER" },
+      });
+      updated.push(setting);
+    }
+    res.json({ updated, count: updated.length });
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// DELETE /settings/:key — supprimer une clé (DIRECTEUR seul)
+app.delete("/settings/:key", auth, requireRole("DIRECTEUR"), async (req, res) => {
+  try {
+    await prisma.setting.delete({ where: { key: req.params.key } });
+    res.json({ message: "Setting supprimé" });
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// ============================================================
 // OUTBOX (pour le notification service)
 // ============================================================
 

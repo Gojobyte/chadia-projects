@@ -176,6 +176,54 @@ const PROJETS = [
   },
 ];
 
+// =====================================================================
+// SETTINGS — paramètres par défaut ONG CHADIA
+// =====================================================================
+const SETTINGS = [
+  // Identité juridique
+  { key: "org.denomination", value: "CHADIA — Chadia pour le Développement du Tchad", category: "ORGANIZATION", label: "Dénomination officielle" },
+  { key: "org.sigle", value: "CDT", category: "ORGANIZATION", label: "Sigle court" },
+  { key: "org.forme_juridique", value: "Association tchadienne sans but lucratif", category: "ORGANIZATION", label: "Forme juridique" },
+  { key: "org.recipisse", value: "À renseigner", category: "ORGANIZATION", label: "Numéro de récépissé" },
+  { key: "org.date_fondation", value: "À renseigner", category: "ORGANIZATION", label: "Date de fondation" },
+  { key: "org.nif", value: "À renseigner", category: "ORGANIZATION", label: "Numéro d'identification fiscale" },
+  { key: "org.mission", value: "Contribuer au développement économique et social du Tchad par la formation professionnelle, l'eau-assainissement, l'agriculture-élevage, l'éducation et la santé. Renforcer les capacités des MPME tchadiennes et accompagner les communautés des régions de N'Djamena, du Guéra et du Batha.", category: "ORGANIZATION", label: "Mission statutaire" },
+  { key: "org.regime_fiscal", value: "Réel", category: "ORGANIZATION", label: "Régime fiscal" },
+
+  // Branding
+  { key: "branding.sigle_court", value: "CHADIA", category: "BRANDING", label: "Sigle affiché en sidebar" },
+  { key: "branding.couleur_accent", value: "#B85C3A", category: "BRANDING", label: "Couleur d'accent (terre cuite)" },
+  { key: "branding.mention_footer", value: "ONG CHADIA · BP 6118 N'Djamena · chadiaong@gmail.com", category: "BRANDING", label: "Mention bas de page PDF" },
+
+  // Contact
+  { key: "contact.email", value: "chadiaong@gmail.com", category: "CONTACT", label: "E-mail officiel" },
+  { key: "contact.telephone_1", value: "+235 65 62 62 40", category: "CONTACT", label: "Téléphone principal" },
+  { key: "contact.telephone_2", value: "+235 92 29 94 36", category: "CONTACT", label: "Téléphone secondaire" },
+  { key: "contact.adresse", value: "Quartier Kabalaye, en face stade Idriss MHT OUYA, N'Djamena", category: "CONTACT", label: "Adresse postale" },
+  { key: "contact.bp", value: "BP 6118 N'Djamena", category: "CONTACT", label: "Boîte postale" },
+
+  // Workflow AO
+  { key: "workflow.publication_auto", value: true, category: "WORKFLOW", label: "Publication automatique sur le registre public", description: "Les appels d'offres validés sont publiés dans l'heure sur /marches" },
+  { key: "workflow.notification_fournisseurs", value: true, category: "WORKFLOW", label: "Notification automatique des fournisseurs ciblés", description: "Envoi par e-mail aux fournisseurs catégorisés par lot" },
+  { key: "workflow.verrouillage_plis", value: true, category: "WORKFLOW", label: "Verrouillage des plis avant ouverture", description: "Soumissions chiffrées jusqu'à la séance d'ouverture officielle" },
+  { key: "workflow.double_validation", value: true, category: "WORKFLOW", label: "Double validation avant attribution", description: "Signature électronique du DG et du Président du comité de dépouillement" },
+  { key: "workflow.pv_auto", value: false, category: "WORKFLOW", label: "Génération automatique du PV de séance", description: "Bêta — à valider manuellement avant signature" },
+
+  // Numérotation
+  { key: "numerotation.format_ao", value: "AO-{ANNEE}-{NUM:3}", category: "NUMEROTATION", label: "Format référence Appel d'Offres" },
+  { key: "numerotation.format_soumission", value: "SOUM-{NUM_AO}-{NUM:2}", category: "NUMEROTATION", label: "Format référence Soumission" },
+  { key: "numerotation.format_projet", value: "PRJ-{ANNEE}-{NUM:2}", category: "NUMEROTATION", label: "Format référence Projet" },
+  { key: "numerotation.annee_comptable", value: "01-01_31-12", category: "NUMEROTATION", label: "Année comptable" },
+
+  // Intégrations
+  { key: "integration.bsic", value: { active: true, nom: "BSIC Tchad", iban: "À renseigner", swift: "BSIYTDND" }, category: "INTEGRATION", label: "BSIC Tchad" },
+  { key: "integration.gmail", value: { active: true, email: "chadiaong@gmail.com" }, category: "INTEGRATION", label: "Google Workspace" },
+  { key: "integration.calcom", value: { active: false, slug: null }, category: "INTEGRATION", label: "Cal.com" },
+  { key: "integration.hetzner_storage", value: { active: false, box_id: null }, category: "INTEGRATION", label: "Hetzner Storage Box" },
+  { key: "integration.docusign", value: { active: false }, category: "INTEGRATION", label: "DocuSign" },
+  { key: "integration.plausible", value: { active: false, domain: "ong-chadia.com" }, category: "INTEGRATION", label: "Plausible Analytics" },
+];
+
 async function main() {
   for (const b of BAILLEURS) {
     await prisma.bailleur.upsert({
@@ -185,6 +233,15 @@ async function main() {
     });
   }
   console.log(`Bailleurs seedés: ${BAILLEURS.length}`);
+
+  for (const s of SETTINGS) {
+    await prisma.setting.upsert({
+      where: { key: s.key },
+      update: { value: s.value, label: s.label, description: s.description, category: s.category },
+      create: s,
+    });
+  }
+  console.log(`Settings seedés: ${SETTINGS.length}`);
 
   for (const p of PROJETS) {
     await prisma.projet.upsert({
