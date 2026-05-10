@@ -1,0 +1,54 @@
+# CodeRabbit Configuration
+# Docs: https://docs.coderabbit.ai/
+
+language: "fr-FR"
+early_access: false
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  review_status: true
+  commit_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+  poem: false
+  path_instructions:
+    - path: "prisma/**"
+      comment: "Vérifier la validité du schéma Prisma et la cohérence des migrations."
+    - path: "app/**"
+      comment: "Vérifier le routing Next.js 16, les Server/Client Components, et les bonnes pratiques App Router."
+    - path: "components/**"
+      comment: "Vérifier l'accessibilité, la réutilisabilité et la cohérence du design system."
+    - path: "lib/**"
+      comment: "Vérifier la sécurité (validation des inputs, typage strict) et éviter les appels DB redondants."
+    - path: "middleware.ts"
+      comment: "Vérifier la logique d'auth NextAuth v5 et les redirections de sécurité."
+  tools:
+    ast-grep:
+      essential_rules: true
+    ruff:
+      enabled: true
+    github-checks:
+      enabled: true
+      timeout_ms: 90000
+    languagetool:
+      enabled: true
+
+chat:
+  auto_reply: true
+
+# Exclure les fichiers générés et verrouillés
+exclude:
+  - "**/node_modules/**"
+  - "**/package-lock.json"
+  - "**/pnpm-lock.yaml"
+  - "**/*.d.ts"
+  - "**/.next/**"
+  - "**/prisma/migrations/**"
+  - "docs/**"
+  - "test-fixtures/**"

@@ -1,0 +1,333 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// FOURNISSEURS
+// ============================================================
+
+enum FournisseurStatut {
+  EN_ATTENTE
+  VERIFIE
+  REJETE
+  SUSPENDU
+  BLACKLISTE
+}
+
+enum FournisseurCategorie {
+  ENTREPRISE_INDIVIDUELLE
+  SARL
+  SA
+  ONG_NATIONALE
+  ONG_INTERNATIONALE
+  COOPERATIVE
+  CONSORTIUM
+  AUTRE
+}
+
+model Fournisseur {
+  id                String              @id @default(cuid())
+  raisonSociale     String
+  sigle             String?
+  categorie         FournisseurCategorie @default(ENTREPRISE_INDIVIDUELLE)
+  numeroRccm        String?             @unique
+  numeroNif         String?             @unique
+  email             String              @unique
+  telephone         String?
+  adresse           String?
+  ville             String?
+  pays              String              @default("Tchad")
+  siteWeb           String?
+  representantNom   String?
+  representantTitre String?
+  domainesExpertise String[]
+  certifications    String[]
+  anneesExperience  Int?
+  effectif          Int?
+  chiffreAffaires   Float?
+  logoUrl           String?
+  statut            FournisseurStatut   @default(EN_ATTENTE)
+  verifiePar        String?
+  verifieAt         DateTime?
+
+  soumissions       Soumission[]
+  evaluations       EvaluationFournisseur[]
+  documents         Document[]
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([statut])
+  @@index([categorie])
+  @@map("fournisseurs")
+}
+
+// ============================================================
+// BAILLEURS
+// ============================================================
+
+model Bailleur {
+  id            String   @id @default(cuid())
+  nom           String
+  sigle         String   @unique
+  logoUrl       String?
+  siteWeb       String?
+  rulesJson     Json?
+  promptHints   String?
+
+  appelsOffre   AppelOffre[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("bailleurs")
+}
+
+// ============================================================
+// APPELS D'OFFRES
+// ============================================================
+
+enum AppelOffreStatut {
+  BROUILLON
+  PUBLIE
+  EN_COURS
+  CLOTURE
+  EN_EVALUATION
+  ATTRIBUE
+  ANNULE
+  ARCHIVE
+}
+
+enum AppelOffreType {
+  APPEL_OFFRES_OUVERT
+  APPEL_OFFRES_RESTREINT
+  MARCHE_NEGOCIE
+  CONSULTATION
+  GRE_A_GRE
+}
+
+enum AppelOffreCategorie {
+  TRAVAUX
+  FOURNITURES
+  SERVICES
+  MIXTE
+}
+
+model AppelOffre {
+  id                String              @id @default(cuid())
+  reference         String              @unique
+  titre             String
+  description       String
+  type              AppelOffreType      @default(APPEL_OFFRES_OUVERT)
+  categorie         AppelOffreCategorie @default(SERVICES)
+  secteur           String?
+
+  bailleurId        String
+  bailleur          Bailleur            @relation(fields: [bailleurId], references: [id])
+
+  budgetEstime      Float?
+  devise            String              @default("FCFA")
+
+  datePublication   DateTime            @default(now())
+  dateLimiteDepot   DateTime
+  dateOuverture     DateTime?
+  dateAttribution   DateTime?
+  dureeMarche       Int?
+
+  pays              String              @default("Tchad")
+  region            String?
+  lieuExecution     String?
+
+  criteresEligibilite Json?
+  criteresEvaluation  Json?
+
+  statut            AppelOffreStatut    @default(BROUILLON)
+  estPublic         Boolean             @default(true)
+  createdBy         String
+
+  soumissions       Soumission[]
+  documents         Document[]
+  resultats         AppelOffreResultat?
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([statut])
+  @@index([type])
+  @@index([categorie])
+  @@index([bailleurId])
+  @@index([dateLimiteDepot])
+  @@map("appels_offres")
+}
+
+// ============================================================
+// SOUMISSIONS
+// ============================================================
+
+enum SoumissionStatut {
+  BROUILLON
+  DEPOSEE
+  RECEVABLE
+  NON_RECEVABLE
+  EN_EVALUATION
+  RETENUE
+  REJETEE
+  DESISTEE
+}
+
+model Soumission {
+  id                String              @id @default(cuid())
+  numeroSoumission  String              @unique
+
+  appelOffreId      String
+  appelOffre        AppelOffre          @relation(fields: [appelOffreId], references: [id], onDelete: Cascade)
+  fournisseurId     String
+  fournisseur       Fournisseur         @relation(fields: [fournisseurId], references: [id])
+
+  offreTechnique    String?
+  offreFinanciere   Float?
+  devise            String              @default("FCFA")
+  detailFinancier   Json?
+  delaiExecution    Int?
+  validiteOffre     Int?
+
+  statut            SoumissionStatut    @default(BROUILLON)
+
+  noteTechnique     Float?
+  noteFinanciere    Float?
+  noteGlobale       Float?
+  classement        Int?
+  commentairesEvaluation String?
+
+  documents         Document[]
+
+  deposeAt          DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@unique([appelOffreId, fournisseurId])
+  @@index([appelOffreId])
+  @@index([fournisseurId])
+  @@index([statut])
+  @@map("soumissions")
+}
+
+// ============================================================
+// DOCUMENTS (gestion fluide - attaches aux AO et soumissions)
+// ============================================================
+
+enum DocumentType {
+  TDR              // Termes de reference
+  SOUMISSION_TECHNIQUE
+  SOUMISSION_FINANCIERE
+  ATTESTATION_FISCALE
+  RCCM
+  CNPS
+  PROCES_VERBAL
+  AVIS_ATTRIBUTION
+  CONTRAT
+  AUTRE
+}
+
+model Document {
+  id              String       @id @default(cuid())
+  nom             String
+  type            DocumentType @default(AUTRE)
+  mimeType        String?
+  taille          Int?
+  url             String
+  cheminLocal     String?
+
+  // Relations optionnelles
+  appelOffreId    String?
+  appelOffre      AppelOffre?  @relation(fields: [appelOffreId], references: [id], onDelete: Cascade)
+  soumissionId    String?
+  soumission      Soumission?  @relation(fields: [soumissionId], references: [id], onDelete: Cascade)
+  fournisseurId   String?
+  fournisseur     Fournisseur? @relation(fields: [fournisseurId], references: [id], onDelete: Cascade)
+
+  uploadedBy      String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([appelOffreId])
+  @@index([soumissionId])
+  @@index([fournisseurId])
+  @@index([type])
+  @@map("documents")
+}
+
+// ============================================================
+// EVALUATIONS
+// ============================================================
+
+model EvaluationFournisseur {
+  id                String    @id @default(cuid())
+  fournisseurId     String
+  fournisseur       Fournisseur @relation(fields: [fournisseurId], references: [id], onDelete: Cascade)
+  soumissionId      String?
+
+  noteQualite       Int?
+  noteDelai         Int?
+  noteCommunication Int?
+  noteGlobale       Float?
+  commentaires      String?
+  recommande        Boolean   @default(true)
+  evaluePar         String?
+  evalueAt          DateTime  @default(now())
+
+  createdAt         DateTime  @default(now())
+
+  @@index([fournisseurId])
+  @@map("evaluations_fournisseurs")
+}
+
+// ============================================================
+// RESULTATS PUBLICS
+// ============================================================
+
+model AppelOffreResultat {
+  id                  String      @id @default(cuid())
+  appelOffreId        String      @unique
+  appelOffre          AppelOffre  @relation(fields: [appelOffreId], references: [id], onDelete: Cascade)
+
+  soumissionRetenueId String?
+  fournisseurRetenuNom String?
+  montantAttribue     Float?
+  devise              String      @default("FCFA")
+
+  nombreSoumissions   Int         @default(0)
+  nombreRecevables    Int         @default(0)
+  motifAttribution    String?
+
+  publieAt            DateTime?
+  publiePar           String?
+  estPublic           Boolean     @default(true)
+
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  @@map("appels_offres_resultats")
+}
+
+// ============================================================
+// OUTBOX PATTERN (communication inter-services)
+// ============================================================
+
+model OutboxEvent {
+  id          String   @id @default(cuid())
+  eventType   String   // "tender.created", "tender.attributed", "submission.received"
+  payload     Json
+  processed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  processedAt DateTime?
+
+  @@index([processed, createdAt])
+  @@map("outbox_events")
+}

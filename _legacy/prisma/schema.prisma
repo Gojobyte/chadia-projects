@@ -1,0 +1,827 @@
+// ============================================================
+// CHADIA Projects — Schema Prisma
+// Plateforme de montage de projets / reponse aux appels d'offres
+// ============================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// UTILISATEURS & AUTH
+// ============================================================
+
+enum UserRole {
+  DIRECTEUR
+  ADMIN
+  FINANCIER
+  MEMBRE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String?
+  role         UserRole @default(MEMBRE)
+  image        String?
+  googleId     String?  @unique
+
+  projetsCreated    Projet[]       @relation("ProjetCreatedBy")
+  memberships       ProjetMembre[]
+  tachesAssignees   Tache[]        @relation("TacheAssignee")
+  documentsAssignes Document[]     @relation("DocumentAssigne")
+  activites         Activite[]
+  notifications     Notification[]
+  commentaires      Commentaire[]
+  accounts          Account[]
+  sessions          Session[]
+  llmInteractions        LLMInteraction[]
+  keyQuestionAnswers     ProjetKeyQuestionAnswer[]
+  fournisseur            Fournisseur?
+  alertes                Alerte[]
+  abonnements            Abonnement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================================
+// PROJETS (Appels d'offres)
+// ============================================================
+
+enum ProjetStatut {
+  BROUILLON
+  EN_COURS
+  EN_REVISION
+  SOUMIS
+  ACCEPTE
+  REJETE
+  ARCHIVE
+}
+
+model Projet {
+  id          String       @id @default(cuid())
+  titre       String
+  reference   String?
+  description String       @db.Text
+  objectifs   String?      @db.Text
+
+  bailleurId  String
+  bailleur    Bailleur     @relation(fields: [bailleurId], references: [id])
+
+  budget      Float?
+  devise      String       @default("FCFA")
+
+  datePublication DateTime?
+  dateLimite      DateTime
+  pays            String?
+  statut          ProjetStatut @default(BROUILLON)
+  starred         Boolean      @default(false)
+
+  appelOffreUrl String?
+
+  createdBy   User   @relation("ProjetCreatedBy", fields: [createdById], references: [id])
+  createdById String
+
+  documents    Document[]
+  taches       Tache[]
+  membres      ProjetMembre[]
+  activites    Activite[]
+  commentaires         Commentaire[]
+  analyseIA            AnalyseIA?
+  llmInteractions      LLMInteraction[]
+  keyQuestionAnswers   ProjetKeyQuestionAnswer[]
+  appelsOffre          AppelOffre[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([statut])
+  @@index([dateLimite])
+  @@map("projets")
+}
+
+enum ProjetRole {
+  DIRECTEUR
+  ADMIN
+  FINANCIER
+  MEMBRE
+}
+
+model ProjetMembre {
+  id       String     @id @default(cuid())
+  projetId String
+  userId   String
+  role     ProjetRole @default(MEMBRE)
+  projet   Projet     @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([projetId, userId])
+  @@map("projet_membres")
+}
+
+// ============================================================
+// DOCUMENTS
+// ============================================================
+
+enum DocumentCategorie {
+  PROPOSITION_TECHNIQUE
+  BUDGET_PREVISIONNEL
+  BUDGET_DETAIL
+  CADRE_LOGIQUE
+  NOTE_CONCEPTUELLE
+  PLAN_TRAVAIL
+  GANTT
+  CV
+  DOCUMENT_LEGAL
+  THEORIE_DU_CHANGEMENT
+  LETTRE_PARTENAIRE
+  ANNEXE
+  AUTRE
+}
+
+enum DocumentStatut {
+  BROUILLON
+  REDACTION
+  RELECTURE
+  VALIDATION
+  FINALISATION
+  VALIDE
+}
+
+model Document {
+  id          String             @id @default(cuid())
+  projetId    String
+  categorie   DocumentCategorie
+  titre       String
+  description String?
+  contenu     String?            @db.Text
+  fichierUrl  String?
+  statut      DocumentStatut     @default(BROUILLON)
+  ordre       Int                @default(0)
+  assigneAId  String?
+  dateLimite  DateTime?
+  progression Int                @default(0)
+
+  // Phase 2.1 — lien section TDR
+  sectionId       String?  // id de la section dans requiredSections de l'AnalyseIA
+
+  projet       Projet        @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  assigneA     User?         @relation("DocumentAssigne", fields: [assigneAId], references: [id])
+  taches       Tache[]
+  commentaires Commentaire[]
+  sectionQA    DocumentSectionQA?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([projetId, categorie])
+  @@map("documents")
+}
+
+// ============================================================
+// TACHES
+// ============================================================
+
+enum TachePriorite {
+  HAUTE
+  MOYENNE
+  BASSE
+}
+
+enum TacheStatut {
+  A_FAIRE
+  EN_COURS
+  TERMINE
+}
+
+model Tache {
+  id          String        @id @default(cuid())
+  projetId    String
+  documentId  String?
+  titre       String
+  description String?
+  statut      TacheStatut   @default(A_FAIRE)
+  priorite    TachePriorite @default(MOYENNE)
+  dateLimite  DateTime?
+  assigneAId  String?
+
+  projet   Projet    @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  document Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  assigneA User?     @relation("TacheAssignee", fields: [assigneAId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([projetId])
+  @@index([assigneAId])
+  @@map("taches")
+}
+
+// ============================================================
+// COMMENTAIRES
+// ============================================================
+
+model Commentaire {
+  id          String  @id @default(cuid())
+  contenu     String  @db.Text
+  documentId  String?
+  tacheId     String?
+  projetId    String
+  userId      String
+
+  document Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  projet   Projet    @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  @@index([documentId])
+  @@index([projetId])
+  @@map("commentaires")
+}
+
+// ============================================================
+// ANALYSE IA
+// ============================================================
+
+enum SourceType {
+  PDF
+  URL
+  MANUAL
+}
+
+model AnalyseIA {
+  id        String @id @default(cuid())
+  projetId  String @unique
+
+  // Champs existants — conservés
+  appelOffreTexte String? @db.Text
+  criteres        String? @db.Text
+  exigences       String? @db.Text
+  documentsRequis String? @db.Text
+  budgetEstime    String?
+  recommandations String? @db.Text
+  scoreConformite Int?
+
+  // Nouveaux champs structurés (JSON)
+  donorMetadata       Json?  // { name, program, referenceNumber }
+  timeline            Json?  // { publishDate, submissionDeadline, ... }
+  budgetConstraints   Json?  // { minAmount, maxAmount, currency, cofinancing, overhead }
+  eligibility         Json?  // { countries, organizationTypes, consortium, sectors }
+  requiredSections    Json?  // [{ id, title, description, maxPages, weight }]
+  evaluationCriteria  Json?  // [{ name, weight, subcriteria }]
+  requiredAnnexes     Json?  // [{ id, title, template }]
+  crossCutting        Json?  // { genderMarker, environmentMarker, ... }
+  keyQuestions        Json?  // string[]
+  complianceWarnings  Json?  // string[]
+
+  // Métadonnées source
+  sourceType     SourceType?
+  sourceUrl      String?
+  sourceFileName String?
+  rawText        String? @db.Text
+
+  // Métadonnées LLM
+  llmProvider  String?   // "mistral", "gemini"
+  llmModel     String?   // "mistral-large-latest", etc.
+  extractedAt  DateTime?
+  validatedAt  DateTime?
+  validatedBy  String?
+
+  projet Projet @relation(fields: [projetId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("analyses_ia")
+}
+
+// ============================================================
+// BAILLEURS, TEMPLATES, ACTIVITES, NOTIFICATIONS
+// ============================================================
+
+model Bailleur {
+  id      String  @id @default(cuid())
+  nom     String
+  sigle   String  @unique
+  logoUrl String?
+  siteWeb String?
+
+  // Nouveaux champs Phase 1
+  rulesJson      Json?    // règles bailleur (% admin, % personnel, etc.)
+  promptHints    String?  @db.Text  // hints contextuels pour les prompts IA
+  templatesJson  Json?    // templates de sections par bailleur
+
+  projets Projet[]
+  appelsOffre AppelOffre[]
+  @@map("bailleurs")
+}
+
+model Template {
+  id          String            @id @default(cuid())
+  categorie   DocumentCategorie
+  titre       String
+  description String?
+  contenu     String            @db.Text
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  @@map("templates")
+}
+
+model Activite {
+  id          String @id @default(cuid())
+  projetId    String
+  userId      String
+  action      String
+  description String
+  projet      Projet @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  user        User   @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  @@index([projetId])
+  @@index([createdAt])
+  @@map("activites")
+}
+
+model Notification {
+  id        String  @id @default(cuid())
+  userId    String
+  titre     String
+  message   String
+  lien      String?
+  lu        Boolean @default(false)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@index([userId, lu])
+  @@map("notifications")
+}
+
+// ============================================================
+// LOGGING IA
+// ============================================================
+
+model LLMInteraction {
+  id          String   @id @default(cuid())
+  userId      String
+  projetId    String?
+  provider    String   // "mistral", "gemini"
+  model       String   // "mistral-large-latest", etc.
+  action      String   // "tdr_extraction", "copilot_continuer", etc.
+  inputHash   String   // hash du prompt pour déduplication
+  tokensIn    Int
+  tokensOut   Int
+  costUsd     Float
+  durationMs  Int
+  status      String   // "success", "error", "retry"
+  errorMsg    String?
+
+  user        User     @relation(fields: [userId], references: [id])
+  projet      Projet?  @relation(fields: [projetId], references: [id])
+
+  createdAt   DateTime @default(now())
+  @@index([userId])
+  @@index([projetId])
+  @@index([createdAt])
+  @@map("llm_interactions")
+}
+
+// ============================================================
+// PHASE 2.1 — CO-RÉDACTION IA
+// ============================================================
+
+// Réponses aux keyQuestions stratégiques du projet
+model ProjetKeyQuestionAnswer {
+  id              String    @id @default(cuid())
+  projetId        String
+  questionIndex   Int       // index dans le tableau keyQuestions de l'AnalyseIA
+  questionText    String    @db.Text
+  answer          String?   @db.Text
+  targetSectionId String?   // section où la réponse sera mobilisée
+  answeredById    String?
+  answeredAt      DateTime?
+
+  projet          Projet    @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  answeredBy      User?     @relation(fields: [answeredById], references: [id])
+
+  @@unique([projetId, questionIndex])
+  @@map("projet_key_question_answers")
+}
+
+// Q&A par section pour la rédaction guidée
+model DocumentSectionQA {
+  id              String    @id @default(cuid())
+  documentId      String    @unique
+  sectionId       String    // ex: "executive_summary", "methodology"
+  questions       Json      // [{ id, text, category, answer, answeredAt }]
+  generatedAt     DateTime  @default(now())
+  lastDraftAt     DateTime?
+  draftCostUsd    Float?
+
+  document        Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@map("document_section_qa")
+}
+
+// ============================================================
+// PHASE 3 — SYSTÈME DE GESTION DE MARCHÉS PUBLICS
+// Inspiré des meilleurs systèmes mondiaux (SAM.gov, TED, GeM, KONEPS)
+// ============================================================
+
+// ============================================================
+// FOURNISSEURS (Fournisseurs inscrits sur la plateforme)
+// ============================================================
+
+enum FournisseurStatut {
+  EN_ATTENTE    // En attente de vérification
+  VERIFIE       // Vérifié et approuvé
+  REJETE        // Rejeté
+  SUSPENDU      // Suspendu temporairement
+  BLACKLISTE    // Liste noire
+}
+
+enum FournisseurCategorie {
+  ENTREPRISE_INDIVIDUELLE
+  SARL
+  SA
+  ONG_NATIONALE
+  ONG_INTERNATIONALE
+  COOPERATIVE
+  CONSORTIUM
+  AUTRE
+}
+
+model Fournisseur {
+  id                String              @id @default(cuid())
+  raisonSociale     String
+  sigle             String?
+  categorie         FournisseurCategorie @default(ENTREPRISE_INDIVIDUELLE)
+  numeroRccm        String?             @unique  // Registre du Commerce
+  numeroNif         String?             @unique  // Numéro d'Identification Fiscale
+  numeroCnps         String?             @unique  // CNPS (sécurité sociale)
+
+  // Contact
+  email             String              @unique
+  telephone         String?
+  adresse           String?
+  ville             String?
+  pays              String              @default("Tchad")
+  siteWeb           String?
+
+  // Représentant légal
+  representantNom   String?
+  representantTitre String?
+  representantEmail String?
+  representantTel   String?
+
+  // Capacités
+  domainesExpertise String[]            // ["santé", "éducation", "infrastructure", ...]
+  certifications    String[]            // ["ISO 9001", "PMP", ...]
+  anneesExperience  Int?
+  effectif          Int?
+  chiffreAffaires   Float?
+
+  // Documents
+  logoUrl           String?
+  documentsLegaux   Json?               // [{ type, url, expirationDate }]
+
+  // Vérification
+  statut            FournisseurStatut   @default(EN_ATTENTE)
+  verifiePar        String?
+  verifieAt         DateTime?
+  notesVerification String?             @db.Text
+
+  // Utilisateur lié (optionnel)
+  userId            String?             @unique
+  user              User?               @relation(fields: [userId], references: [id])
+
+  soumissions       Soumission[]
+  evaluations       EvaluationFournisseur[]
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([statut])
+  @@index([categorie])
+  @@index([domainesExpertise])
+  @@map("fournisseurs")
+}
+
+// ============================================================
+// APPELS D'OFFRES (Tenders / Marchés publics)
+// ============================================================
+
+enum AppelOffreStatut {
+  BROUILLON
+  PUBLIE           // Publiquement visible
+  EN_COURS         // Période de soumission ouverte
+  CLOTURE          // Date limite atteinte
+  EN_EVALUATION    // Évaluation des offres en cours
+  ATTRIBUE         // Marché attribué
+  ANNULE           // Annulé
+  ARCHIVE
+}
+
+enum AppelOffreType {
+  APPEL_OFFRES_OUVERT
+  APPEL_OFFRES_RESTREINT
+  MARCHE_NEGOCIE
+  CONSULTATION
+  GRE_A_GRE
+}
+
+enum AppelOffreCategorie {
+  TRAVAUX           // Construction / infrastructure
+  FOURNITURES       // Biens / équipements
+  SERVICES          // Services intellectuels
+  MIXTE             // Combinaison
+}
+
+model AppelOffre {
+  id                String              @id @default(cuid())
+  reference         String              @unique  // Numéro de référence unique
+  titre             String
+  description       String              @db.Text
+
+  // Classification
+  type              AppelOffreType      @default(APPEL_OFFRES_OUVERT)
+  categorie         AppelOffreCategorie @default(SERVICES)
+  secteur           String?             // "santé", "éducation", "infrastructure"
+
+  // Bailleur / Financeur
+  bailleurId        String
+  bailleur          Bailleur            @relation(fields: [bailleurId], references: [id])
+
+  // Montant
+  budgetEstime      Float?
+  devise            String              @default("FCFA")
+  budgetDetail      Json?               // Détail par poste
+
+  // Dates
+  datePublication   DateTime            @default(now())
+  dateLimiteDepot   DateTime            // Date limite de soumission
+  dateOuverture     DateTime?           // Date d'ouverture des plis
+  dateAttribution   DateTime?
+  dateDebutMarche   DateTime?
+  dureeMarche       Int?                // Durée en jours
+
+  // Localisation
+  pays              String              @default("Tchad")
+  region            String?
+  lieuExecution     String?
+
+  // Critères d'éligibilité
+  criteresEligibilite Json?             // { experienceMin, chiffreAffairesMin, certifications, pays }
+  criteresEvaluation  Json?             // [{ critere, poids, sousCriteres }]
+
+  // Documents de l'appel d'offre
+  documentsAppelOffre Json?             // [{ titre, url, type, obligatoire }]
+
+  // Statut et visibilité
+  statut            AppelOffreStatut    @default(BROUILLON)
+  estPublic         Boolean             @default(true)  // Visible publiquement
+
+  // Projet lié (optionnel)
+  projetId          String?
+  projet            Projet?             @relation(fields: [projetId], references: [id])
+
+  soumissions       Soumission[]
+  resultats         AppelOffreResultat?
+
+  // Métadonnées
+  createdBy         String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([statut])
+  @@index([type])
+  @@index([categorie])
+  @@index([bailleurId])
+  @@index([dateLimiteDepot])
+  @@index([secteur])
+  @@map("appels_offres")
+}
+
+// ============================================================
+// SOUMISSIONS (Offres déposées par les fournisseurs)
+// ============================================================
+
+enum SoumissionStatut {
+  BROUILLON
+  DEPOSEE           // Soumise avant la date limite
+  RECEVABLE         // Vérifiée et recevable
+  NON_RECEVABLE     // Non recevable (critères non respectés)
+  EN_EVALUATION     // En cours d'évaluation
+  RETENUE           // Retenue / gagnante
+  REJETEE           // Rejetée
+  DESISTEE          // Désistement du fournisseur
+}
+
+model Soumission {
+  id                String              @id @default(cuid())
+  numeroSoumission  String              @unique  // Numéro unique auto-généré
+
+  // Relations
+  appelOffreId      String
+  appelOffre        AppelOffre          @relation(fields: [appelOffreId], references: [id], onDelete: Cascade)
+  fournisseurId     String
+  fournisseur       Fournisseur         @relation(fields: [fournisseurId], references: [id])
+
+  // Contenu de l'offre
+  offreTechnique    String?             @db.Text
+  offreFinanciere   Float?              // Montant total
+  devise            String              @default("FCFA")
+  detailFinancier   Json?               // Détail par poste
+
+  // Documents joints
+  documents         Json?               // [{ titre, url, type, taille }]
+
+  // Décomposition
+  delaiExecution    Int?                // En jours
+  validiteOffre     Int?                // En jours
+
+  // Statut
+  statut            SoumissionStatut    @default(BROUILLON)
+
+  // Évaluation
+  noteTechnique     Float?
+  noteFinanciere     Float?
+  noteGlobale       Float?
+  classement        Int?
+  commentairesEvaluation String?        @db.Text
+
+  // Métadonnées
+  deposeAt          DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@unique([appelOffreId, fournisseurId])
+  @@index([appelOffreId])
+  @@index([fournisseurId])
+  @@index([statut])
+  @@map("soumissions")
+}
+
+// ============================================================
+// ÉVALUATIONS FOURNISSEURS (Historique des performances)
+// ============================================================
+
+model EvaluationFournisseur {
+  id                String              @id @default(cuid())
+  fournisseurId     String
+  fournisseur       Fournisseur         @relation(fields: [fournisseurId], references: [id], onDelete: Cascade)
+  appelOffreId      String?
+  soumissionId      String?
+
+  // Évaluation
+  noteQualite       Int?                // 1-5
+  noteDelai         Int?                // 1-5
+  noteCommunication Int?                // 1-5
+  noteGlobale       Float?              // Moyenne pondérée
+  commentaires      String?             @db.Text
+  recommande        Boolean             @default(true)
+
+  // Qui a évalué
+  evaluePar         String?
+  evalueAt          DateTime            @default(now())
+
+  createdAt         DateTime            @default(now())
+
+  @@index([fournisseurId])
+  @@map("evaluations_fournisseurs")
+}
+
+// ============================================================
+// RÉSULTATS PUBLICS (Transparence — comme TED, GeM, SAM.gov)
+// ============================================================
+
+model AppelOffreResultat {
+  id                String              @id @default(cuid())
+  appelOffreId      String              @unique
+  appelOffre        AppelOffre          @relation(fields: [appelOffreId], references: [id], onDelete: Cascade)
+
+  // Résultat
+  soumissionRetenueId String?
+  fournisseurRetenuId String?
+  fournisseurRetenuNom String?
+  montantAttribue     Float?
+  devise              String            @default("FCFA")
+
+  // Détails
+  nombreSoumissions   Int               @default(0)
+  nombreRecevables    Int               @default(0)
+  nombreEvaluees      Int               @default(0)
+  motifAttribution    String?           @db.Text
+  motifAnnulation     String?           @db.Text
+
+  // Publication
+  publieAt            DateTime?
+  publiePar           String?
+  estPublic           Boolean           @default(true)
+
+  // Documents
+  procesVerbalUrl     String?
+  avisAttributionUrl  String?
+
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@map("appels_offres_resultats")
+}
+
+// ============================================================
+// ALERTES ET NOTIFICATIONS AUTOMATIQUES
+// ============================================================
+
+enum AlerteType {
+  NOUVEL_APPEL_OFFRE
+  RAPPEL_DEADLINE
+  CHANGEMENT_STATUT
+  ATTRIBUTION_MARCHE
+  EVALUATION_REQUISE
+  DOCUMENT_MANQUANT
+}
+
+model Alerte {
+  id                String              @id @default(cuid())
+  userId            String
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type              AlerteType
+  titre             String
+  message           String
+  lien              String?
+
+  // Cible
+  appelOffreId      String?
+  soumissionId      String?
+
+  // État
+  lu                Boolean             @default(false)
+  envoyeParEmail    Boolean             @default(false)
+  emailEnvoyeAt     DateTime?
+
+  // Planification
+  planifiePour      DateTime?           // Pour les rappels futurs
+
+  createdAt         DateTime            @default(now())
+
+  @@index([userId, lu])
+  @@index([type])
+  @@index([planifiePour])
+  @@map("alertes")
+}
+
+// ============================================================
+// ABONNEMENTS AUX APPELS D'OFFRES (Alertes par secteur/bailleur)
+// ============================================================
+
+model Abonnement {
+  id                String              @id @default(cuid())
+  userId            String
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  typeFiltre        String              // "secteur", "bailleur", "categorie", "pays"
+  valeurFiltre      String              // "santé", "PNUD", "TRAVAUX", etc.
+  actif             Boolean             @default(true)
+
+  createdAt         DateTime            @default(now())
+
+  @@unique([userId, typeFiltre, valeurFiltre])
+  @@map("abonnements")
+}
