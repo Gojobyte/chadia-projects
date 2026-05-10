@@ -1,0 +1,61 @@
+# =====================================================================
+# Caddyfile · CHADIA Projects
+#
+# Phase 1 (actuelle) : déploiement sur IP nue 188.245.42.63 sans SSL.
+# Phase 2 (quand domaine acheté) : remplacer le bloc `:80` par
+#   `chadia.org` et Caddy obtiendra le certificat Let's Encrypt
+#   automatiquement.
+# =====================================================================
+
+{
+    # Pas de HTTPS auto tant qu'on n'a pas de domaine.
+    auto_https off
+
+    # Logs JSON sur stdout (Docker capture automatiquement).
+    log {
+        output stdout
+        format json
+        level INFO
+    }
+}
+
+:80 {
+    # Reverse proxy vers le gateway Next.js dans le network Docker.
+    reverse_proxy gateway:3000
+
+    # Compression gzip pour réduire le poids des pages servies.
+    encode gzip
+
+    # En-têtes de sécurité de base.
+    header {
+        # Empêche le navigateur de tenter de deviner le type MIME.
+        X-Content-Type-Options "nosniff"
+        # Bloque l'iframing hors du même domaine (anti-clickjacking).
+        X-Frame-Options "DENY"
+        # Désactive le referrer cross-origin.
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Nettoie l'en-tête Server par défaut de Caddy.
+        -Server
+    }
+
+    # Logs d'accès JSON sur stdout pour debug.
+    log {
+        output stdout
+    }
+}
+
+# =====================================================================
+# Phase 2 — décommenter quand le domaine pointera vers 188.245.42.63
+# =====================================================================
+#
+# chadia.org, www.chadia.org {
+#     reverse_proxy gateway:3000
+#     encode gzip
+#     header {
+#         Strict-Transport-Security "max-age=31536000; includeSubDomains"
+#         X-Content-Type-Options "nosniff"
+#         X-Frame-Options "DENY"
+#         Referrer-Policy "strict-origin-when-cross-origin"
+#         -Server
+#     }
+# }

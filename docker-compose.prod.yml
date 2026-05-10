@@ -1,0 +1,134 @@
+# =====================================================================
+# Production stack — Hetzner self-host avec Caddy en reverse proxy.
+# Seul Caddy expose des ports publics (80, 443). Tous les autres services
+# communiquent sur le network Docker interne `chadia` et ne sont jamais
+# accessibles directement depuis Internet.
+# =====================================================================
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - chadia
+    depends_on:
+      - gateway
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: chadia
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: chadia
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chadia"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chadia
+    # Pas de `ports:` → inaccessible depuis Internet, seul le network
+    # interne `chadia` peut l'atteindre.
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    networks:
+      - chadia
+
+  auth-service:
+    build: ./services/auth
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://chadia:${POSTGRES_PASSWORD}@postgres:5432/chadia?schema=auth
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD}
+      PORT: 3001
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - chadia
+
+  tender-service:
+    build: ./services/tender
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://chadia:${POSTGRES_PASSWORD}@postgres:5432/chadia?schema=tender
+      REDIS_URL: redis://redis:6379
+      AUTH_SERVICE_URL: http://auth-service:3001
+      NOTIFICATION_SERVICE_URL: http://notification-service:3003
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      PORT: 3002
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - chadia
+
+  notification-service:
+    build: ./services/notification
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://chadia:${POSTGRES_PASSWORD}@postgres:5432/chadia?schema=notification
+      REDIS_URL: redis://redis:6379
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      PORT: 3003
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - chadia
+
+  gateway:
+    build: ./services/gateway
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      AUTH_SERVICE_URL: http://auth-service:3001
+      TENDER_SERVICE_URL: http://tender-service:3002
+      NOTIFICATION_SERVICE_URL: http://notification-service:3003
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${PUBLIC_URL}
+      NEXT_PUBLIC_BASE_URL: ${PUBLIC_URL}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+    depends_on:
+      - auth-service
+      - tender-service
+      - notification-service
+    networks:
+      - chadia
+
+volumes:
+  pgdata:
+  redisdata:
+  caddy_data:
+  caddy_config:
+
+networks:
+  chadia:
+    driver: bridge

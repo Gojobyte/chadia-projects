@@ -1,4 +1,4 @@
-import NextAuth, { type NextAuthOptions } from "next-auth";
+import NextAuth, { type NextAuthOptions, type Session } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { AuthAPI } from "@/lib/api";
@@ -112,8 +112,9 @@ export const authOptions: NextAuthOptions = {
 const nextAuthHandler = NextAuth(authOptions);
 export const handlers = { GET: nextAuthHandler, POST: nextAuthHandler };
 
-// Server-side auth helper
-export async function auth() {
+// Server-side auth helper. Le import dynamique évite de charger
+// next-auth/next côté client.
+export async function auth(): Promise<Session | null> {
   const { getServerSession } = await import("next-auth/next");
   return getServerSession(authOptions);
 }

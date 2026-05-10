@@ -1,0 +1,34 @@
+# Dépendances locales — réinstallées via le Dockerfile
+node_modules
+
+# Build Next.js local — re-généré dans Docker
+.next
+out
+
+# Variables d'env de dev/local — la prod injecte les siennes via docker-compose
+.env
+.env.local
+.env.*.local
+.env.development
+.env.development.local
+
+# Outils dev
+.vscode
+.idea
+.DS_Store
+*.swp
+
+# Git (le code est déjà dans l'image, pas besoin de l'historique)
+.git
+.gitignore
+
+# Tests + couverture
+coverage
+*.test.ts
+*.test.tsx
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
