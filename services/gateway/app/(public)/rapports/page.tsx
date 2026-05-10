@@ -1,106 +1,64 @@
 export const metadata = {
-  title: "Rapports financiers · CHADIA",
+  title: "Rapports financiers · ONG CHADIA",
   description:
-    "Comptes annuels, rapports d'audit externes, états financiers consolidés. Sept exercices en accès libre.",
+    "États financiers SYSCOHADA déposés. Exercices 2021, 2022, 2023, 2024 · cabinet Atrio Consultance.",
 };
 
 const RAPPORTS = [
   {
-    yr: "2025",
-    em: "audité",
-    nm: "Rapport financier annuel",
-    desc:
-      "Comptes consolidés, exécution budgétaire par bailleur et secteur, projection 2026. 142 pages.",
-    audit: true,
-    pdf: "12,8 Mo",
-    pages: "142 p.",
-    cabinet: "KPMG Afrique Centrale",
-  },
-  {
     yr: "2024",
-    em: "audité",
-    nm: "Rapport financier annuel",
+    em: "bilan + DSF",
+    nm: "États financiers normalisés",
     desc:
-      "Premier exercice avec déploiement OCDS complet. 38% de fonds européens, 22% Banque Mondiale.",
+      "Bilan + Compte de résultat + Tableau des flux de trésorerie. CA services 205,5 M FCFA, résultat net 15,6 M FCFA, total bilan 64,2 M FCFA. Régime fiscal Réel.",
     audit: true,
-    pdf: "11,4 Mo",
-    pages: "128 p.",
-    cabinet: "KPMG Afrique Centrale",
+    pdf: "684 Ko · DSF 736 Ko",
+    pages: "33 fiches",
+    cabinet: "Atrio Consultance",
   },
   {
     yr: "2023",
     em: "audité",
-    nm: "Rapport financier annuel",
+    nm: "États financiers annuels",
     desc:
-      "Croissance de 14% du portefeuille, ouverture du bureau d'Abéché, premier programme USAID.",
+      "Subvention d'exploitation 578,7 M FCFA, charges de personnel 57,7 M FCFA, résultat net 1,8 M FCFA. Premier exercice à recettes externes consolidées.",
     audit: true,
-    pdf: "9,7 Mo",
-    pages: "118 p.",
-    cabinet: "KPMG Afrique Centrale",
+    pdf: "5,2 Mo",
+    pages: "complet",
+    cabinet: "Atrio Consultance",
   },
   {
     yr: "2022",
     em: "audité",
-    nm: "Rapport financier annuel",
+    nm: "États financiers annuels",
     desc:
-      "Année de consolidation post-Covid. Réorganisation logistique et démarrage de l'agroécologie.",
+      "Exercice de structuration. Mise en place du Bureau Exécutif acté le 15 octobre. Premières missions documentées AUDA-NEPAD (Tchad, Rwanda, Côte d'Ivoire).",
     audit: true,
-    pdf: "8,9 Mo",
-    pages: "104 p.",
-    cabinet: "KPMG Afrique Centrale",
+    pdf: "5,1 Mo",
+    pages: "complet",
+    cabinet: "Atrio Consultance",
   },
   {
     yr: "2021",
     em: "audité",
-    nm: "Rapport financier annuel",
-    desc: "Extension régionale Cameroun & RCA. Première convention pluriannuelle UE-ECHO.",
+    nm: "États financiers annuels",
+    desc:
+      "Exercice de référence pour la consolidation comptable au format SYSCOHADA. Base des comparaisons d'évolution N/N-1 des exercices suivants.",
     audit: true,
-    pdf: "7,6 Mo",
-    pages: "92 p.",
-    cabinet: "Mazars Afrique",
-  },
-  {
-    yr: "2020",
-    em: "audité",
-    nm: "Rapport financier annuel",
-    desc: "Adaptation Covid · réponse d'urgence sur 3 200 ménages, redéploiement nutrition.",
-    audit: true,
-    pdf: "6,8 Mo",
-    pages: "84 p.",
-    cabinet: "Mazars Afrique",
-  },
-  {
-    yr: "2019",
-    em: "audité",
-    nm: "Rapport financier annuel",
-    desc: "Année de la reconnaissance d'utilité publique. Premier audit externe complet.",
-    audit: true,
-    pdf: "5,9 Mo",
-    pages: "76 p.",
-    cabinet: "Mazars Afrique",
-  },
-  {
-    yr: "2018",
-    nm: "Bilan & comptes simplifiés",
-    desc: "Avant audit externe. États financiers déposés au Greffe selon la loi tchadienne.",
-    audit: false,
-    pdf: "2,1 Mo",
-    pages: "34 p.",
-    cabinet: "Auto-publié",
-  },
-  {
-    yr: "2017",
-    nm: "Bilan & comptes simplifiés",
-    desc: "Période de structuration administrative. Croissance financée majoritairement par ECHO.",
-    audit: false,
-    pdf: "1,8 Mo",
-    pages: "28 p.",
-    cabinet: "Auto-publié",
+    pdf: "5,0 Mo",
+    pages: "complet",
+    cabinet: "Atrio Consultance",
   },
 ];
 
+const KPI = [
+  { l: "CA services 2024", v: "205", em: "M FCFA", d: "Croissance vs 2023 (subventions reclassées)" },
+  { l: "Résultat net 2024", v: "15,6", em: "M FCFA", d: "+776% vs 2023 (résultat net 1,8 M FCFA)" },
+  { l: "Bilan total 2024", v: "64,2", em: "M FCFA", d: "Légère contraction · trésorerie consolidée" },
+  { l: "Charges personnel", v: "42,2", em: "M FCFA", d: "8 salariés (5 employés + 3 cadres)" },
+];
+
 export default function RapportsPage() {
-  const auditedCount = RAPPORTS.filter((r) => r.audit).length;
   return (
     <>
       <section className="phero">
@@ -108,18 +66,35 @@ export default function RapportsPage() {
           <div className="eyebrow">
             <span className="rule"></span> Rapports financiers · accès libre
           </div>
-          <h1>Sept ans <em>de comptes</em> publiés.</h1>
+          <h1>Quatre exercices <em>déposés</em>.</h1>
           <p className="lede">
-            Chaque exercice clôt par un <strong>rapport audité par cabinet international</strong> et
-            publié intégralement, sans tronçonnage. Les états financiers consolidés, le détail
-            par bailleur et l&apos;exécution budgétaire sont annexés.{" "}
-            <strong>Aucune réserve</strong> sur les six derniers audits.
+            Nos états financiers sont préparés au <strong>format normalisé SYSCOHADA</strong> et déposés chaque année auprès de la Direction Générale des Impôts (Centre de N&apos;Djamena). Le cabinet <strong>Atrio Consultance</strong>, inscrit à l&apos;Ordre National des Experts-Comptables, vise nos comptes et atteste leur conformité.
           </p>
           <div className="phero-meta">
-            <span><strong>9</strong> exercices publiés</span>
-            <span><strong>{auditedCount}</strong> rapports audités</span>
-            <span>Cabinet <strong>KPMG Afrique Centrale</strong> depuis 2022</span>
-            <span>Conforme normes <strong>OHADA / SYSCOA</strong></span>
+            <span><strong>4</strong> exercices disponibles · 2021–2024</span>
+            <span>Format <strong>SYSCOHADA</strong> (OHADA)</span>
+            <span>Visa <strong>Atrio Consultance</strong> · BP 6118 N&apos;Djamena</span>
+            <span>Régime fiscal <strong>Réel</strong></span>
+          </div>
+        </div>
+      </section>
+
+      <section className="impact">
+        <div className="psection-wrap">
+          <div className="section-eyebrow">
+            <span className="rule"></span> Exercice 2024 · vue d&apos;ensemble
+          </div>
+          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(40px,5vw,64px)", lineHeight: 1, letterSpacing: "-0.02em", fontWeight: 400, margin: "0 0 32px", maxWidth: "24ch" }}>
+            Quatre indicateurs <em style={{ fontStyle: "italic", color: "var(--color-terracotta)" }}>clés.</em>
+          </h2>
+          <div className="impact-grid">
+            {KPI.map((i) => (
+              <div key={i.l} className="imp">
+                <div className="l">{i.l}</div>
+                <div className="v">{i.v}<em>{i.em}</em></div>
+                <div className="d">{i.d}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -131,11 +106,11 @@ export default function RapportsPage() {
           </div>
           <h2>Tous les <em>exercices.</em></h2>
           <p className="lede">
-            Téléchargement libre · format PDF/A archivable · données brutes en CSV sur demande.
+            Téléchargement disponible sur demande à <strong>chadiaong@gmail.com</strong>. Les états bruts sont conservés au siège (Quartier Kabalaye, N&apos;Djamena) et le dépôt légal est effectué auprès du Ministère des Finances.
           </p>
           <div className="rapports-grid">
             {RAPPORTS.map((r) => (
-              <a key={r.yr} href="#" className="rapport-card">
+              <a key={r.yr} href="mailto:chadiaong@gmail.com?subject=Demande%20rapport%20financier%20CHADIA" className="rapport-card">
                 <div className="yr">
                   {r.yr}
                   {r.em && <em> · {r.em}</em>}
@@ -146,7 +121,7 @@ export default function RapportsPage() {
                   <span><i className="ph ph-file-pdf"></i> {r.pdf}</span>
                   <span>{r.pages}</span>
                   {r.audit ? (
-                    <span className="audit">audité {r.cabinet}</span>
+                    <span className="audit">visé {r.cabinet}</span>
                   ) : (
                     <span>{r.cabinet}</span>
                   )}
@@ -160,25 +135,42 @@ export default function RapportsPage() {
       <section className="psection alt">
         <div className="psection-wrap">
           <div className="section-eyebrow">
-            <span className="rule"></span> Données ouvertes
+            <span className="rule"></span> Détail de l&apos;exercice 2024
           </div>
-          <h2>Au-delà du PDF : <em>la donnée brute.</em></h2>
+          <h2>Ce que nos <em>chiffres racontent.</em></h2>
           <p className="lede">
-            Toutes les attributions de marchés sont publiées en open data au standard{" "}
-            <strong>OCDS v1.1 (Open Contracting Data Standard)</strong> — un format adopté par 50
-            gouvernements et organisations multilatérales. Notre flux est mis à jour
-            automatiquement à chaque délibération de jury.
+            L&apos;exercice 2024 est le premier à présenter un chiffre d&apos;affaires consolidé sur les services (formation, conseil, ingénierie entrepreneuriale) — résultat des contrats SPE et autres missions sectorielles.
           </p>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 24 }}>
-            <a href="#" className="pbtn pbtn--accent">
-              Télécharger CSV <i className="ph ph-download"></i>
-            </a>
-            <a href="#" className="pbtn">
-              Télécharger JSON <i className="ph ph-download"></i>
-            </a>
-            <a href="#" className="pbtn pbtn--ghost">
-              Documentation OCDS <i className="ph ph-arrow-up-right"></i>
-            </a>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginTop: 32 }}>
+            <div style={{ padding: 24, background: "var(--color-surface)", border: "1px solid var(--color-line)", borderRadius: 6 }}>
+              <h3 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 400, margin: "0 0 12px" }}>Produits 2024</h3>
+              <dl style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "8px 16px", margin: 0, fontSize: 14 }}>
+                <dt style={{ color: "var(--color-sepia)" }}>Services vendus (HT)</dt>
+                <dd style={{ margin: 0, fontFamily: "var(--font-mono)" }}>205 454 854</dd>
+                <dt style={{ color: "var(--color-sepia)" }}>Valeur ajoutée</dt>
+                <dd style={{ margin: 0, fontFamily: "var(--font-mono)" }}>60 349 724</dd>
+                <dt style={{ color: "var(--color-sepia)" }}>Excédent brut d&apos;exploitation</dt>
+                <dd style={{ margin: 0, fontFamily: "var(--font-mono)" }}>18 195 179</dd>
+                <dt style={{ color: "var(--color-sepia)", fontWeight: 600 }}>Résultat net</dt>
+                <dd style={{ margin: 0, fontFamily: "var(--font-mono)", color: "var(--color-success)", fontWeight: 600 }}>15 614 370</dd>
+              </dl>
+            </div>
+            <div style={{ padding: 24, background: "var(--color-surface)", border: "1px solid var(--color-line)", borderRadius: 6 }}>
+              <h3 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 400, margin: "0 0 12px" }}>Charges 2024</h3>
+              <dl style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "8px 16px", margin: 0, fontSize: 14 }}>
+                <dt style={{ color: "var(--color-sepia)" }}>Charges de personnel</dt>
+                <dd style={{ margin: 0, fontFamily: "var(--font-mono)" }}>42 154 545</dd>
+                <dt style={{ color: "var(--color-sepia)" }}>Sous-traitance générale</dt>
+                <dd style={{ margin: 0, fontFamily: "var(--font-mono)" }}>22 451 454</dd>
+                <dt style={{ color: "var(--color-sepia)" }}>Formation du personnel</dt>
+                <dd style={{ margin: 0, fontFamily: "var(--font-mono)" }}>10 945 329</dd>
+                <dt style={{ color: "var(--color-sepia)" }}>Entretien & maintenance</dt>
+                <dd style={{ margin: 0, fontFamily: "var(--font-mono)" }}>6 558 545</dd>
+                <dt style={{ color: "var(--color-sepia)" }}>Impôt sur le résultat</dt>
+                <dd style={{ margin: 0, fontFamily: "var(--font-mono)" }}>5 465 030</dd>
+              </dl>
+            </div>
           </div>
         </div>
       </section>

@@ -1,30 +1,30 @@
 export const metadata = {
-  title: "Contact · CHADIA",
+  title: "Contact · ONG CHADIA",
   description:
-    "Bailleur, fournisseur, journaliste, partenaire — réponse sous 48 heures ouvrées. Mécanisme de plainte indépendant disponible.",
+    "ONG CHADIA — Quartier Kabalaye, BP 6118 N'Djamena. Téléphone +235 65 62 62 40 · chadiaong@gmail.com.",
 };
 
 const CHANNELS = [
   {
-    titre: "Pour ",
-    em: "les bailleurs",
-    desc: "Conventions, financement, comptes-rendus.",
-    contact: "bailleurs@chadia.td",
+    titre: "Direction ",
+    em: "Générale",
+    desc: "Conventions, partenariats institutionnels, missions stratégiques.",
+    contact: "chadiaong@gmail.com",
     delay: "Réponse < 48h ouvrées",
   },
   {
-    titre: "Pour ",
-    em: "les fournisseurs",
-    desc: "Inscription, mises à jour de dossier, suivi de soumission.",
-    contact: "fournisseurs@chadia.td",
+    titre: "Programmes ",
+    em: "& projets",
+    desc: "Suivi des programmes, planification de missions, demandes opérationnelles.",
+    contact: "chadiaong@gmail.com",
     delay: "Réponse < 48h ouvrées",
   },
   {
-    titre: "Pour ",
-    em: "la presse",
-    desc: "Demandes d'interviews, données chiffrées, accès terrain.",
-    contact: "presse@chadia.td",
-    delay: "Réponse < 24h",
+    titre: "Signalement ",
+    em: "EAS / PEAS",
+    desc: "Mécanisme confidentiel pour tout incident d'exploitation, abus, harcèlement.",
+    contact: "Voie de référence interne PEAS",
+    delay: "Traitement sous 7 jours",
   },
 ];
 
@@ -36,17 +36,14 @@ export default function ContactPage() {
           <div className="eyebrow">
             <span className="rule"></span> Contact · une porte ouverte
           </div>
-          <h1>Une équipe <em>à votre écoute.</em></h1>
+          <h1>L&apos;équipe <em>de CHADIA</em> à votre écoute.</h1>
           <p className="lede">
-            Bailleur, fournisseur, journaliste, étudiant·e, organisation partenaire ou
-            bénéficiaire — nos équipes sont à votre disposition.{" "}
-            <strong>Réponse sous 48 heures ouvrées.</strong> Pour les signalements relevant du
-            mécanisme de plainte, un canal indépendant est disponible plus bas sur cette page.
+            Bailleur, partenaire institutionnel, entreprise du secteur privé, journaliste, organisation de la société civile, ou bénéficiaire d&apos;un de nos programmes — nos équipes sont à votre disposition. <strong>Réponse sous 48 heures ouvrées.</strong> Pour les signalements relevant du mécanisme PEAS / EAS, un canal interne confidentiel est disponible plus bas sur cette page.
           </p>
           <div className="phero-meta">
-            <span>Siège <strong>N&apos;Djamena</strong></span>
-            <span>5 bureaux régionaux</span>
-            <span>Téléphone <strong>+235 22 45 11 28</strong></span>
+            <span>Siège <strong>N&apos;Djamena · Quartier Kabalaye</strong></span>
+            <span>Téléphone <strong>+235 65 62 62 40</strong></span>
+            <span>Mobile <strong>+235 92 29 94 36</strong></span>
             <span>Lundi → vendredi · 8h–17h</span>
           </div>
         </div>
@@ -61,13 +58,12 @@ export default function ContactPage() {
               </div>
               <h2>Un message, <em>une réponse.</em></h2>
               <p className="lede" style={{ fontSize: 15 }}>
-                Choisissez le canal correspondant à votre demande. Pour les questions générales,
-                utilisez le formulaire ci-dessous.
+                Le formulaire ci-dessous est traité par la coordination de l&apos;ONG. Précisez l&apos;objet de votre demande pour qu&apos;elle soit routée au bon interlocuteur (partenariats institutionnels, programmes, communication, sauvegarde).
               </p>
 
               <form
                 className="contact-form"
-                action="mailto:contact@chadia.td"
+                action="mailto:chadiaong@gmail.com"
                 method="post"
                 encType="text/plain"
               >
@@ -93,10 +89,11 @@ export default function ContactPage() {
                   <label htmlFor="objet">Objet de la demande</label>
                   <select id="objet" name="objet">
                     <option>Demande d&apos;information générale</option>
-                    <option>Bailleur — convention ou financement</option>
-                    <option>Fournisseur — inscription ou suivi</option>
-                    <option>Presse — demande d&apos;interview</option>
-                    <option>Partenariat opérationnel</option>
+                    <option>Partenariat institutionnel (bailleur, ONG, agence)</option>
+                    <option>Partenariat secteur privé (formation, conseil)</option>
+                    <option>Suivi d&apos;un programme en cours</option>
+                    <option>Demande de presse / communication</option>
+                    <option>Demande d&apos;emploi / stage</option>
                     <option>Autre</option>
                   </select>
                 </div>
@@ -112,35 +109,47 @@ export default function ContactPage() {
 
             <aside className="contact-info">
               <div className="section-eyebrow">
-                <span className="rule"></span> Coordonnées
+                <span className="rule"></span> Coordonnées officielles
               </div>
               <dl>
                 <dt>Siège · N&apos;Djamena</dt>
                 <dd>
-                  <strong>Avenue Mobutu, BP 1284</strong><br/>
-                  N&apos;Djamena, République du Tchad<br/>
-                  Lundi–vendredi · 8h–17h
+                  <strong>Quartier Kabalaye</strong><br/>
+                  En face stade Idriss MHT OUYA<br/>
+                  N&apos;Djamena, République du Tchad
                 </dd>
-                <dt>Téléphone</dt>
-                <dd><strong>+235 22 45 11 28</strong></dd>
-                <dt>E-mails directs</dt>
+                <dt>Boîte postale</dt>
+                <dd><strong>BP 6118 N&apos;Djamena</strong></dd>
+                <dt>Téléphones</dt>
+                <dd>
+                  <strong>+235 65 62 62 40</strong><br/>
+                  <strong>+235 92 29 94 36</strong><br/>
+                  <span style={{ fontSize: 12, color: "var(--color-stone)" }}>Lundi → vendredi · 8h–17h (UTC+1)</span>
+                </dd>
+                <dt>E-mail</dt>
+                <dd><strong>chadiaong@gmail.com</strong></dd>
+                <dt>Direction Générale</dt>
+                <dd>
+                  <strong>Tidjani SALAH</strong><br/>
+                  Coordinateur du Bureau Exécutif<br/>
+                  Directeur Général
+                </dd>
+                <dt>Canaux thématiques</dt>
                 <dd>
                   {CHANNELS.map((c) => (
-                    <div key={c.contact} style={{ marginBottom: 8 }}>
-                      <strong>{c.contact}</strong><br/>
+                    <div key={c.titre + c.em} style={{ marginBottom: 10 }}>
+                      <strong>{c.titre}{c.em}</strong><br/>
                       <span style={{ fontSize: 12, color: "var(--color-stone)" }}>
-                        {c.titre}{c.em} · {c.delay}
+                        {c.desc} · {c.delay}
                       </span>
                     </div>
                   ))}
                 </dd>
-                <dt>Bureaux régionaux</dt>
-                <dd>Bol · Moundou · Abéché · Mongo · Mao</dd>
-                <dt>Mécanisme de plainte indépendant</dt>
+                <dt>Expert-comptable</dt>
                 <dd>
-                  <strong>plainte@chadia-mediation.td</strong><br/>
-                  Canal anonyme, traité sous 7 jours par un médiateur externe désigné par le
-                  comité d&apos;audit.
+                  <strong>Atrio Consultance</strong><br/>
+                  Conseil-Formation-Gestion<br/>
+                  BP 6118 N&apos;Djamena
                 </dd>
               </dl>
             </aside>

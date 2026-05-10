@@ -1,22 +1,22 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Notre mission · CHADIA",
+  title: "Notre mission · ONG CHADIA",
   description:
-    "ONG humanitaire et de développement créée à N'Djamena en 2014. Servir les communautés du bassin du Lac Tchad.",
+    "Association tchadienne pour le développement du Tchad. Formation professionnelle, accompagnement entrepreneurial, eau & assainissement, agriculture, santé.",
 };
 
 const PILLARS = [
   {
     num: "01 · Principe",
     titre: "Proximité ",
-    em: "radicale",
+    em: "terrain",
     intro:
-      "92% de nos équipes sont tchadiennes ou camerounaises. Nos bureaux sont dans les zones d'intervention — pas seulement à N'Djamena. Les décisions opérationnelles sont prises au plus près du terrain.",
+      "Notre équipe est composée à 100% de personnel national tchadien. Le siège est à N'Djamena (Quartier Kabalaye) et l'organisation déploie ses chantiers dans les zones Est et Sud du pays au plus près des bénéficiaires.",
     points: [
-      "5 bureaux régionaux : Bol, Moundou, Abéché, Mongo, Mao",
-      "Recrutement local prioritaire à compétence égale",
-      "Comités villageois associés à 100% des projets",
+      "Siège à N'Djamena · interventions Zone Est & Zone Sud",
+      "Personnel 100% tchadien (8 salariés en 2024)",
+      "Méthodologie andragogique : valoriser l'expérience des adultes",
     ],
   },
   {
@@ -24,41 +24,67 @@ const PILLARS = [
     titre: "Transparence ",
     em: "par défaut",
     intro:
-      "Tous nos marchés, contrats et bilans sont publiés en ligne — par défaut, sans demande préalable. Nous publions également les marchés non attribués et les recours pour permettre un contrôle citoyen complet.",
+      "Nos états financiers sont déposés chaque année auprès de la Direction Générale des Impôts (système comptable OHADA SYSCOHADA). Notre cadre interne est régi par un Manuel de procédures, un Plan de Management des Projets et une politique PEAS rigoureuse.",
     points: [
-      "Données ouvertes au format OCDS v1.1",
-      "Audit financier annuel par cabinet international",
-      "Mécanisme de plainte indépendant",
+      "États financiers déposés (2021, 2022, 2023, 2024)",
+      "Cabinet visa : Atrio Consultance, BP 6118 N'Djamena",
+      "Mécanisme de signalement EAS / PEAS confidentiel",
     ],
   },
   {
     num: "03 · Principe",
-    titre: "Économie ",
-    em: "locale",
+    titre: "Impact ",
+    em: "mesurable",
     intro:
-      "Nous privilégions les fournisseurs locaux et les PME du bassin du Lac, même quand cela coûte un peu plus cher. L'argent humanitaire doit irriguer l'économie qu'il soutient — pas seulement importer des biens.",
+      "Chaque programme s'achève par un rapport d'activité chiffré, une évaluation par le commanditaire et un suivi post-action à 3 et 6 mois. La progression des compétences des bénéficiaires est mesurée par tests pré et post-formation.",
     points: [
-      "36% du parc fournisseurs sont des PME locales",
-      "Réservation de lots aux PME < 50 M FCFA",
-      "Programme d'accompagnement à la conformité",
+      "Programme SPE 2024 : taux maîtrise concepts 88%",
+      "Programme AUDA-NEPAD 2022 : 145 entrepreneurs formés (3 pays)",
+      "Suivi post-formation systématique à 3 mois et 6 mois",
     ],
   },
 ];
 
-const PAYS = [
-  { num: "01", nm: "Tchad", em: true, sub: "Pays principal · 9 provinces", v: "94", unit: "%" },
-  { num: "02", nm: "Cameroun", sub: "Extrême-Nord · zone d'accueil réfugiés", v: "3", unit: "%" },
-  { num: "03", nm: "RCA", sub: "Préfecture de la Vakaga", v: "2", unit: "%" },
-  { num: "04", nm: "Soudan", sub: "Réponse Darfour · partenariat OCHA", v: "1", unit: "%" },
+const ZONES = [
+  { num: "01", nm: "N'Djamena", em: true, sub: "Siège · Quartier Kabalaye · opérations principales", v: "Siège" },
+  { num: "02", nm: "Zone Est", sub: "Chef de projets WAS/BTP · Ingénieur production", v: "Active" },
+  { num: "03", nm: "Zone Sud", sub: "Chef de projets WAS/BTP · Ingénieur production", v: "Active" },
+  { num: "04", nm: "International", sub: "Missions documentées : Rwanda · Côte d'Ivoire", v: "Ponctuel" },
 ];
 
 const TIMELINE = [
-  { yr: "2014 · fondation", titre: "Création de CHADIA ", em: "à N'Djamena", desc: "Création par 7 médecins, ingénieurs et travailleurs sociaux tchadiens, en réponse à la crise nutritionnelle dans le bassin du Lac.", major: true },
-  { yr: "2016 · première convention bailleur", titre: "Accord-cadre avec ECHO", desc: "Première convention pluriannuelle avec la direction humanitaire européenne — programme nutrition de 1,8 M€ sur 3 ans." },
-  { yr: "2019 · agrément", titre: "Reconnaissance d'utilité publique", desc: "Agrément officiel par décret présidentiel. CHADIA devient la première ONG nationale tchadienne RUP.", major: true },
-  { yr: "2021 · ouverture régionale", titre: "Extension Cameroun & RCA", desc: "Ouverture d'antennes à Maroua (Cameroun) et Birao (RCA) pour accompagner les mouvements transfrontaliers de populations." },
-  { yr: "2024 · transparence", titre: "Lancement du ", em: "registre public", desc: "Mise en ligne de la plateforme de transparence des marchés. CHADIA devient la 1ʳᵉ ONG francophone à publier ses marchés en open data OCDS.", major: true },
-  { yr: "2026 · aujourd'hui", titre: "148 salariés · 12,4 Mds FCFA gérés", desc: "Déploiement de CHADIA Projects, notre copilote numérique de gestion de cycle, pour automatiser la transparence sur l'ensemble du portefeuille." },
+  {
+    yr: "Création",
+    titre: "Fondation de ", em: "CHADIA",
+    desc: "Association tchadienne sans but lucratif, indépendante et apolitique, pour le développement économique et social du Tchad.",
+  },
+  {
+    yr: "2021–2022 · structuration",
+    titre: "Reconnaissance officielle",
+    desc: "Dépôt régulier des états financiers normalisés SYSCOHADA. Visa Atrio Consultance, partenaire expert-comptable.",
+  },
+  {
+    yr: "2022 · première mission continentale",
+    titre: "Programme AUDA-NEPAD ", em: "(Union Africaine)",
+    desc: "Séminaire MPME en ingénierie entrepreneuriale dans 3 pays — N'Djamena, Kigali, Abidjan. 145 entrepreneurs formés, 138 plans d'affaires élaborés.",
+    major: true,
+  },
+  {
+    yr: "15 octobre 2022 · gouvernance",
+    titre: "Mise en place du ", em: "Bureau Exécutif",
+    desc: "Composition officielle : Coordinateur Tidjani SALAH, Trésorier, Secrétaire comptable, Responsable communication. Présidence du CA : Khadidja Bouchoura Youssouf.",
+  },
+  {
+    yr: "2024 · partenariat secteur privé",
+    titre: "Programme SPE ", em: "formation entrepreneuriale",
+    desc: "Mission pour Solar Power Enterprise — 15 entrepreneurs formés sur 7 modules. Taux de maîtrise 88%, satisfaction 92%, attestation d'excellence.",
+    major: true,
+  },
+  {
+    yr: "2024 · clôture exercice",
+    titre: "205 M FCFA de produits",
+    desc: "Chiffre d'affaires services 205 M FCFA · résultat net 15,6 M FCFA · valeur ajoutée 60,3 M FCFA. Bilan certifié SYSCOHADA, audit comptable confié à Atrio Consultance.",
+  },
 ];
 
 export default function MissionPage() {
@@ -69,19 +95,16 @@ export default function MissionPage() {
           <div className="eyebrow">
             <span className="rule"></span> Notre mission · qui nous sommes
           </div>
-          <h1>Servir les communautés du <em>bassin du Lac.</em></h1>
+          <h1>CHADIA, <em>pour le développement</em> du Tchad.</h1>
           <p className="lede">
-            <strong>CHADIA — pour le développement du Tchad</strong> est une ONG humanitaire et de
-            développement créée à N&apos;Djamena en 2014. Nous intervenons dans les zones rurales
-            et péri-urbaines du Tchad, du Cameroun et de la République Centrafricaine — au plus
-            près des populations affectées par les crises alimentaires, climatiques et sécuritaires.
+            <strong>CHADIA — Chadia pour le Développement du Tchad (CDT)</strong> est une association tchadienne sans but lucratif, indépendante et apolitique. Depuis N&apos;Djamena (Quartier Kabalaye), nous opérons dans la <strong>formation professionnelle</strong>, l&apos;<strong>accompagnement entrepreneurial</strong>, l&apos;<strong>eau et l&apos;assainissement</strong>, l&apos;<strong>agriculture / élevage</strong>, l&apos;<strong>éducation</strong> et la <strong>santé / sécurité</strong>.
           </p>
           <div className="phero-meta">
-            <span>Créée en <strong>2014</strong></span>
-            <span><strong>148</strong> salariés · 92% nationaux</span>
-            <span><strong>4 pays</strong> d&apos;intervention</span>
-            <span><strong>2,3 M</strong> bénéficiaires depuis 2014</span>
-            <span>Reconnue d&apos;utilité publique <strong>2019</strong></span>
+            <span>Siège <strong>N&apos;Djamena · Quartier Kabalaye</strong></span>
+            <span><strong>8</strong> salariés (exercice 2024)</span>
+            <span>Comptabilité <strong>SYSCOHADA</strong></span>
+            <span>Téléphone <strong>+235 65 62 62 40</strong></span>
+            <span>BP <strong>6118 N&apos;Djamena</strong></span>
           </div>
         </div>
       </section>
@@ -90,32 +113,21 @@ export default function MissionPage() {
         <div className="manifesto-wrap">
           <div>
             <p className="quote">
-              Une humanitaire qui rend des comptes <em>à ceux qu&apos;elle sert</em> avant ses bailleurs.
+              Renforcer les capacités, c&apos;est <em>libérer le potentiel</em> d&apos;un pays.
             </p>
             <p className="quote-by">
-              <strong>Aïcha Saleh</strong>Directrice générale · co-fondatrice
+              <strong>Tidjani SALAH</strong>Directeur Général · Coordinateur du Bureau Exécutif
             </p>
           </div>
           <div className="body">
             <p>
-              CHADIA est née d&apos;un constat simple : dans le bassin du Lac Tchad, les communautés
-              affectées par les crises savent rarement <strong>combien d&apos;argent leur est destiné,
-              qui le gère, ni à quoi il sert</strong>. Nous voulons changer cela — en travaillant au
-              plus près du terrain, avec des équipes nationales, et en publiant l&apos;intégralité de
-              nos décisions de marché.
+              CHADIA est née d&apos;un constat simple : les <strong>Micro, Petites et Moyennes Entreprises tchadiennes</strong> représentent l&apos;essentiel du tissu économique, mais font face à des contraintes structurelles — accès limité aux financements, faiblesse des capacités managériales, difficultés d&apos;accès aux marchés. Nous travaillons à lever ces obstacles, projet par projet, entrepreneur par entrepreneur.
             </p>
             <p>
-              Nos programmes répondent aux urgences alimentaires et sanitaires, mais aussi à la
-              résilience long terme — accès à l&apos;eau, santé maternelle, éducation, agroécologie.
-              Nous travaillons en partenariat étroit avec les autorités locales, les organisations
-              de la société civile tchadienne et les communautés bénéficiaires elles-mêmes, qui
-              co-construisent nos plans d&apos;action.
+              Nos domaines d&apos;expertise couvrent la <strong>formation professionnelle</strong> (entrepreneuriat, finance, leadership), le <strong>conseil stratégique</strong> pour PME / TPE, l&apos;<strong>élaboration de plans d&apos;affaires bancables</strong>, l&apos;<strong>eau-assainissement (WAS)</strong>, le <strong>BTP</strong>, l&apos;<strong>agriculture-élevage</strong>, l&apos;<strong>éducation</strong> et la <strong>santé</strong>. Nos chantiers déploient des chefs de projets et ingénieurs production dans les Zone Est et Zone Sud du pays.
             </p>
             <p>
-              Nous sommes financés par <strong>l&apos;Union Européenne, la Banque Mondiale, l&apos;Agence
-              Française de Développement, les Nations Unies et l&apos;USAID</strong>, ainsi que par les
-              dons de particuliers et d&apos;entreprises tchadiennes. Notre comptabilité, nos audits
-              annuels et l&apos;intégralité de nos marchés sont publiés en accès libre sur ce site.
+              Notre méthodologie repose sur l&apos;<strong>andragogie</strong> (formation des adultes) et la <strong>pédagogie par compétences</strong>. Nos états financiers sont déposés annuellement au système SYSCOHADA et visés par le cabinet <strong>Atrio Consultance</strong>. Toutes nos missions sont sanctionnées par une attestation de bonne exécution du commanditaire.
             </p>
           </div>
         </div>
@@ -150,26 +162,24 @@ export default function MissionPage() {
             <span className="rule"></span> Où nous travaillons
           </div>
           <h2 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(40px,5vw,64px)", lineHeight: 1, letterSpacing: "-0.02em", fontWeight: 400, margin: "0 0 32px", maxWidth: "22ch" }}>
-            Quatre pays, <em style={{ fontStyle: "italic", color: "var(--color-terracotta)" }}>douze provinces.</em>
+            Tchad <em style={{ fontStyle: "italic", color: "var(--color-terracotta)" }}>et au-delà.</em>
           </h2>
           <div className="where-grid">
             <div className="where-list">
-              {PAYS.map((p) => (
+              {ZONES.map((p) => (
                 <div key={p.num} className="row">
                   <div className="num">{p.num}</div>
                   <div className="nm">
                     {p.em ? <em>{p.nm}</em> : p.nm}
                     <small>{p.sub}</small>
                   </div>
-                  <div className="v">{p.v}<em>{p.unit}</em></div>
+                  <div className="v">{p.v}</div>
                 </div>
               ))}
             </div>
             <div style={{ padding: 32, background: "var(--color-canvas)", border: "1px solid var(--color-line)", borderRadius: 6 }}>
               <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: "var(--color-sepia)" }}>
-                Notre siège est à N&apos;Djamena. Nos cinq bureaux régionaux — <strong>Bol, Moundou,
-                Abéché, Mongo, Mao</strong> — couvrent l&apos;ensemble du bassin du Lac et les zones
-                d&apos;intervention transfrontalières au Cameroun, en RCA et au Soudan.
+                Notre siège est à <strong>N&apos;Djamena (Quartier Kabalaye, en face stade Idriss MHT OUYA)</strong>. L&apos;organigramme prévoit deux zones d&apos;intervention principales pour les chantiers WAS / BTP (eau, assainissement, génie civil). Nos missions de formation entrepreneuriale ont été déployées au Tchad, au Rwanda et en Côte d&apos;Ivoire pour le compte d&apos;institutions continentales.
               </p>
             </div>
           </div>
@@ -181,14 +191,13 @@ export default function MissionPage() {
           <div className="story-grid">
             <div>
               <div className="section-eyebrow">
-                <span className="rule"></span> Notre histoire
+                <span className="rule"></span> Quelques jalons
               </div>
               <h2 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(40px,5vw,64px)", lineHeight: 1, letterSpacing: "-0.02em", fontWeight: 400, margin: "0 0 24px" }}>
-                Douze années sur le <em style={{ fontStyle: "italic", color: "var(--color-terracotta)" }}>terrain.</em>
+                Au service du <em style={{ fontStyle: "italic", color: "var(--color-terracotta)" }}>terrain.</em>
               </h2>
               <p className="lede" style={{ fontSize: 15 }}>
-                D&apos;un collectif de bénévoles tchadiens à une ONG de référence du bassin du Lac.
-                Quelques jalons qui ont compté.
+                De la mise en place du Bureau Exécutif au partenariat avec l&apos;Union Africaine et le secteur privé — quelques étapes structurantes.
               </p>
             </div>
             <div className="timeline">
@@ -209,8 +218,7 @@ export default function MissionPage() {
           <div>
             <h3>Vous souhaitez <em>collaborer</em> avec nous ?</h3>
             <p>
-              Bailleur, fournisseur, journaliste, étudiant·e, organisation partenaire — nos
-              équipes sont à votre disposition. Réponse sous 48 heures ouvrées.
+              Bailleur, partenaire institutionnel, entreprise du secteur privé, journaliste, organisation de la société civile — nos équipes répondent sous 48 heures ouvrées à chadiaong@gmail.com ou au +235 65 62 62 40.
             </p>
           </div>
           <div className="cta-actions">
@@ -218,7 +226,7 @@ export default function MissionPage() {
               Nous contacter <i className="ph ph-arrow-up-right"></i>
             </Link>
             <Link href="/rapports" className="pbtn pbtn--inverse">
-              Lire le rapport 2025 <i className="ph ph-file-pdf"></i>
+              Voir nos rapports <i className="ph ph-file-pdf"></i>
             </Link>
           </div>
         </div>
