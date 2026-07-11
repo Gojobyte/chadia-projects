@@ -204,26 +204,24 @@ export function NotificationBell() {
               </div>
             )}
             {notifs.map((n) => {
-              const Wrapper = n.lien ? Link : "div";
-              return (
-                <Wrapper
-                  key={n.id}
-                  {...(n.lien ? { href: n.lien } : {})}
-                  onClick={() => {
-                    if (!n.lu) markAsRead(n.id);
-                    if (n.lien) setOpen(false);
-                  }}
-                  style={{
-                    display: "flex",
-                    gap: 12,
-                    padding: "12px 16px",
-                    borderBottom: "1px solid var(--color-line)",
-                    cursor: "pointer",
-                    background: n.lu ? "transparent" : "var(--color-terracotta-soft)",
-                    textDecoration: "none",
-                    color: "var(--color-ink)",
-                  }}
-                >
+              // Link exige un href obligatoire : on rend deux wrappers
+              // explicites plutôt qu'un composant conditionnel non typable.
+              const rowStyle: React.CSSProperties = {
+                display: "flex",
+                gap: 12,
+                padding: "12px 16px",
+                borderBottom: "1px solid var(--color-line)",
+                cursor: "pointer",
+                background: n.lu ? "transparent" : "var(--color-terracotta-soft)",
+                textDecoration: "none",
+                color: "var(--color-ink)",
+              };
+              const handleClick = () => {
+                if (!n.lu) markAsRead(n.id);
+                if (n.lien) setOpen(false);
+              };
+              const row = (
+                <>
                   <div
                     style={{
                       width: 32,
@@ -250,7 +248,16 @@ export function NotificationBell() {
                       {n.message}
                     </p>
                   </div>
-                </Wrapper>
+                </>
+              );
+              return n.lien ? (
+                <Link key={n.id} href={n.lien} onClick={handleClick} style={rowStyle}>
+                  {row}
+                </Link>
+              ) : (
+                <div key={n.id} onClick={handleClick} style={rowStyle}>
+                  {row}
+                </div>
               );
             })}
           </div>

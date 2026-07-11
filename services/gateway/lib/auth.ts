@@ -101,8 +101,8 @@ export const authOptions: NextAuthOptions = {
         (session.user as Record<string, unknown>).id = token.id;
         (session.user as Record<string, unknown>).role = token.role;
       }
-      (session as Record<string, unknown>).authServiceToken = token.authServiceToken;
-      (session as Record<string, unknown>).googleAccessToken = token.googleAccessToken;
+      session.authServiceToken = token.authServiceToken;
+      session.googleAccessToken = token.googleAccessToken;
       return session;
     },
   },

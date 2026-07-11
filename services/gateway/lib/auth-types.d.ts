@@ -1,3 +1,7 @@
+// L'import rend ce fichier « module » : sans lui, les declare module
+// ci-dessous REMPLACENT les types de next-auth au lieu de les augmenter.
+import type {} from "next-auth";
+
 type UserRole = "DIRECTEUR" | "ADMIN" | "FINANCIER" | "MEMBRE";
 
 declare module "next-auth" {
