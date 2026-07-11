@@ -48,14 +48,30 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     steps:
+      # On attend le run CI complet pour ce SHA plutôt qu'un check nommé :
+      # les checks d'un job gated par `needs` n'existent pas encore quand
+      # Deploy démarre (CI et Deploy partent en même temps sur le push),
+      # et wait-on-check-action échoue immédiatement sur un check absent.
       - name: Wait for CI workflow
-        uses: lewagon/wait-on-check-action@v1.3.4
-        with:
-          ref: ${{ github.sha }}
-          check-name: "Docker · build smoke (gateway)"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 15
-          allowed-conclusions: success,skipped
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for i in $(seq 1 90); do
+            read -r status conclusion < <(gh run list \
+              --repo "$GITHUB_REPOSITORY" --workflow=ci.yml \
+              --commit "$GITHUB_SHA" --limit 1 \
+              --json status,conclusion \
+              --jq '.[0] | "\(.status) \(.conclusion)"') || true
+            echo "Tentative $i/90 — CI: status=${status:-absent} conclusion=${conclusion:-n/a}"
+            if [ "$status" = "completed" ]; then
+              [ "$conclusion" = "success" ] && exit 0
+              echo "::error::CI terminée avec conclusion=$conclusion"
+              exit 1
+            fi
+            sleep 20
+          done
+          echo "::error::CI toujours pas terminée après 30 min"
+          exit 1
 
   # ------------------------------------------------------------
   # 2. Déploiement SSH
