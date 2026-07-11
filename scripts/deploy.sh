@@ -98,16 +98,26 @@ else
 fi
 echo "$LOG_PREFIX 2/6 — Services à rebuilder : $SERVICES_TO_BUILD"
 
+# La détection produit des noms de dossiers (services/<nom>), mais le
+# compose nomme les services auth-service, tender-service, etc.
+COMPOSE_TARGETS=""
+for s in $SERVICES_TO_BUILD; do
+  case "$s" in
+    tender|auth|notification) COMPOSE_TARGETS="$COMPOSE_TARGETS ${s}-service" ;;
+    *)                        COMPOSE_TARGETS="$COMPOSE_TARGETS $s" ;;
+  esac
+done
+
 # -------------------------------------------------------------------
 # 3. Build + restart
 # -------------------------------------------------------------------
 echo "$LOG_PREFIX 3/6 — Build des images"
 # shellcheck disable=SC2086
-$COMPOSE build $SERVICES_TO_BUILD
+$COMPOSE build $COMPOSE_TARGETS
 
 echo "$LOG_PREFIX 4/6 — Up des conteneurs (recreate si image changée)"
 # shellcheck disable=SC2086
-$COMPOSE up -d $SERVICES_TO_BUILD
+$COMPOSE up -d $COMPOSE_TARGETS
 
 # -------------------------------------------------------------------
 # 5. Migration Prisma si tender concerné
