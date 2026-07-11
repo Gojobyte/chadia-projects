@@ -491,7 +491,64 @@ a { color: inherit; text-decoration: none; }
   position: sticky; top: 0;
   height: 100vh;
   width: var(--sidebar-w, 248px);
+  transition: width var(--dur-base, 180ms) var(--ease-out, cubic-bezier(0.2, 0.7, 0.2, 1));
 }
+
+/* ============================================================
+   App shell — layout authentifié (sidebar + main column)
+   ============================================================ */
+.app-shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  min-height: 100vh;
+  transition: grid-template-columns var(--dur-base, 180ms) var(--ease-out, cubic-bezier(0.2, 0.7, 0.2, 1));
+}
+.app-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.app-content {
+  padding: 20px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ============================================================
+   Sidebar repliée — déclenchée par <html data-sb-collapsed="true">
+   ============================================================ */
+:root[data-sb-collapsed="true"] { --sidebar-w: 68px; }
+.sidebar.is-collapsed { width: 68px; }
+.sidebar.is-collapsed .sidebar-header { padding: 16px 10px; justify-content: center; }
+.sidebar.is-collapsed .brand-block { display: none; }
+.sidebar.is-collapsed .sidebar-section { padding: 8px 8px; }
+.sidebar.is-collapsed .sidebar-section-title { display: none; }
+.sidebar.is-collapsed .nav-item { justify-content: center; padding: 8px 6px; gap: 0; }
+.sidebar.is-collapsed .nav-item .nav-icon { font-size: 18px; }
+.sidebar.is-collapsed .sidebar-footer { padding: 10px 8px; }
+.sidebar.is-collapsed .user-chip { justify-content: center; padding: 6px; gap: 0; }
+.sidebar.is-collapsed .user-chip .meta { display: none; }
+
+/* Bouton de toggle */
+.sb-toggle {
+  margin-left: auto;
+  width: 28px; height: 28px;
+  display: grid; place-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-stone);
+  cursor: pointer;
+  font-size: 16px;
+  font-family: inherit;
+  transition: background var(--dur-fast, 120ms), color var(--dur-fast, 120ms), border-color var(--dur-fast, 120ms);
+}
+.sb-toggle:hover {
+  background: var(--color-canvas);
+  border-color: var(--color-line);
+  color: var(--color-ink);
+}
+.sidebar.is-collapsed .sb-toggle { margin: 0; }
 .sidebar-header { padding: 20px 18px 18px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--color-line); }
 .brand-mark {
   width: 32px; height: 32px; border-radius: var(--radius-sm);
@@ -1299,7 +1356,16 @@ a { color: inherit; text-decoration: none; }
 /* ============================================================
    PG · pageframe (alias court pour app shell — design "Tableau de bord")
    ============================================================ */
-.pg { padding: 32px 32px 56px; max-width: 1480px; }
+.pg {
+  padding: 32px 32px 56px;
+  max-width: 1480px;
+  /* Centre le contenu dans l'espace disponible — important quand la
+     sidebar est repliée et que le 1fr du grid devient plus large. */
+  margin: 0 auto;
+}
+/* Sidebar repliée : on étend un peu le max-width pour mieux profiter
+   de l'espace gagné (~180px côté gauche). */
+:root[data-sb-collapsed="true"] .pg { max-width: 1620px; }
 .pg-h { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 32px; flex-wrap: wrap; }
 .pg-eyebrow { font-size: 11px; letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; color: var(--color-shale); font-weight: 600; }
 .pg-title { font-family: var(--font-display); font-size: 44px; line-height: 1; font-weight: 400; letter-spacing: var(--tracking-tight); margin: 8px 0 6px; }
@@ -2191,7 +2257,8 @@ a { color: inherit; text-decoration: none; }
   display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
   gap: 32px;
 }
-@media (max-width: 980px) { .siteft-wrap { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 980px) { .siteft-wrap { grid-template-columns: 1fr 1fr; padding: 0 16px; } }
+@media (max-width: 560px) { .siteft-wrap { grid-template-columns: 1fr; gap: 24px; } }
 .siteft h5 {
   font-family: var(--font-mono); font-size: 11px;
   letter-spacing: var(--tracking-eyebrow); text-transform: uppercase;
@@ -3909,3 +3976,325 @@ a { color: inherit; text-decoration: none; }
 .save-bar button.primary { background: var(--color-terracotta); color: var(--color-page); border-color: var(--color-terracotta); }
 .save-bar button.ghost { background: transparent; color: rgba(250,247,241,0.85); border-color: rgba(250,247,241,0.25); }
 .contact-info dd strong { color: var(--color-ink); font-weight: 600; }
+
+/* ============================================================
+ * A11y · prefers-reduced-motion (Sprint 2)
+ * ============================================================
+ * Désactive animations/transitions pour les utilisateurs sensibles au
+ * mouvement (troubles vestibulaires, TDAH, etc.). WCAG 2.3.3. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+ * RESPONSIVE — site public (mobile-first overrides)
+ * ============================================================
+ * Bouton hamburger (caché sur desktop, visible sur ≤980px).
+ * Sur desktop la nav reste un flex inline classique. */
+.nav-toggle {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  width: 40px; height: 40px;
+  align-items: center; justify-content: center;
+  color: var(--color-ink);
+  cursor: pointer;
+  margin-left: auto;
+  font-size: 20px;
+}
+.nav-toggle:hover { background: var(--color-canvas); }
+
+@media (max-width: 980px) {
+  .nav-toggle { display: inline-flex; }
+  /* Le menu desktop se transforme en panneau plein-écran sous le header.
+     `display: none` par défaut, révélé par .is-open. */
+  .main-nav {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--color-page);
+    z-index: var(--z-overlay, 1000);
+    padding: 80px 24px 24px;
+    flex-direction: column;
+    gap: 0;
+    overflow-y: auto;
+  }
+  .main-nav.is-open { display: flex; }
+  .main-nav a {
+    padding: 16px 0;
+    font-size: 18px;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .main-nav a.on {
+    border-bottom: 1px solid var(--color-line);
+    padding-bottom: 16px;
+  }
+  /* La langue passe à côté du toggle pour rester accessible. */
+  .lang { margin-left: 0; gap: 8px; font-size: 11px; }
+  /* Header public + banner se resserrent. */
+  .site-wrap { padding: 14px 16px; gap: 12px; }
+  .site-brand .nm { font-size: 18px; }
+  .site-brand .mark { width: 32px; height: 32px; font-size: 18px; }
+  .gov-banner .wrap { padding: 0 16px; gap: 8px; font-size: 10px; }
+}
+
+@media (max-width: 480px) {
+  .site-brand .nm em { display: none; } /* sous-titre coupé sur très petits écrans */
+  .lang { display: none; } /* déjà accessible via le menu, on libère de l'espace */
+}
+
+/* ============================================================
+ * RESPONSIVE — site privé (sidebar + topbar)
+ * ============================================================ */
+/* Bouton hamburger de la topbar — révèle/cache la sidebar en mobile. */
+.topbar-burger {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  width: 36px; height: 36px;
+  align-items: center; justify-content: center;
+  color: var(--color-ink);
+  cursor: pointer;
+  font-size: 18px;
+  flex: 0 0 auto;
+}
+.topbar-burger:hover { background: var(--color-canvas); }
+
+/* Backdrop sombre qui apparaît quand la sidebar mobile est ouverte. */
+.sidebar-backdrop {
+  display: none;
+  position: fixed; inset: 0;
+  background: oklch(0% 0 0 / 0.45);
+  z-index: calc(var(--z-overlay, 1000) - 1);
+}
+.sidebar-backdrop.is-open { display: block; }
+
+@media (max-width: 960px) {
+  /* La grille devient une simple colonne ; la sidebar se superpose. */
+  .app-shell { grid-template-columns: 1fr; }
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: 280px;
+    z-index: var(--z-overlay, 1000);
+    transform: translateX(-100%);
+    box-shadow: 0 0 32px rgba(0,0,0,0.18);
+  }
+  .sidebar.is-mobile-open { transform: translateX(0); }
+  /* Annule l'état "replié" desktop sur mobile — sur mobile elle est
+     pleine largeur (280px) quand ouverte. */
+  .sidebar.is-collapsed { width: 280px; }
+  .sidebar.is-collapsed .brand-block,
+  .sidebar.is-collapsed .sidebar-section-title,
+  .sidebar.is-collapsed .user-chip .meta { display: revert; }
+  .sidebar.is-collapsed .nav-item { justify-content: flex-start; padding: 8px 12px; gap: 10px; }
+  .sidebar.is-collapsed .nav-item .nav-icon { font-size: 16px; }
+  .sidebar.is-collapsed .sb-toggle { display: none; }
+
+  .topbar-burger { display: inline-flex; }
+  .topbar { padding: 0 16px; gap: 12px; }
+  .topbar .search { width: auto; flex: 1 1 auto; min-width: 0; max-width: 320px; }
+  .topbar .search kbd { display: none; }
+
+  /* Padding réduit sur le contenu app. */
+  .app-content { padding: 12px; }
+  .pg { padding: 20px 16px 40px; }
+  .pg-title { font-size: clamp(28px, 6vw, 44px); }
+  .pg-h { gap: 16px; margin-bottom: 24px; }
+}
+
+@media (max-width: 640px) {
+  /* Crumbs cachés sur très petits écrans (le titre de la page suffit). */
+  .topbar .crumbs { display: none; }
+  .topbar { padding: 0 12px; }
+  .topbar .search { max-width: none; }
+  .pg { padding: 16px 12px 40px; }
+  .pg-title { font-size: clamp(24px, 7vw, 36px); }
+  .pg-actions { flex-wrap: wrap; }
+  /* Grilles encore plus condensées sur mobile. */
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .sm-pipe { grid-template-columns: 1fr 1fr !important; }
+  .briefing { flex-direction: column; align-items: flex-start; gap: 16px; padding: 16px; }
+  .briefing .b-date { border-right: none; border-bottom: 1px solid var(--color-line-strong); padding-right: 0; padding-bottom: 12px; width: 100%; font-size: 28px; }
+}
+
+/* ============================================================
+ * SITE PUBLIC · REFONTE 2026 — matière photographique
+ * ============================================================
+ * La refonte introduit la photo de terrain comme matière première
+ * du site public. Traitement unique : cadre papier (surface + filet),
+ * légende mono façon rapport de terrain. */
+
+/* Figure encadrée — photo posée sur le papier */
+.pfigure {
+  margin: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-strong);
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-2);
+}
+.pfigure img {
+  display: block; width: 100%; height: 100%;
+  object-fit: cover; border-radius: 2px;
+}
+.pfigure figcaption {
+  padding: 10px 2px 2px;
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--color-shale);
+  display: flex; align-items: baseline; gap: 8px;
+}
+.pfigure figcaption::before {
+  content: "";
+  flex: 0 0 7px; height: 7px; align-self: center;
+  background: var(--color-terracotta);
+}
+.pfigure.tall img { aspect-ratio: 3 / 4; }
+.pfigure.wide img { aspect-ratio: 16 / 9; }
+.pfigure.pano img { aspect-ratio: 21 / 9; }
+.pfigure.sq img { aspect-ratio: 1 / 1; }
+
+/* Bande photo sous le hero d'accueil */
+.phero-media { margin-top: 44px; }
+
+/* Badge « en cours » — point pulsé */
+.badge-live {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: var(--tracking-eyebrow); text-transform: uppercase;
+  color: var(--color-success); font-weight: 600;
+}
+.badge-live .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--color-success);
+  box-shadow: 0 0 0 3px var(--color-success-soft);
+  animation: live-pulse 2.2s var(--ease-in-out) infinite;
+}
+@keyframes live-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px var(--color-success-soft); }
+  50% { box-shadow: 0 0 0 7px rgba(91, 138, 58, 0.06); }
+}
+.psection.dark .badge-live { color: oklch(0.78 0.1 145); }
+
+/* Diptyque avant / pendant */
+.duo { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+/* Galerie terrain — grille irrégulière 12 colonnes */
+.pgallery { display: grid; grid-template-columns: repeat(12, 1fr); gap: 24px; }
+.pgallery > * { grid-column: span 4; }
+.pgallery > *:nth-child(6n+1),
+.pgallery > *:nth-child(6n+5) { grid-column: span 7; }
+.pgallery > *:nth-child(6n+2),
+.pgallery > *:nth-child(6n+4) { grid-column: span 5; }
+.pgallery .pfigure img { aspect-ratio: 4 / 3; }
+
+/* Chaîne de financement — du bailleur au terrain */
+.chain { display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px; }
+.chain .node {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-strong);
+  border-top: 2px solid var(--color-ink);
+  border-radius: var(--radius-sm);
+  padding: 22px 20px;
+  position: relative;
+}
+.chain .node.hot { border-top-color: var(--color-terracotta); }
+.chain .node + .node::before {
+  content: "→";
+  position: absolute; left: -30px; top: 24px;
+  font-family: var(--font-display); font-size: 22px;
+  color: var(--color-terracotta);
+}
+.chain .node .who {
+  font-family: var(--font-display); font-size: 24px;
+  line-height: 1.05; letter-spacing: -0.01em;
+  margin-bottom: 8px; color: var(--color-ink);
+}
+.chain .node .role {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: var(--tracking-eyebrow); text-transform: uppercase;
+  color: var(--color-terracotta); font-weight: 600; margin-bottom: 10px;
+}
+.chain .node p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--color-sepia); }
+
+/* Domaines d'action — colonnes filetées */
+.domains-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px 32px; }
+.domain { border-top: 2px solid var(--color-ink); padding-top: 16px; }
+.domain .num {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--color-terracotta); letter-spacing: 0.08em; margin-bottom: 10px;
+}
+.domain h3 {
+  font-family: var(--font-display); font-size: 24px;
+  font-weight: 400; letter-spacing: -0.01em;
+  margin: 0 0 8px; line-height: 1.1;
+}
+.domain h3 em { font-style: italic; color: var(--color-terracotta); }
+.domain p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--color-sepia); }
+
+/* Bandeau partenaires — noms en serif, séparés par des points */
+.partners-strip {
+  display: flex; flex-wrap: wrap; align-items: baseline;
+  gap: 8px 18px;
+  font-family: var(--font-display); font-size: 26px;
+  color: var(--color-shale); letter-spacing: -0.01em;
+}
+.partners-strip .sep { color: var(--color-terracotta); font-size: 18px; }
+.partners-strip em { font-style: italic; }
+
+/* Bloc projet phare (accueil) */
+.feature-grid {
+  display: grid; grid-template-columns: 1.05fr 1fr;
+  gap: 56px; align-items: start;
+}
+.feature-photos { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.feature-photos .pfigure:nth-child(2) { margin-top: 32px; }
+.feature-facts {
+  display: flex; gap: 28px; flex-wrap: wrap;
+  font-family: var(--font-mono); font-size: 12px;
+  color: var(--color-shale);
+  padding-top: 20px; margin-top: 4px;
+  border-top: 1px solid var(--color-line);
+}
+.psection.dark .feature-facts { border-top-color: rgba(250,247,241,0.18); color: rgba(250,247,241,0.6); }
+.feature-facts strong { color: var(--color-ink); font-weight: 500; }
+.psection.dark .feature-facts strong { color: var(--color-page); }
+
+/* Liste d'impact — résultats attendus */
+.impact-list { border-top: 2px solid var(--color-ink); }
+.impact-list .imp {
+  display: grid; grid-template-columns: 64px 1fr;
+  gap: 24px; align-items: baseline;
+  padding: 18px 0; border-bottom: 1px solid var(--color-line);
+}
+.impact-list .imp .n {
+  font-family: var(--font-display); font-size: 30px;
+  color: var(--color-terracotta); font-style: italic;
+}
+.impact-list .imp p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--color-ink); }
+.impact-list .imp p small { display: block; font-size: 13px; color: var(--color-shale); margin-top: 2px; }
+
+/* Responsive du bloc refonte */
+@media (max-width: 980px) {
+  .duo, .feature-grid, .feature-photos { grid-template-columns: 1fr; }
+  .feature-photos .pfigure:nth-child(2) { margin-top: 0; }
+  .pgallery { grid-template-columns: 1fr; }
+  .pgallery > * { grid-column: 1 / -1 !important; }
+  .chain { grid-template-columns: 1fr; gap: 28px; }
+  .chain .node + .node::before {
+    content: "↓";
+    left: 20px; top: -28px;
+  }
+  .domains-grid { grid-template-columns: 1fr; gap: 28px; }
+  .partners-strip { font-size: 20px; }
+  .phero-media .pfigure.pano img { aspect-ratio: 4 / 3; }
+}

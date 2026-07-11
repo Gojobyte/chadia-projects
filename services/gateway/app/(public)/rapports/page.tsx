@@ -12,9 +12,10 @@ const RAPPORTS = [
     desc:
       "Bilan + Compte de résultat + Tableau des flux de trésorerie. CA services 205,5 M FCFA, résultat net 15,6 M FCFA, total bilan 64,2 M FCFA. Régime fiscal Réel.",
     audit: true,
-    pdf: "684 Ko · DSF 736 Ko",
+    pdf: "Bilan + DSF",
     pages: "33 fiches",
     cabinet: "Atrio Consultance",
+    href: "/docs/finance/bilan-2024.pdf",
   },
   {
     yr: "2023",
@@ -23,9 +24,10 @@ const RAPPORTS = [
     desc:
       "Subvention d'exploitation 578,7 M FCFA, charges de personnel 57,7 M FCFA, résultat net 1,8 M FCFA. Premier exercice à recettes externes consolidées.",
     audit: true,
-    pdf: "5,2 Mo",
+    pdf: "PDF",
     pages: "complet",
     cabinet: "Atrio Consultance",
+    href: "/docs/finance/etats-financiers-2023.pdf",
   },
   {
     yr: "2022",
@@ -34,9 +36,10 @@ const RAPPORTS = [
     desc:
       "Exercice de structuration. Mise en place du Bureau Exécutif acté le 15 octobre. Premières missions documentées AUDA-NEPAD (Tchad, Rwanda, Côte d'Ivoire).",
     audit: true,
-    pdf: "5,1 Mo",
+    pdf: "PDF",
     pages: "complet",
     cabinet: "Atrio Consultance",
+    href: "/docs/finance/etats-financiers-2022.pdf",
   },
   {
     yr: "2021",
@@ -45,10 +48,18 @@ const RAPPORTS = [
     desc:
       "Exercice de référence pour la consolidation comptable au format SYSCOHADA. Base des comparaisons d'évolution N/N-1 des exercices suivants.",
     audit: true,
-    pdf: "5,0 Mo",
+    pdf: "PDF",
     pages: "complet",
     cabinet: "Atrio Consultance",
+    href: "/docs/finance/etats-financiers-2021.pdf",
   },
+];
+
+// DSF (Déclarations Statistiques et Fiscales) — documents fiscaux séparés
+// des bilans. Utiles pour les contrôles de l'administration fiscale.
+const DSF = [
+  { yr: "DSF 2024", href: "/docs/finance/dsf-2024.pdf", desc: "Déclaration Statistique et Fiscale · exercice 2024" },
+  { yr: "DSF 2025", href: "/docs/finance/dsf-2025.pdf", desc: "Déclaration Statistique et Fiscale · exercice 2025 (en cours)" },
 ];
 
 const KPI = [
@@ -106,11 +117,17 @@ export default function RapportsPage() {
           </div>
           <h2>Tous les <em>exercices.</em></h2>
           <p className="lede">
-            Téléchargement disponible sur demande à <strong>chadiaong@gmail.com</strong>. Les états bruts sont conservés au siège (Quartier Kabalaye, N&apos;Djamena) et le dépôt légal est effectué auprès du Ministère des Finances.
+            Téléchargement direct ci-dessous. Les états bruts sont conservés au siège (Quartier Kabalaye, N&apos;Djamena) et le dépôt légal est effectué auprès du Ministère de l&apos;Économie et de la Planification du Développement.
           </p>
           <div className="rapports-grid">
             {RAPPORTS.map((r) => (
-              <a key={r.yr} href="mailto:chadiaong@gmail.com?subject=Demande%20rapport%20financier%20CHADIA" className="rapport-card">
+              <a
+                key={r.yr}
+                href={r.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rapport-card"
+              >
                 <div className="yr">
                   {r.yr}
                   {r.em && <em> · {r.em}</em>}
@@ -128,6 +145,29 @@ export default function RapportsPage() {
                 </div>
               </a>
             ))}
+          </div>
+
+          {/* Bloc DSF — documents fiscaux séparés du bilan */}
+          <div style={{ marginTop: 32, padding: 20, background: "var(--color-canvas)", border: "1px solid var(--color-line)", borderRadius: 6 }}>
+            <div style={{ fontSize: 11, letterSpacing: "var(--tracking-eyebrow)", textTransform: "uppercase", color: "var(--color-shale)", fontWeight: 600, marginBottom: 8 }}>
+              Déclarations fiscales (DSF) complémentaires
+            </div>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              {DSF.map((d) => (
+                <a
+                  key={d.yr}
+                  href={d.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "var(--color-surface)", border: "1px solid var(--color-line)", borderRadius: 4, fontSize: 13, color: "var(--color-ink)", textDecoration: "none" }}
+                  title={d.desc}
+                >
+                  <i className="ph ph-file-pdf" style={{ color: "var(--color-terracotta)" }}></i>
+                  {d.yr}
+                  <i className="ph ph-arrow-up-right" style={{ fontSize: 12, color: "var(--color-stone)" }}></i>
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       </section>

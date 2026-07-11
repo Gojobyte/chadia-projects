@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Contact · ONG CHADIA",
   description:
-    "ONG CHADIA — Quartier Kabalaye, BP 6118 N'Djamena. Téléphone +235 65 62 62 40 · chadiaong@gmail.com.",
+    "ONG CHADIA — Quartier Kabalaye, BP 6118 N'Djamena. Téléphone +235 65 62 62 40 · tidjani@chadia-ong.org.",
 };
 
 const CHANNELS = [
@@ -9,14 +9,14 @@ const CHANNELS = [
     titre: "Direction ",
     em: "Générale",
     desc: "Conventions, partenariats institutionnels, missions stratégiques.",
-    contact: "chadiaong@gmail.com",
+    contact: "tidjani@chadia-ong.org",
     delay: "Réponse < 48h ouvrées",
   },
   {
     titre: "Programmes ",
     em: "& projets",
     desc: "Suivi des programmes, planification de missions, demandes opérationnelles.",
-    contact: "chadiaong@gmail.com",
+    contact: "tidjani@chadia-ong.org",
     delay: "Réponse < 48h ouvrées",
   },
   {
@@ -41,9 +41,11 @@ export default function ContactPage() {
             Bailleur, partenaire institutionnel, entreprise du secteur privé, journaliste, organisation de la société civile, ou bénéficiaire d&apos;un de nos programmes — nos équipes sont à votre disposition. <strong>Réponse sous 48 heures ouvrées.</strong> Pour les signalements relevant du mécanisme PEAS / EAS, un canal interne confidentiel est disponible plus bas sur cette page.
           </p>
           <div className="phero-meta">
-            <span>Siège <strong>N&apos;Djamena · Quartier Kabalaye</strong></span>
+            <span>Siège <strong>Quartier Kabalaye · avenue Bezo · N&apos;Djamena</strong></span>
             <span>Téléphone <strong>+235 65 62 62 40</strong></span>
             <span>Mobile <strong>+235 92 29 94 36</strong></span>
+            <span>E-mail <strong>tidjani@chadia-ong.org</strong></span>
+            <span>N° d&apos;agrément <strong>154/PCMT/PMT/MEPDCI/SE/SPONGAH/2021</strong></span>
             <span>Lundi → vendredi · 8h–17h</span>
           </div>
         </div>
@@ -63,7 +65,7 @@ export default function ContactPage() {
 
               <form
                 className="contact-form"
-                action="mailto:chadiaong@gmail.com"
+                action="mailto:tidjani@chadia-ong.org"
                 method="post"
                 encType="text/plain"
               >
@@ -127,7 +129,7 @@ export default function ContactPage() {
                   <span style={{ fontSize: 12, color: "var(--color-stone)" }}>Lundi → vendredi · 8h–17h (UTC+1)</span>
                 </dd>
                 <dt>E-mail</dt>
-                <dd><strong>chadiaong@gmail.com</strong></dd>
+                <dd><strong>tidjani@chadia-ong.org</strong></dd>
                 <dt>Direction Générale</dt>
                 <dd>
                   <strong>Tidjani SALAH</strong><br/>

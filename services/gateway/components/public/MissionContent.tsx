@@ -84,16 +84,20 @@ const TIMELINE = [
 export function MissionContent() {
   return (
     <>
-      <section className="phero">
-        <div className="phero-wrap">
-          <div className="eyebrow">
-            <span className="rule"></span> Notre mission · qui nous sommes
-          </div>
+      <section className="hero-full">
+        <img
+          className="bg"
+          src="/images/tchad/guelta-archei-ennedi.webp"
+          alt="La guelta d'Archei dans le massif de l'Ennedi, patrimoine mondial de l'UNESCO, Tchad"
+        />
+        <div className="veil"></div>
+        <div className="hf-wrap">
+          <div className="kicker">Notre mission · qui nous sommes</div>
           <h1>CHADIA, <em>pour le développement</em> du Tchad.</h1>
           <p className="lede">
             <strong>CHADIA — Chadia pour le Développement du Tchad (CDT)</strong> est une association tchadienne sans but lucratif, indépendante et apolitique. Depuis N&apos;Djamena (Quartier Kabalaye), nous opérons dans la <strong>formation professionnelle</strong>, l&apos;<strong>accompagnement entrepreneurial</strong>, l&apos;<strong>eau et l&apos;assainissement</strong>, l&apos;<strong>agriculture / élevage</strong>, l&apos;<strong>éducation</strong> et la <strong>santé / sécurité</strong>.
           </p>
-          <div className="phero-meta">
+          <div className="hf-meta">
             <span>Siège <strong>N&apos;Djamena · Quartier Kabalaye</strong></span>
             <span><strong>8</strong> salariés (exercice 2024)</span>
             <span>Comptabilité <strong>SYSCOHADA</strong></span>
@@ -101,6 +105,7 @@ export function MissionContent() {
             <span>BP <strong>6118 N&apos;Djamena</strong></span>
           </div>
         </div>
+        <span className="credit">Guelta d&apos;Archei · Ennedi (UNESCO) — photo anmede · CC BY-SA 2.0</span>
       </section>
 
       <section className="manifesto">
@@ -132,8 +137,8 @@ export function MissionContent() {
           <div className="section-eyebrow">
             <span className="rule"></span> Trois principes · une boussole
           </div>
-          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(40px,5vw,64px)", lineHeight: 1, letterSpacing: "-0.02em", fontWeight: 400, margin: "0 0 32px", maxWidth: "22ch" }}>
-            Ce qui guide chaque <em style={{ fontStyle: "italic", color: "var(--color-terracotta)" }}>décision.</em>
+          <h2>
+            Ce qui guide chaque <em>décision.</em>
           </h2>
           <div className="pillars-grid">
             {PILLARS.map((p) => (
@@ -155,8 +160,8 @@ export function MissionContent() {
           <div className="section-eyebrow">
             <span className="rule"></span> Où nous travaillons
           </div>
-          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(40px,5vw,64px)", lineHeight: 1, letterSpacing: "-0.02em", fontWeight: 400, margin: "0 0 32px", maxWidth: "22ch" }}>
-            Tchad <em style={{ fontStyle: "italic", color: "var(--color-terracotta)" }}>et au-delà.</em>
+          <h2>
+            Tchad <em>et au-delà.</em>
           </h2>
           <div className="where-grid">
             <div className="where-list">
@@ -187,8 +192,8 @@ export function MissionContent() {
               <div className="section-eyebrow">
                 <span className="rule"></span> Quelques jalons
               </div>
-              <h2 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(40px,5vw,64px)", lineHeight: 1, letterSpacing: "-0.02em", fontWeight: 400, margin: "0 0 24px" }}>
-                Au service du <em style={{ fontStyle: "italic", color: "var(--color-terracotta)" }}>terrain.</em>
+              <h2>
+                Au service du <em>terrain.</em>
               </h2>
               <p className="lede" style={{ fontSize: 15 }}>
                 De la mise en place du Bureau Exécutif au partenariat avec l&apos;Union Africaine et le secteur privé — quelques étapes structurantes.
@@ -212,15 +217,15 @@ export function MissionContent() {
           <div>
             <h3>Vous souhaitez <em>collaborer</em> avec nous ?</h3>
             <p>
-              Bailleur, partenaire institutionnel, entreprise du secteur privé, journaliste, organisation de la société civile — nos équipes répondent sous 48 heures ouvrées à chadiaong@gmail.com ou au +235 65 62 62 40.
+              Bailleur, partenaire institutionnel, entreprise du secteur privé, journaliste, organisation de la société civile — nos équipes répondent sous 48 heures ouvrées à tidjani@chadia-ong.org ou au +235 65 62 62 40.
             </p>
           </div>
           <div className="cta-actions">
             <Link href="/contact" className="pbtn pbtn--accent">
               Nous contacter <i className="ph ph-arrow-up-right"></i>
             </Link>
-            <Link href="/rapports" className="pbtn pbtn--inverse">
-              Voir nos rapports <i className="ph ph-file-pdf"></i>
+            <Link href="/resultats" className="pbtn pbtn--inverse">
+              Voir nos résultats <i className="ph ph-chart-line-up"></i>
             </Link>
           </div>
         </div>

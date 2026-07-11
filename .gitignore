@@ -52,3 +52,10 @@ next-env.d.ts
 # Documents administratifs internes ONG CHADIA (source PDF/Word)
 doc-source/
 docs-source/
+
+# États financiers — réservés aux bailleurs, jamais sur GitHub (repo public)
+services/gateway/public/docs/finance/
+
+# Sauvegardes locales et sources brutes (photos WhatsApp, zips)
+Caddyfile.bak.*
+_legacy/public/

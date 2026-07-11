@@ -15,9 +15,16 @@ export function middleware(request: NextRequest) {
     "/marches",
     "/resultats",
     "/mission",
+    "/precom",
+    // Photos du site public (reportages terrain, projet PRECOM, logo) —
+    // servies depuis services/gateway/public/images/.
+    "/images",
     "/gouvernance",
-    "/rapports",
     "/contact",
+    // Rapports d'activité publics uniquement. Les états financiers
+    // (/rapports et /docs/finance) sont réservés à l'espace connecté :
+    // communiqués aux bailleurs sur demande, comme chez les grandes ONG.
+    "/docs/rapports-activites",
   ];
   const isPublicHome = pathname === "/";
   const isPublic = isPublicHome || PUBLIC_PATHS.some((p) => pathname.startsWith(p));

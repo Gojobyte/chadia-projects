@@ -46,84 +46,6 @@ const STRUCT = [
   },
 ];
 
-const TEAM_CA = [
-  {
-    initiales: "KB",
-    nm: "Khadidja Bouchoura Youssouf",
-    role: "Conseil d'Administration",
-    titre: "Présidente du CA",
-    em: "Élue 15 oct. 2022",
-    bio: "Préside le Conseil d'administration de l'ONG CHADIA. Veille à la conformité de l'organisation aux statuts et à la cohérence des engagements stratégiques avec la mission de développement du Tchad.",
-    meta: "Conseil d'administration",
-  },
-  {
-    initiales: "AM",
-    nm: "Amine Moustapha Saleh",
-    role: "Conseil d'Administration",
-    titre: "Vice-Président du CA",
-    em: "Élu 15 oct. 2022",
-    bio: "Vice-Président du Conseil d'administration. Seconde la Présidente et supervise l'application des décisions du Conseil au sein du Bureau Exécutif.",
-    meta: "Conseil d'administration",
-  },
-  {
-    initiales: "SK",
-    nm: "Salah Khastalani",
-    role: "Conseil d'Administration",
-    titre: "Commissaire au Compte",
-    em: "Contrôle indépendant",
-    bio: "Commissaire au Compte de l'ONG. Examine les états financiers et certifie la régularité et la sincérité des comptes annuels présentés à l'Assemblée Générale.",
-    meta: "Contrôle indépendant",
-  },
-];
-
-const TEAM_BE = [
-  {
-    initiales: "TS",
-    nm: "Tidjani SALAH",
-    role: "Bureau Exécutif",
-    titre: "Directeur Général",
-    em: "Coordinateur",
-    bio: "Coordonne l'ensemble des opérations de l'ONG CHADIA. Représente l'organisation auprès des partenaires institutionnels (AUDA-NEPAD, ministères tchadiens) et du secteur privé.",
-    meta: "Direction Générale · BP 6118 N'Djamena",
-  },
-  {
-    initiales: "AI",
-    nm: "Amine Idriss",
-    role: "Bureau Exécutif",
-    titre: "Responsable Communication",
-    em: "Communication externe",
-    bio: "Pilote la communication institutionnelle de l'ONG CHADIA, les relations avec la presse et le suivi des publications réglementaires.",
-    meta: "Bureau Exécutif",
-  },
-  {
-    initiales: "MH",
-    nm: "Moustapha Hisseine Ahmat",
-    role: "Bureau Exécutif",
-    titre: "Trésorier",
-    em: "Trésorerie & finances",
-    bio: "Trésorier du Bureau Exécutif. Suit la trésorerie, valide les engagements bancaires et garantit la disponibilité des fonds pour les opérations courantes.",
-    meta: "Bureau Exécutif",
-  },
-  {
-    initiales: "BM",
-    nm: "Brahim Mahamat ALI",
-    role: "Bureau Exécutif",
-    titre: "Secrétaire comptable",
-    em: "Tenue comptable",
-    bio: "Assure la tenue de la comptabilité quotidienne, l'archivage des pièces justificatives et la préparation des états financiers avant visa du cabinet expert-comptable.",
-    meta: "Bureau Exécutif",
-  },
-];
-
-const DOCS = [
-  { ic: "ph-scroll", nm: "Manuel de procédures ", em: "CHADIA", sub: "Procédures opérationnelles internes · achats et marchés" },
-  { ic: "ph-clipboard-text", nm: "Plan de Management ", em: "des Projets (PMP)", sub: "Cadre de gouvernance projet · cycle complet" },
-  { ic: "ph-shield-check", nm: "Manuel PEAS ", em: "CHADIA", sub: "Prévention de l'Exploitation et des Abus Sexuels" },
-  { ic: "ph-first-aid", nm: "Manuel sécurité, santé ", em: "et environnement", sub: "Normes SSE applicables sur les chantiers" },
-  { ic: "ph-car-profile", nm: "Manuel ", em: "voyages et missions", sub: "Cadre pour les missions terrain et déplacements" },
-  { ic: "ph-package", nm: "Procédure ", em: "gestion des biens", sub: "Inventaire, mouvements et amortissements" },
-];
-
 export default function GouvernancePage() {
   return (
     <>
@@ -167,90 +89,6 @@ export default function GouvernancePage() {
         </div>
       </section>
 
-      <section className="team">
-        <div className="psection-wrap">
-          <div className="section-eyebrow">
-            <span className="rule"></span> Conseil d&apos;Administration
-          </div>
-          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(40px,5vw,64px)", lineHeight: 1, letterSpacing: "-0.02em", fontWeight: 400, margin: "0 0 8px", maxWidth: "22ch" }}>
-            Trois membres <em style={{ fontStyle: "italic", color: "var(--color-terracotta)" }}>élus.</em>
-          </h2>
-          <p className="lede" style={{ fontSize: 15 }}>
-            Élus en Assemblée Générale du 15 octobre 2022. Le CA supervise les orientations stratégiques de l&apos;association.
-          </p>
-          <div className="team-grid">
-            {TEAM_CA.map((p) => (
-              <div key={p.initiales} className="person">
-                <div className="photo">
-                  <span className="role-tag">{p.role}</span>
-                  <i className="ph ph-user-circle"></i>
-                </div>
-                <div className="body">
-                  <h4>{p.nm}<em>{p.titre} · {p.em}</em></h4>
-                  <p className="bio">{p.bio}</p>
-                  <div className="meta">{p.meta}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="team" style={{ paddingTop: 0 }}>
-        <div className="psection-wrap">
-          <div className="section-eyebrow">
-            <span className="rule"></span> Bureau Exécutif
-          </div>
-          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(40px,5vw,64px)", lineHeight: 1, letterSpacing: "-0.02em", fontWeight: 400, margin: "0 0 8px", maxWidth: "22ch" }}>
-            L&apos;équipe <em style={{ fontStyle: "italic", color: "var(--color-terracotta)" }}>opérationnelle.</em>
-          </h2>
-          <p className="lede" style={{ fontSize: 15 }}>
-            Équipe désignée par le Conseil d&apos;administration, en charge de l&apos;exécution des programmes et de la gestion quotidienne.
-          </p>
-          <div className="team-grid">
-            {TEAM_BE.map((p) => (
-              <div key={p.initiales} className="person">
-                <div className="photo">
-                  <span className="role-tag">{p.role}</span>
-                  <i className="ph ph-user-circle"></i>
-                </div>
-                <div className="body">
-                  <h4>{p.nm}<em>{p.titre} · {p.em}</em></h4>
-                  <p className="bio">{p.bio}</p>
-                  <div className="meta">{p.meta}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="docs">
-        <div className="psection-wrap">
-          <div className="section-eyebrow">
-            <span className="rule"></span> Cadre normatif interne
-          </div>
-          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(40px,5vw,64px)", lineHeight: 1, letterSpacing: "-0.02em", fontWeight: 400, margin: "0 0 8px", maxWidth: "22ch" }}>
-            Les textes qui <em style={{ fontStyle: "italic", color: "var(--color-terracotta)" }}>nous obligent.</em>
-          </h2>
-          <p className="lede" style={{ fontSize: 15 }}>
-            Six manuels et procédures officiels qui encadrent toutes nos opérations — du recrutement à la passation de marchés, en passant par la sauvegarde des bénéficiaires.
-          </p>
-          <div className="docs-grid">
-            {DOCS.map((d) => (
-              <a key={d.nm} href="#" className="doc-card">
-                <span className="ic"><i className={`ph ${d.ic}`}></i></span>
-                <span className="nm">
-                  {d.nm}<em>{d.em}</em>
-                  <small>{d.sub}</small>
-                </span>
-                <i className="ph ph-arrow-up-right arrow"></i>
-              </a>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <section className="ethics">
         <div className="psection-wrap">
           <div className="section-eyebrow">
@@ -275,9 +113,9 @@ export default function GouvernancePage() {
               <div className="l">02 · Audit comptable annuel</div>
               <h4>États financiers <em>visés</em></h4>
               <p>
-                Cabinet <strong>Atrio Consultance</strong> (BP 6118 N&apos;Djamena). Dépôt au système OHADA SYSCOHADA chaque année. Exercices 2021, 2022, 2023 et 2024 disponibles.
+                Cabinet <strong>Atrio Consultance</strong> (BP 6118 N&apos;Djamena). Dépôt au système OHADA SYSCOHADA chaque année. Exercices 2021 à 2024 communiqués aux bailleurs et partenaires sur demande.
               </p>
-              <Link href="/rapports">Consulter les rapports <i className="ph ph-arrow-up-right"></i></Link>
+              <Link href="/contact">Demander l&apos;accès aux états financiers <i className="ph ph-arrow-up-right"></i></Link>
             </div>
             <div className="ethics-cell">
               <div className="l">03 · Tolérance zéro EAS / VBG</div>
@@ -285,7 +123,7 @@ export default function GouvernancePage() {
               <p>
                 Code de conduite individuel signé par chaque agent, plan de formation PEAS, procédures de recrutement sécurisé, voies d&apos;orientation des survivantes.
               </p>
-              <Link href="#">Voir la politique de sauvegarde <i className="ph ph-arrow-up-right"></i></Link>
+              <Link href="/contact">Nous écrire pour en savoir plus <i className="ph ph-arrow-up-right"></i></Link>
             </div>
           </div>
         </div>

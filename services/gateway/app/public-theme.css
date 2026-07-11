@@ -1,0 +1,823 @@
+/* ============================================================
+   ONG CHADIA · SITE PUBLIC — Direction « Prestige » (refonte 2026)
+   ============================================================
+   Peau graphique du site vitrine, scopée sous `.pub` pour ne pas
+   toucher l'application privée (qui reste sur la direction Sahel).
+
+   Vocabulaire — inspiré des grandes fondations internationales
+   (charity: water, Obama Foundation, WaterAid, Age of Union) :
+   — Fraunces, serif éditorial en bas-de-casse : la voix posée
+     d'une institution. Les <em> deviennent des italiques dorés
+     ou émeraude, jamais des surligneurs.
+   — Archivo pour le texte courant, IBM Plex Mono réservé à la
+     donnée (chiffres, références, légendes).
+   — Palette : ivoire chaud, vert forêt profond, un accent
+     émeraude et une pointe d'or. Filets fins, rayons doux,
+     ombres diffuses. Zéro capitale criarde.
+   ============================================================ */
+
+.pub {
+  /* ---------- Palette Prestige (écrase les tokens Sahel) ---------- */
+  --pub-forest:       #11291e;   /* sections sombres, footer */
+  --pub-forest-deep:  #0b1e15;   /* bandeau république */
+  --pub-green:        #17734d;   /* accent principal */
+  --pub-green-hover:  #115c3d;
+  --pub-green-press:  #0d4a31;
+  --pub-gold:         #d9a441;   /* pointe d'or — italiques sur fond sombre */
+  --pub-gold-soft:    #e8c15e;
+
+  --color-page:        #faf9f5;
+  --color-canvas:      #f2efe7;
+  --color-surface:     #ffffff;
+  --color-surface-2:   #f5f2ea;
+  --color-line:        #e5e0d3;
+  --color-line-strong: #cfc8b6;
+  --color-mineral:     #a49b84;
+  --color-stone:       #85806f;
+  --color-shale:       #5a584c;
+  --color-sepia:       #343931;
+  --color-ink:         #17211b;
+
+  --color-terracotta:        var(--pub-green); /* accents texte hérités */
+  --color-terracotta-hover:  var(--pub-green-hover);
+  --color-terracotta-press:  var(--pub-green-press);
+  --color-terracotta-soft:   rgba(23, 115, 77, 0.10);
+  --color-terracotta-line:   rgba(23, 115, 77, 0.35);
+
+  /* ---------- Typographie Prestige ---------- */
+  --font-display: var(--pub-font-display), Georgia, serif;
+  --font-sans:    var(--pub-font-sans), system-ui, sans-serif;
+  --font-mono:    var(--pub-font-mono), ui-monospace, monospace;
+
+  background: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   PRIMITIVES — titres, italiques, boutons, filets
+   ============================================================ */
+
+/* Fraunces en bas-de-casse : l'autorité tranquille. */
+.pub h1, .pub h2,
+.pub .phero h1, .pub .psection h2,
+.pub .cta h3 {
+  font-family: var(--font-display);
+  font-weight: 470;
+  text-transform: none;
+  letter-spacing: -0.015em;
+}
+
+/* L'italique émeraude — signature de la refonte. */
+.pub h1 em, .pub h2 em, .pub .cta h3 em,
+.pub .phero h1 em, .pub .psection h2 em {
+  font-style: italic;
+  font-weight: 430;
+  color: var(--pub-green);
+  background: none;
+  padding: 0;
+}
+
+.pub ::selection { background: var(--pub-green); color: #fff; }
+
+/* Boutons — pilules sobres, bas-de-casse */
+.pub .pbtn {
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.005em;
+  padding: 13px 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+.pub .pbtn:hover { transform: translateY(-1px); }
+.pub .pbtn--accent {
+  background: var(--pub-green);
+  border-color: var(--pub-green);
+  color: #fff;
+  box-shadow: 0 10px 24px -12px rgba(23, 115, 77, 0.55);
+}
+.pub .pbtn--accent:hover { background: var(--pub-green-hover); border-color: var(--pub-green-hover); color: #fff; }
+.pub .pbtn--ghost { border-color: rgba(23, 33, 27, 0.25); color: var(--color-ink); }
+.pub .pbtn--ghost:hover { border-color: var(--color-ink); background: var(--color-ink); color: var(--color-page); }
+.pub .pbtn--inverse { border-color: rgba(255, 255, 255, 0.45); color: #fff; }
+.pub .pbtn--inverse:hover { background: #fff; border-color: #fff; color: var(--pub-forest); }
+
+/* Sourcils de section — petites capitales espacées, filet fin */
+.pub .section-eyebrow, .pub .phero .eyebrow {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--pub-green);
+}
+.pub .section-eyebrow .rule, .pub .phero .eyebrow .rule {
+  flex: 0 0 28px;
+  height: 1px;
+  background: var(--pub-green);
+}
+
+/* ============================================================
+   BANDEAU RÉPUBLIQUE + HEADER + NAV
+   ============================================================ */
+.pub .gov-banner {
+  background: var(--pub-forest-deep);
+  border-bottom: none;
+}
+.pub .gov-banner .wrap {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: rgba(250, 249, 245, 0.6);
+}
+.pub .gov-banner .wrap strong { color: var(--pub-gold-soft); font-weight: 600; }
+.pub .gov-banner .wrap a { color: rgba(250, 249, 245, 0.7); }
+.pub .gov-banner .wrap a:hover { color: #fff; }
+.pub .gov-banner .wrap a.gov-login {
+  border: 1px solid rgba(217, 164, 65, 0.45);
+  color: var(--pub-gold-soft);
+  border-radius: 999px;
+}
+.pub .gov-banner .wrap a.gov-login:hover { background: var(--pub-gold); border-color: var(--pub-gold); color: var(--pub-forest-deep); }
+
+.pub .site {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  background: rgba(250, 249, 245, 0.88);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--color-line);
+}
+.pub .site-brand .mark-img {
+  height: 44px;
+  width: auto;
+  display: block;
+}
+.pub .site-brand .nm {
+  font-family: var(--font-display);
+  font-weight: 560;
+  font-size: 21px;
+  letter-spacing: 0.05em;
+}
+.pub .site-brand .nm em {
+  font-style: normal;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-stone);
+}
+.pub .main-nav { gap: 28px; }
+.pub .main-nav a {
+  position: relative;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  text-transform: none;
+  color: var(--color-shale);
+}
+.pub .main-nav a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -5px;
+  width: 100%;
+  height: 2px;
+  background: var(--pub-green);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s var(--ease-out);
+}
+.pub .main-nav a:hover::after { transform: scaleX(1); }
+.pub .main-nav a.on::after { display: none; }
+.pub .main-nav a:hover { color: var(--color-ink); }
+.pub .main-nav a.on {
+  color: var(--color-ink);
+  border-bottom: 2px solid var(--pub-green);
+  padding-bottom: 3px;
+}
+.pub .lang a.on { background: var(--pub-forest); color: var(--color-page); border-radius: 999px; }
+.pub .nav-toggle { border-radius: 10px; border: 1px solid var(--color-line-strong); }
+
+/* ============================================================
+   HÉROS PHOTO PLEIN ÉCRAN (accueil, PRECOM)
+   ============================================================ */
+.pub .hero-full {
+  position: relative;
+  min-height: 86vh;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  background: var(--pub-forest);
+}
+.pub .hero-full .bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: pub-drift 18s var(--ease-out) both;
+}
+@keyframes pub-drift {
+  from { transform: scale(1.06); }
+  to { transform: scale(1); }
+}
+.pub .hero-full .veil {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, rgba(8, 22, 15, 0.9) 0%, rgba(8, 22, 15, 0.38) 48%, rgba(8, 22, 15, 0.1) 100%),
+    linear-gradient(105deg, rgba(8, 22, 15, 0.5) 0%, transparent 55%);
+}
+.pub .hero-full .hf-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 130px 32px 60px;
+}
+.pub .hero-full .kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(250, 249, 245, 0.85);
+  margin-bottom: 24px;
+}
+.pub .hero-full .kicker::before {
+  content: "";
+  width: 30px;
+  height: 1px;
+  background: var(--pub-gold-soft);
+}
+.pub .hero-full h1 {
+  color: #fdfcf8;
+  font-size: clamp(42px, 6.2vw, 92px);
+  line-height: 1.04;
+  margin: 0 0 26px;
+  max-width: 18ch;
+}
+.pub .hero-full h1 em { color: var(--pub-gold-soft); }
+.pub .hero-full .lede {
+  font-size: clamp(16px, 1.6vw, 19px);
+  line-height: 1.6;
+  color: rgba(250, 249, 245, 0.82);
+  max-width: 58ch;
+  margin: 0 0 32px;
+}
+.pub .hero-full .lede strong { color: #fff; font-weight: 600; }
+.pub .hero-full .hf-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 38px; }
+.pub .hero-full .hf-meta {
+  display: flex;
+  gap: 12px 40px;
+  flex-wrap: wrap;
+  border-top: 1px solid rgba(250, 249, 245, 0.22);
+  padding-top: 20px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  color: rgba(250, 249, 245, 0.55);
+}
+.pub .hero-full .hf-meta strong { color: rgba(255, 255, 255, 0.95); font-weight: 500; }
+.pub .hero-full .credit {
+  position: absolute;
+  right: 20px;
+  bottom: 16px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(250, 249, 245, 0.4);
+  writing-mode: vertical-rl;
+}
+
+/* Entrée orchestrée du héros */
+@keyframes pub-rise {
+  from { opacity: 0; transform: translateY(22px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.pub .hero-full .kicker,
+.pub .hero-full h1,
+.pub .hero-full .lede,
+.pub .hero-full .hf-actions,
+.pub .hero-full .hf-meta {
+  animation: pub-rise 0.8s var(--ease-out) both;
+}
+.pub .hero-full h1 { animation-delay: 0.1s; }
+.pub .hero-full .lede { animation-delay: 0.2s; }
+.pub .hero-full .hf-actions { animation-delay: 0.3s; }
+.pub .hero-full .hf-meta { animation-delay: 0.4s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pub .hero-full .bg { animation: none; }
+  .pub .hero-full .kicker, .pub .hero-full h1, .pub .hero-full .lede,
+  .pub .hero-full .hf-actions, .pub .hero-full .hf-meta { animation: none; }
+}
+
+/* ============================================================
+   HÉROS TYPOGRAPHIQUE (pages intérieures)
+   ============================================================ */
+.pub .phero {
+  padding: 88px 0 64px;
+  border-bottom: 1px solid var(--color-line);
+}
+.pub .phero h1 {
+  font-size: clamp(42px, 5.6vw, 80px);
+  line-height: 1.05;
+}
+.pub .phero .lede { font-size: 17px; line-height: 1.65; color: var(--color-shale); }
+.pub .phero-meta {
+  border-top: 1px solid var(--color-line);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
+/* ============================================================
+   SECTIONS & COMPOSANTS ÉDITORIAUX
+   ============================================================ */
+.pub .psection { padding: 104px 0; }
+.pub .psection h2 {
+  font-size: clamp(32px, 4vw, 56px);
+  line-height: 1.08;
+}
+.pub .psection.alt {
+  background: var(--color-canvas);
+  border-top: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+}
+.pub .psection.dark { background: var(--pub-forest); }
+.pub .psection.dark h2 { color: #fdfcf8; }
+.pub .psection.dark h2 em { color: var(--pub-gold-soft); }
+.pub .psection.dark .lede { color: rgba(250, 249, 245, 0.72); }
+.pub .psection.dark .section-eyebrow { color: var(--pub-gold-soft); }
+.pub .psection.dark .section-eyebrow .rule { background: var(--pub-gold-soft); }
+
+/* Bande de chiffres — ivoire, numéraux serif géants, filets fins */
+.pub .counters {
+  background: var(--color-page);
+  border-top: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+  padding: 78px 0;
+}
+.pub .counter {
+  border-right: none;
+  border-top: 1px solid var(--color-ink);
+  padding-top: 22px;
+}
+.pub .counter .l {
+  color: var(--pub-green);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+}
+.pub .counter .v {
+  font-family: var(--font-display);
+  font-weight: 380;
+  color: var(--color-ink);
+  font-size: clamp(52px, 5.4vw, 78px);
+  letter-spacing: -0.02em;
+}
+.pub .counter .v em {
+  font-style: italic;
+  color: var(--color-stone);
+  font-size: 0.42em;
+  font-weight: 420;
+}
+.pub .counter .d { color: var(--color-shale); font-size: 13px; line-height: 1.5; }
+
+/* Figures photo — tirages doux, ombre diffuse */
+.pub .pfigure {
+  border: 1px solid var(--color-line);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(23, 33, 27, 0.05), 0 24px 48px -28px rgba(23, 33, 27, 0.3);
+  padding: 0;
+  background: var(--color-surface);
+}
+.pub .pfigure { overflow: hidden; }
+.pub .pfigure img {
+  border-radius: 0;
+  transition: transform 0.7s var(--ease-out);
+}
+.pub .pfigure:hover img { transform: scale(1.045); }
+.pub .pfigure figcaption {
+  background: var(--color-surface);
+  color: var(--color-stone);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 12px 16px;
+}
+.pub .pfigure figcaption::before { background: var(--pub-green); }
+.pub .psection.dark .pfigure {
+  border-color: rgba(250, 249, 245, 0.14);
+  background: var(--pub-forest-deep);
+  box-shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.55);
+}
+.pub .psection.dark .pfigure figcaption {
+  background: var(--pub-forest-deep);
+  color: rgba(250, 249, 245, 0.6);
+}
+.pub .psection.dark .pfigure figcaption::before { background: var(--pub-gold-soft); }
+
+/* Bande photo plein écran — citation en surimpression */
+.pub .photo-band {
+  position: relative;
+  min-height: 62vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--pub-forest);
+}
+.pub .photo-band > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pub .photo-band .pb-veil {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% 50%, rgba(8, 22, 15, 0.7) 0%, rgba(8, 22, 15, 0.5) 100%);
+}
+.pub .photo-band blockquote {
+  position: relative;
+  margin: 0;
+  padding: 96px 32px;
+  max-width: 940px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 440;
+  font-size: clamp(26px, 3.4vw, 46px);
+  line-height: 1.28;
+  color: #fdfcf8;
+}
+.pub .photo-band blockquote em { font-style: italic; color: var(--pub-gold-soft); }
+.pub .photo-band cite {
+  display: block;
+  margin-top: 24px;
+  font-family: var(--font-sans);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(250, 249, 245, 0.6);
+}
+
+/* Galerie terrain de l'accueil */
+.pub .home-gallery {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+.pub .home-gallery .pfigure img {
+  aspect-ratio: 3 / 4;
+  width: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Chaîne de financement */
+.pub .chain .node {
+  border-radius: 16px;
+  border: 1px solid var(--color-line);
+  border-top: 3px solid var(--color-line-strong);
+  background: var(--color-surface);
+}
+.pub .chain .node.hot { border-color: var(--pub-forest); border-top-color: var(--pub-gold); background: var(--pub-forest); }
+.pub .chain .node.hot .who { color: #fdfcf8; }
+.pub .chain .node.hot p { color: rgba(250, 249, 245, 0.65); }
+.pub .chain .node .who {
+  font-family: var(--font-display);
+  font-weight: 520;
+  text-transform: none;
+  font-size: 22px;
+}
+.pub .chain .node .role { color: var(--pub-green); }
+.pub .chain .node.hot .role { color: var(--pub-gold-soft); }
+.pub .chain .node + .node::before { color: var(--color-mineral); font-family: var(--font-sans); font-weight: 600; }
+
+/* Domaines d'action — cartes douces */
+.pub .domain {
+  border: 1px solid var(--color-line);
+  border-radius: 18px;
+  background: var(--color-surface);
+  padding: 28px 26px;
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.pub .domain:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 44px -24px rgba(23, 33, 27, 0.28);
+}
+.pub .domain .num {
+  color: var(--pub-green);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+}
+.pub .domain h3 {
+  font-family: var(--font-display);
+  font-weight: 520;
+  text-transform: none;
+  font-size: 23px;
+  letter-spacing: -0.01em;
+}
+.pub .domain h3 em {
+  font-style: italic;
+  font-weight: 460;
+  color: var(--pub-green);
+  background: none;
+  padding: 0;
+}
+.pub .domain:hover .num::after { content: ""; }
+
+/* Partenaires — mur de noms discret */
+.pub .partners-strip {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: clamp(13px, 1.5vw, 17px);
+  letter-spacing: 0.14em;
+  color: var(--color-stone);
+  gap: 16px 30px;
+}
+.pub .partners-strip em { font-style: normal; }
+.pub .partners-strip .sep { display: none; }
+.pub .partners-strip span { display: inline-flex; align-items: center; gap: 30px; }
+.pub .partners-strip span::after {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-line-strong);
+  flex: none;
+}
+.pub .partners-strip span:last-child::after { display: none; }
+
+/* Bloc projet phare / listes d'impact */
+.pub .feature-facts { border-top: 1px solid var(--color-line); font-size: 11px; }
+.pub .psection.dark .feature-facts { border-top: 1px solid rgba(250, 249, 245, 0.2); }
+.pub .psection.dark .feature-facts strong { color: var(--pub-gold-soft); }
+.pub .badge-live { color: var(--pub-green); }
+.pub .psection.dark .badge-live { color: var(--pub-gold-soft); }
+.pub .badge-live .dot { background: var(--pub-green); box-shadow: 0 0 0 3px rgba(23, 115, 77, 0.2); }
+.pub .psection.dark .badge-live .dot { background: var(--pub-gold-soft); box-shadow: 0 0 0 3px rgba(217, 164, 65, 0.25); }
+@keyframes live-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(23, 115, 77, 0.2); }
+  50% { box-shadow: 0 0 0 8px rgba(23, 115, 77, 0.04); }
+}
+
+.pub .impact-list { border-top: 1px solid var(--color-ink); }
+.pub .impact-list .imp .n {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 460;
+  color: var(--pub-green);
+}
+.pub .impact-list .imp { border-bottom: 1px solid var(--color-line); }
+.pub .psection.dark .impact-list { border-top-color: rgba(250, 249, 245, 0.3); }
+.pub .psection.dark .impact-list .imp { border-bottom-color: rgba(250, 249, 245, 0.14); }
+.pub .psection.dark .impact-list .imp .n { color: var(--pub-gold-soft); }
+
+/* Piliers / zones / timeline (pages mission & precom) */
+.pub .pillar { border-top: 1px solid var(--color-ink); padding-top: 20px; }
+.pub .pillar .num { color: var(--pub-green); font-family: var(--font-mono); }
+.pub .pillar h3 {
+  font-family: var(--font-display);
+  font-weight: 520;
+  text-transform: none;
+}
+.pub .pillar h3 em { font-style: italic; color: var(--pub-green); }
+.pub .where-list .row:first-child { border-top: 1px solid var(--color-ink); }
+.pub .where-list .row:last-child { border-bottom: 1px solid var(--color-ink); }
+.pub .where-list .nm em {
+  font-style: italic;
+  font-weight: 460;
+  color: var(--pub-green);
+  background: none;
+  padding: 0;
+}
+.pub .tl-row::before { background: var(--color-line-strong); }
+.pub .tl-row.major::before { background: var(--pub-green); }
+.pub .tl-row.major .yr { color: var(--pub-green); }
+.pub .tl-row h4 em { font-style: italic; color: var(--pub-green); }
+.pub .manifesto .quote em {
+  font-style: italic;
+  color: var(--pub-green);
+  background: none;
+  padding: 0;
+}
+
+/* Cartes des pages rapports / résultats / contact / gouvernance */
+.pub .rapport-card, .pub .donut-card, .pub .ethics-cell,
+.pub .contact-form, .pub .contact-info,
+.pub .award, .pub .struct-row {
+  border-radius: 16px;
+}
+.pub .award .a-body h3 { font-family: var(--font-display); font-weight: 520; text-transform: none; font-size: 25px; }
+.pub .award .a-body h3 em { font-style: italic; color: var(--pub-green); }
+.pub .reg-list-head { border-bottom: 1px solid var(--color-ink); }
+.pub .reg-list-head h2 { font-size: 27px; }
+.pub .filter-wrap .pill {
+  border-radius: 999px;
+  border: 1px solid var(--color-line-strong);
+  color: var(--color-shale);
+  font-weight: 600;
+  text-transform: none;
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
+}
+.pub .filter-wrap .pill.on { background: var(--pub-forest); color: var(--color-page); border-color: var(--pub-forest); }
+.pub .filter-wrap .search { border-radius: 12px; border: 1px solid var(--color-line-strong); }
+.pub .donor-badge { border-radius: 999px; }
+
+/* CTA — le salon vert forêt */
+.pub .cta {
+  background: var(--pub-forest);
+  color: var(--color-page);
+  padding: 104px 0;
+  border-top: none;
+  position: relative;
+  overflow: hidden;
+}
+.pub .cta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(900px 420px at 82% -10%, rgba(217, 164, 65, 0.14), transparent 65%);
+  pointer-events: none;
+}
+.pub .cta .cta-wrap { position: relative; }
+.pub .cta h3 {
+  color: #fdfcf8;
+  font-size: clamp(32px, 4vw, 56px);
+  line-height: 1.1;
+}
+.pub .cta h3 em {
+  font-style: italic;
+  font-weight: 430;
+  background: none;
+  color: var(--pub-gold-soft);
+  padding: 0;
+}
+.pub .cta p { color: rgba(250, 249, 245, 0.72); }
+.pub .cta .pbtn--accent {
+  background: var(--color-page);
+  border-color: var(--color-page);
+  color: var(--pub-forest);
+  box-shadow: none;
+}
+.pub .cta .pbtn--accent:hover { background: #fff; border-color: #fff; color: var(--pub-forest); }
+.pub .cta .pbtn--inverse { border-color: rgba(250, 249, 245, 0.4); color: var(--color-page); }
+.pub .cta .pbtn--inverse:hover { background: rgba(250, 249, 245, 0.1); border-color: var(--color-page); color: #fff; }
+
+/* ============================================================
+   FOOTER — vert forêt, wordmark en filigrane
+   ============================================================ */
+.pub .siteft {
+  background: var(--pub-forest);
+  border-top: 1px solid rgba(250, 249, 245, 0.12);
+  position: relative;
+  overflow: hidden;
+}
+.pub .siteft .ft-word {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(110px, 20vw, 300px);
+  line-height: 0.78;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: rgba(250, 249, 245, 0.045);
+  -webkit-text-stroke: 0;
+  text-align: center;
+  user-select: none;
+  pointer-events: none;
+  margin: 30px 0 -0.12em;
+  white-space: nowrap;
+}
+.pub .siteft-wrap { position: relative; }
+.pub .siteft .ft-logo {
+  display: block;
+  height: 64px;
+  width: auto;
+  background: #fff;
+  border-radius: 14px;
+  padding: 9px 14px;
+  margin-bottom: 20px;
+}
+.pub .siteft .org {
+  font-family: var(--font-display);
+  font-weight: 520;
+  text-transform: none;
+  font-size: 25px;
+  color: #fdfcf8;
+}
+.pub .siteft .org em { font-style: italic; font-weight: 440; color: var(--pub-gold-soft); }
+.pub .siteft .desc { color: rgba(250, 249, 245, 0.58); }
+.pub .siteft h5 {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(250, 249, 245, 0.45);
+}
+.pub .siteft a { color: rgba(250, 249, 245, 0.75); }
+.pub .siteft a:hover { color: var(--pub-gold-soft); }
+.pub .siteft .legal {
+  color: rgba(250, 249, 245, 0.4);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  border-top: 1px solid rgba(250, 249, 245, 0.12);
+}
+.pub .siteft .legal strong { color: var(--pub-gold-soft); }
+
+/* ============================================================
+   RÉVÉLATIONS AU SCROLL — CSS pur (animation-timeline)
+   ============================================================
+   Progressive enhancement : les navigateurs qui supportent les
+   scroll-driven animations (Chrome, Edge, Safari 26+) voient les
+   sections se révéler à l'entrée du viewport ; les autres ont un
+   rendu statique parfaitement fonctionnel. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    @keyframes pub-reveal {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: none; }
+    }
+    @keyframes pub-reveal-fade {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .pub .psection .section-eyebrow,
+    .pub .psection h2,
+    .pub .counter,
+    .pub .pfigure,
+    .pub .chain .node,
+    .pub .impact-list .imp,
+    .pub .tl-row,
+    .pub .where-list .row,
+    .pub .cta h3,
+    .pub .cta p,
+    .pub .cta-actions {
+      animation: pub-reveal both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 42%;
+    }
+    /* Les cartes domaine gardent leur translation au survol :
+       révélation en fondu seul (une animation avec fill `both`
+       écraserait le transform du :hover). */
+    .pub .domain,
+    .pub .partners-strip {
+      animation: pub-reveal-fade both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 42%;
+    }
+  }
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 980px) {
+  .pub .hero-full { min-height: 74vh; }
+  .pub .home-gallery { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .pub .photo-band { min-height: 46vh; }
+  .pub .hero-full .hf-wrap { padding: 100px 20px 44px; }
+  .pub .psection { padding: 68px 0; }
+  .pub .main-nav { background: var(--color-page); }
+  .pub .main-nav a { font-size: 16px; }
+  .pub .counter { border-right: none; }
+  .pub .siteft .ft-word { font-size: clamp(70px, 22vw, 150px); }
+}

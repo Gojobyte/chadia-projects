@@ -39,11 +39,11 @@ export function LoginForm() {
 
         <div className="login-form-wrap">
           <form className="login-form" onSubmit={handleSubmit}>
-            <div className="login-eyebrow">Espace de travail</div>
+            <div className="login-eyebrow">Espace de travail · ONG CHADIA</div>
             <h1 className="login-title">Bon retour <em>parmi nous.</em></h1>
             <p className="login-sub">
-              Connectez-vous pour reprendre la rédaction, l&apos;évaluation et le suivi
-              de vos appels d&apos;offres.
+              Connectez-vous pour piloter la veille bailleurs, rédiger vos candidatures
+              et suivre vos projets en cours.
             </p>
 
             {(error || accessDenied) && (
@@ -70,7 +70,7 @@ export function LoginForm() {
             <label className="login-field">
               <span className="login-field-label">
                 Mot de passe
-                <a href="#" tabIndex={-1}>Mot de passe oublié</a>
+                <a href="/contact" tabIndex={-1}>Mot de passe oublié</a>
               </span>
               <input
                 className="input input--lg"
@@ -116,7 +116,7 @@ export function LoginForm() {
             <div className="login-foot-link">
               <span>
                 Pas encore de compte ?{" "}
-                <a href="#" style={{ color: "var(--color-terracotta)" }}>
+                <a href="/contact" style={{ color: "var(--color-terracotta)" }}>
                   Demander un accès
                 </a>
               </span>
@@ -125,11 +125,11 @@ export function LoginForm() {
         </div>
 
         <div className="login-bottom">
-          <span>© 2026 CHADIA · N&apos;Djamena</span>
+          <span>© 2026 CHADIA pour le Développement du Tchad · N&apos;Djamena</span>
           <div className="links">
-            <a href="/marches">Registre public</a>
-            <a href="#">Aide</a>
-            <a href="#">Confidentialité</a>
+            <a href="/contact">Contact</a>
+            <a href="/gouvernance">Gouvernance</a>
+            <a href="/resultats">Résultats</a>
           </div>
         </div>
       </section>
@@ -140,35 +140,35 @@ export function LoginForm() {
 
         <div className="stage-meta">
           <span><span className="live"></span>Plateforme opérationnelle</span>
-          <span>v2.4 · N&apos;Djamena · TCD</span>
+          <span>N&apos;Djamena · Tchad</span>
         </div>
 
         <blockquote className="stage-quote">
           <div className="qmark">&ldquo;</div>
           <q>
-            La transparence d&apos;un appel d&apos;offres tient à la <em>rigueur</em> de chaque ligne saisie.
+            Valoriser, <em>responsabiliser</em> et faire ressortir le génie de l&apos;Homme.
           </q>
           <cite>
-            Charte CHADIA Projects
-            <small>Article 1 — Principe de traçabilité intégrale</small>
+            Philosophie CHADIA
+            <small>Chadia pour le Développement du Tchad (CDT) · 2021</small>
           </cite>
         </blockquote>
 
         <div className="stage-stats">
           <div>
-            <div className="v">187</div>
-            <div className="l">Appels d&apos;offres</div>
-            <div className="h">publiés en 2026</div>
+            <div className="v">160<em>+</em></div>
+            <div className="l">Entrepreneurs formés</div>
+            <div className="h">Tchad · Rwanda · Côte d&apos;Ivoire</div>
           </div>
           <div>
-            <div className="v">42<em>md</em></div>
-            <div className="l">FCFA attribués</div>
-            <div className="h">sur 12 mois</div>
+            <div className="v">205<em>M</em></div>
+            <div className="l">FCFA · CA 2024</div>
+            <div className="h">services formation & conseil</div>
           </div>
           <div>
-            <div className="v">1 248</div>
-            <div className="l">Fournisseurs</div>
-            <div className="h">référencés au registre</div>
+            <div className="v">4</div>
+            <div className="l">Exercices déposés</div>
+            <div className="h">SYSCOHADA · 2021–2024</div>
           </div>
         </div>
       </aside>

@@ -60,6 +60,7 @@ const CASES = [
       { l: "Budget", v: "43,1 M FCFA" },
     ],
     attestation: "Attestation de satisfaction délivrée par M. Amine IDRISS ADOUM KARAMA, Directeur DIICIR de l'AUDA-NEPAD · 14 novembre 2022.",
+    pdf: "/docs/rapports-activites/rapport-auda-nepad-2022.pdf",
   },
   {
     titre: "Solar Power Enterprise · Formation Développement Entrepreneurial",
@@ -74,6 +75,21 @@ const CASES = [
       { l: "Budget", v: "22,9 M FCFA" },
     ],
     attestation: "Attestation de Bonne Exécution délivrée par M. Terap Haggar, Directeur Général SPE · 10 juillet 2024. Évaluation \"Excellence\" sur 3 dimensions (Expertise Technique, Qualité des Supports, Professionnalisme).",
+    pdf: "/docs/rapports-activites/rapport-activite-2024-spe.pdf",
+  },
+  {
+    titre: "Programme national · Renforcement des capacités du personnel de santé",
+    em: "Ministère de la Santé publique · Tchad",
+    period: "2023 – 2024",
+    desc: "Mission de formation et d'accompagnement du personnel de santé tchadien dans le cadre du Programme national de renforcement des capacités. Modules portant sur la santé de la reproduction, la nutrition et la protection contre les VBG.",
+    metrics: [
+      { l: "Commanditaire", v: "MSP Tchad" },
+      { l: "Province ciblée", v: "Ouaddaï" },
+      { l: "Axe SR / VBG", v: "5 sous-axes" },
+      { l: "Statut", v: "Clôturé" },
+    ],
+    attestation: "Attestation de satisfaction délivrée par le Ministère de la Santé publique du Tchad.",
+    pdf: "/docs/rapports-activites/rapport-renforcement-personnel-sante.pdf",
   },
 ];
 
@@ -244,6 +260,20 @@ export default function ResultatsImpactPage() {
                   <i className="ph-fill ph-seal-check" style={{ color: "var(--color-success)", marginRight: 4 }}></i>
                   {c.attestation}
                 </p>
+                {c.pdf && (
+                  <div style={{ marginTop: 16 }}>
+                    <a
+                      href={c.pdf}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "var(--color-canvas)", border: "1px solid var(--color-line-strong)", borderRadius: 4, fontSize: 13, color: "var(--color-ink)", textDecoration: "none", fontWeight: 500 }}
+                    >
+                      <i className="ph ph-file-pdf" style={{ color: "var(--color-terracotta)" }}></i>
+                      Voir le rapport d&apos;activité complet
+                      <i className="ph ph-arrow-up-right" style={{ fontSize: 12 }}></i>
+                    </a>
+                  </div>
+                )}
               </article>
             ))}
           </div>
