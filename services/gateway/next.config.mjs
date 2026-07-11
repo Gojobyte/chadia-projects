@@ -14,6 +14,12 @@ const nextConfig = {
   // Désactive la télémétrie Next.js sur le serveur de prod.
   // experimental.instrumentationHook supprimée en Next 15+.
 
+  // Les réponses de /_next/image gardent ce TTL minimum en cache
+  // (défaut : 60 s seulement). Nos photos ne changent jamais → 31 jours.
+  images: {
+    minimumCacheTTL: 2678400,
+  },
+
   // Anti-cache pour les pages d'app dynamiques.
   // Quand on rebuild, les IDs de Server Actions changent — si le browser
   // sert un vieux HTML caché, il post un actionId périmé et Next renvoie
@@ -43,6 +49,32 @@ const nextConfig = {
           {
             key: "Cache-Control",
             value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        // Photos du site public : pas de hash dans l'URL, mais elles ne
+        // changent presque jamais. 7 jours de cache + 30 jours de grâce
+        // (stale-while-revalidate : le navigateur sert la version cachée
+        // et revalide en arrière-plan). Cette règle vient APRÈS le
+        // no-store global : sur une même clé, la dernière règle gagne.
+        source: "/images/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=604800, stale-while-revalidate=2592000",
+          },
+        ],
+      },
+      {
+        // PDF officiels publics (rapports d'activités uniquement — surtout
+        // pas /docs/finance, confidentiel et gated par le middleware) :
+        // 1 jour + grâce de 7 jours au cas où un document serait remplacé.
+        source: "/docs/rapports-activites/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=86400, stale-while-revalidate=604800",
           },
         ],
       },

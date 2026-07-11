@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 const PILLARS = [
@@ -85,10 +86,14 @@ export function MissionContent() {
   return (
     <>
       <section className="hero-full">
-        <img
+        <Image
           className="bg"
           src="/images/tchad/guelta-archei-ennedi.webp"
           alt="La guelta d'Archei dans le massif de l'Ennedi, patrimoine mondial de l'UNESCO, Tchad"
+          width={2400}
+          height={1802}
+          sizes="100vw"
+          priority
         />
         <div className="veil"></div>
         <div className="hf-wrap">

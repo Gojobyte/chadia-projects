@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export const metadata = {
@@ -51,25 +52,29 @@ const RESULTATS = [
 ];
 
 const GALERIE = [
-  { src: "canal-farcha-panorama.webp", cap: "Canal à ciel ouvert engorgé — Farcha, état initial" },
-  { src: "eaux-stagnantes.webp", cap: "Eaux stagnantes au cœur du quartier" },
-  { src: "canal-dechets-betail.webp", cap: "Déchets et divagation animale dans le canal" },
-  { src: "caniveau-traditionnel.webp", cap: "Caniveau traditionnel avant curage" },
-  { src: "mobilisation-quartier.webp", cap: "Mobilisation des habitants sur le tracé" },
-  { src: "panneau-chantier.webp", cap: "Signalisation du chantier — sécurité HIMO" },
-  { src: "agent-gilet-canal.webp", cap: "Encadrement des travaux le long du canal" },
-  { src: "gravilloneuses-groupe.webp", cap: "Groupement de femmes gravilloneuses au travail" },
-  { src: "equipe-officiels.webp", cap: "L'équipe et les acteurs communautaires du projet" },
+  { src: "canal-farcha-panorama.webp", w: 1080, h: 1080, cap: "Canal à ciel ouvert engorgé — Farcha, état initial" },
+  { src: "eaux-stagnantes.webp", w: 1080, h: 1080, cap: "Eaux stagnantes au cœur du quartier" },
+  { src: "canal-dechets-betail.webp", w: 1080, h: 1080, cap: "Déchets et divagation animale dans le canal" },
+  { src: "caniveau-traditionnel.webp", w: 1080, h: 1080, cap: "Caniveau traditionnel avant curage" },
+  { src: "mobilisation-quartier.webp", w: 1152, h: 864, cap: "Mobilisation des habitants sur le tracé" },
+  { src: "panneau-chantier.webp", w: 1152, h: 864, cap: "Signalisation du chantier — sécurité HIMO" },
+  { src: "agent-gilet-canal.webp", w: 1152, h: 864, cap: "Encadrement des travaux le long du canal" },
+  { src: "gravilloneuses-groupe.webp", w: 1080, h: 810, cap: "Groupement de femmes gravilloneuses au travail" },
+  { src: "equipe-officiels.webp", w: 1080, h: 607, cap: "L'équipe et les acteurs communautaires du projet" },
 ];
 
 export default function PrecomPage() {
   return (
     <>
       <section className="hero-full">
-        <img
+        <Image
           className="bg"
           src="/images/precom/beneficiaires-arbres.webp"
           alt="Groupement de femmes bénéficiaires réunies à l'ombre des arbres près des tas de gravier"
+          width={1080}
+          height={810}
+          sizes="100vw"
+          priority
         />
         <div className="veil"></div>
         <div className="hf-wrap">
@@ -137,11 +142,11 @@ export default function PrecomPage() {
           </p>
           <div className="duo" style={{ marginTop: 40 }}>
             <figure className="pfigure sq">
-              <img src="/images/precom/canal-engorge-rue.webp" alt="Canal engorgé de déchets en pleine rue" loading="lazy" />
+              <Image src="/images/precom/canal-engorge-rue.webp" alt="Canal engorgé de déchets en pleine rue" width={1080} height={1080} sizes="(max-width: 860px) 100vw, 50vw" />
               <figcaption>Canal engorgé — constat de terrain, 1ᵉʳ arrondissement</figcaption>
             </figure>
             <figure className="pfigure sq">
-              <img src="/images/precom/eaux-stagnantes.webp" alt="Eaux stagnantes noires dans un caniveau de quartier" loading="lazy" />
+              <Image src="/images/precom/eaux-stagnantes.webp" alt="Eaux stagnantes noires dans un caniveau de quartier" width={1080} height={1080} sizes="(max-width: 860px) 100vw, 50vw" />
               <figcaption>Eaux stagnantes — à l&apos;origine des inondations et des maladies</figcaption>
             </figure>
           </div>
@@ -168,7 +173,7 @@ export default function PrecomPage() {
               ))}
             </div>
             <figure className="pfigure">
-              <img src="/images/precom/canal-farcha-panorama.webp" alt="Vue panoramique du canal à ciel ouvert de Farcha" loading="lazy" style={{ aspectRatio: "4 / 3" }} />
+              <Image src="/images/precom/canal-farcha-panorama.webp" alt="Vue panoramique du canal à ciel ouvert de Farcha" width={1080} height={1080} sizes="(max-width: 860px) 100vw, 50vw" style={{ aspectRatio: "4 / 3" }} />
               <figcaption>Le canal à ciel ouvert de Farcha, avant intervention</figcaption>
             </figure>
           </div>
@@ -189,11 +194,11 @@ export default function PrecomPage() {
           </p>
           <div className="duo" style={{ marginTop: 40 }}>
             <figure className="pfigure sq">
-              <img src="/images/precom/caniveau-macone-neuf.webp" alt="Caniveau maçonné engorgé de déchets avant le curage" loading="lazy" />
+              <Image src="/images/precom/caniveau-macone-neuf.webp" alt="Caniveau maçonné engorgé de déchets avant le curage" width={1080} height={1080} sizes="(max-width: 860px) 100vw, 50vw" />
               <figcaption>Avant — caniveau maçonné engorgé</figcaption>
             </figure>
             <figure className="pfigure sq">
-              <img src="/images/precom/agent-gilet-canal.webp" alt="Équipes HIMO au curage d'un canal de drainage" loading="lazy" />
+              <Image src="/images/precom/agent-gilet-canal.webp" alt="Équipes HIMO au curage d'un canal de drainage" width={1152} height={864} sizes="(max-width: 860px) 100vw, 50vw" />
               <figcaption>Pendant — curage HIMO en cours</figcaption>
             </figure>
           </div>
@@ -221,11 +226,11 @@ export default function PrecomPage() {
             </div>
             <div className="feature-photos">
               <figure className="pfigure tall">
-                <img src="/images/precom/gravilloneuse-concassage.webp" alt="Femme gravilloneuse concassant le gravier" loading="lazy" />
+                <Image src="/images/precom/gravilloneuse-concassage.webp" alt="Femme gravilloneuse concassant le gravier" width={1080} height={1080} sizes="(max-width: 900px) 50vw, 25vw" />
                 <figcaption>Concassage du gravier</figcaption>
               </figure>
               <figure className="pfigure tall">
-                <img src="/images/precom/gravilloneuses-travail.webp" alt="Groupement de femmes gravilloneuses au travail" loading="lazy" />
+                <Image src="/images/precom/gravilloneuses-travail.webp" alt="Groupement de femmes gravilloneuses au travail" width={1080} height={1080} sizes="(max-width: 900px) 50vw, 25vw" />
                 <figcaption>Un groupement au travail — Farcha</figcaption>
               </figure>
             </div>
@@ -341,7 +346,7 @@ export default function PrecomPage() {
           <div className="pgallery" style={{ marginTop: 40 }}>
             {GALERIE.map((g) => (
               <figure key={g.src} className="pfigure">
-                <img src={`/images/precom/${g.src}`} alt={g.cap} loading="lazy" />
+                <Image src={`/images/precom/${g.src}`} alt={g.cap} width={g.w} height={g.h} sizes="(max-width: 860px) 100vw, 50vw" />
                 <figcaption>{g.cap}</figcaption>
               </figure>
             ))}
@@ -369,11 +374,11 @@ export default function PrecomPage() {
             </div>
             <div>
               <figure className="pfigure wide" style={{ marginBottom: 20 }}>
-                <img src="/images/precom/lancement-salle.webp" alt="Salle de la cérémonie de lancement du projet PRECOM" loading="lazy" />
+                <Image src="/images/precom/lancement-salle.webp" alt="Salle de la cérémonie de lancement du projet PRECOM" width={1080} height={607} sizes="(max-width: 860px) 100vw, 50vw" />
                 <figcaption>Cérémonie de lancement — siège CHADIA, Kabalaye</figcaption>
               </figure>
               <figure className="pfigure wide">
-                <img src="/images/precom/lancement-intervenant.webp" alt="Intervenant présentant le projet PRECOM lors du lancement" loading="lazy" />
+                <Image src="/images/precom/lancement-intervenant.webp" alt="Intervenant présentant le projet PRECOM lors du lancement" width={1080} height={607} sizes="(max-width: 860px) 100vw, 50vw" />
                 <figcaption>Présentation du microprojet aux parties prenantes</figcaption>
               </figure>
             </div>

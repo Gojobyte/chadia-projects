@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Fraunces, Archivo, IBM_Plex_Mono } from "next/font/google";
 import { PublicNav } from "./public-nav";
@@ -53,10 +54,13 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <header className="site">
         <div className="site-wrap">
           <Link href="/" className="site-brand">
-            <img
+            <Image
               className="mark-img"
               src="/images/brand/logo-mark.webp"
               alt="Logo CHADIA — carte du Tchad avec le monogramme CDT"
+              width={41}
+              height={44}
+              priority
             />
             <span className="nm">
               CHADIA
@@ -77,11 +81,12 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <footer className="siteft">
         <div className="siteft-wrap">
           <div>
-            <img
+            <Image
               className="ft-logo"
               src="/images/brand/logo-full.webp"
               alt="CHADIA pour le Développement du Tchad"
-              loading="lazy"
+              width={133}
+              height={64}
             />
             <div className="org">CHADIA <em>pour le Tchad</em></div>
             <p className="desc">

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 const DOMAINS = [
@@ -52,10 +53,14 @@ export function HomeContent() {
   return (
     <>
       <section className="hero-full">
-        <img
+        <Image
           className="bg"
           src="/images/precom/chantier-himo-arbres.webp"
           alt="Chantier communautaire HIMO à l'ombre des arbres, 1er arrondissement de N'Djaména"
+          width={1152}
+          height={864}
+          sizes="100vw"
+          priority
         />
         <div className="veil"></div>
         <div className="hf-wrap">
@@ -136,11 +141,11 @@ export function HomeContent() {
             </div>
             <div className="feature-photos">
               <figure className="pfigure tall">
-                <img src="/images/precom/gravilloneuse-concassage.webp" alt="Femme gravilloneuse au concassage du gravier" loading="lazy" />
+                <Image src="/images/precom/gravilloneuse-concassage.webp" alt="Femme gravilloneuse au concassage du gravier" width={1080} height={1080} sizes="(max-width: 900px) 50vw, 25vw" />
                 <figcaption>AGR — concassage du gravier</figcaption>
               </figure>
               <figure className="pfigure tall">
-                <img src="/images/precom/canal-engorge-rue.webp" alt="Canal engorgé de déchets dans le 1er arrondissement" loading="lazy" />
+                <Image src="/images/precom/canal-engorge-rue.webp" alt="Canal engorgé de déchets dans le 1er arrondissement" width={1080} height={1080} sizes="(max-width: 900px) 50vw, 25vw" />
                 <figcaption>Avant curage — Farcha</figcaption>
               </figure>
             </div>
@@ -167,10 +172,12 @@ export function HomeContent() {
       </section>
 
       <section className="photo-band">
-        <img
+        <Image
           src="/images/precom/mobilisation-quartier.webp"
           alt="Mobilisation communautaire dans une rue du 1er arrondissement de N'Djaména"
-          loading="lazy"
+          width={1152}
+          height={864}
+          sizes="100vw"
         />
         <div className="pb-veil"></div>
         <blockquote>
@@ -187,19 +194,19 @@ export function HomeContent() {
           <h2>La preuve <em>par l&apos;image.</em></h2>
           <div className="home-gallery" style={{ marginTop: 44 }}>
             <figure className="pfigure">
-              <img src="/images/precom/gravilloneuses-travail.webp" alt="Femmes gravilloneuses au travail sur le gravier" loading="lazy" />
+              <Image src="/images/precom/gravilloneuses-travail.webp" alt="Femmes gravilloneuses au travail sur le gravier" width={1080} height={1080} sizes="(max-width: 860px) 50vw, 25vw" />
               <figcaption>Le concassage, source de revenus</figcaption>
             </figure>
             <figure className="pfigure">
-              <img src="/images/precom/gravilloneuses-groupe.webp" alt="Groupe de femmes gravilloneuses bénéficiaires des AGR" loading="lazy" />
+              <Image src="/images/precom/gravilloneuses-groupe.webp" alt="Groupe de femmes gravilloneuses bénéficiaires des AGR" width={1080} height={810} sizes="(max-width: 860px) 50vw, 25vw" />
               <figcaption>Femmes gravilloneuses — AGR</figcaption>
             </figure>
             <figure className="pfigure">
-              <img src="/images/precom/agent-gilet-canal.webp" alt="Agent CHADIA en gilet au curage d'un canal de drainage" loading="lazy" />
+              <Image src="/images/precom/agent-gilet-canal.webp" alt="Agent CHADIA en gilet au curage d'un canal de drainage" width={1152} height={864} sizes="(max-width: 860px) 50vw, 25vw" />
               <figcaption>Curage en cours — HIMO</figcaption>
             </figure>
             <figure className="pfigure">
-              <img src="/images/precom/lancement-intervenant.webp" alt="Séance de mobilisation communautaire lors du lancement du projet" loading="lazy" />
+              <Image src="/images/precom/lancement-intervenant.webp" alt="Séance de mobilisation communautaire lors du lancement du projet" width={1080} height={607} sizes="(max-width: 860px) 50vw, 25vw" />
               <figcaption>Mobilisation — lancement du projet</figcaption>
             </figure>
           </div>

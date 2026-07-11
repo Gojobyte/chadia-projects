@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { Instrument_Serif, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./sahel-tokens.css";
 import "./globals.css";
+// Phosphor Icons auto-hébergé (regular uniquement — duotone inutilisée) :
+// bundlé/minifié par Next, police woff2 fingerprintée et cachée à vie,
+// plus aucune requête vers unpkg (CSS bloquant tiers supprimé).
+import "./fonts/phosphor/regular.css";
 
 const display = Instrument_Serif({
   variable: "--font-display-next",
@@ -33,10 +37,6 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" className={`${display.variable} ${sans.variable} ${mono.variable}`}>
-      <head>
-        <link href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" rel="stylesheet" />
-        <link href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css" rel="stylesheet" />
-      </head>
       <body>{children}</body>
     </html>
   );

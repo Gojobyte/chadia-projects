@@ -24,7 +24,7 @@ ong-chadia.com, www.ong-chadia.com {
     reverse_proxy gateway:3000
 
     # Compression gzip pour réduire le poids des pages servies.
-    encode gzip
+    encode zstd gzip
 
     # En-têtes de sécurité (Caddy ajoute déjà Strict-Transport-Security
     # automatiquement quand HTTPS est actif).
@@ -56,7 +56,7 @@ ong-chadia.com, www.ong-chadia.com {
 # Tant que les DNS ne sont pas propagés, on continue à servir sur l'IP nue.
 http://188.245.42.63 {
     reverse_proxy gateway:3000
-    encode gzip
+    encode zstd gzip
 }
 
 
@@ -81,7 +81,7 @@ http://188.245.42.63 {
 trello.projetsynergie.fr {
     reverse_proxy trello-frontend:3000
 
-    encode gzip
+    encode zstd gzip
 
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
@@ -98,7 +98,7 @@ trello.projetsynergie.fr {
 api.projetsynergie.fr {
     reverse_proxy trello-convex-backend:3210
 
-    encode gzip
+    encode zstd gzip
 
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
@@ -116,7 +116,7 @@ api.projetsynergie.fr {
 auth.projetsynergie.fr {
     reverse_proxy trello-convex-backend:3211
 
-    encode gzip
+    encode zstd gzip
 
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
