@@ -1,6 +1,93 @@
 import { auth } from "@/lib/auth";
 import { AuthAPI } from "@/lib/api";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { InviteUserButton } from "./InviteUserButton";
+import { UserRowActions } from "./UserRowActions";
+
+// ---------------------------------------------------------------------
+// Server Actions — CRUD utilisateurs (admin / directeur)
+// ---------------------------------------------------------------------
+async function createUserAction(
+  formData: FormData,
+): Promise<{ ok: boolean; generatedPassword?: string | null; error?: string }> {
+  "use server";
+  const session = await auth();
+  if (!session?.user) return { ok: false, error: "Non authentifié" };
+  if (session.user.role !== "ADMIN" && session.user.role !== "DIRECTEUR") {
+    return { ok: false, error: "Vous n'avez pas le droit de créer un membre" };
+  }
+  const token = (session as { authServiceToken?: string }).authServiceToken;
+  if (!token) return { ok: false, error: "Token de session manquant" };
+
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const name = String(formData.get("name") || "").trim();
+  const role = (String(formData.get("role") || "MEMBRE")) as "ADMIN" | "DIRECTEUR" | "FINANCIER" | "MEMBRE";
+  const password = String(formData.get("password") || "").trim() || undefined;
+  const fonction = String(formData.get("fonction") || "").trim() || undefined;
+  const zone = String(formData.get("zone") || "").trim() || undefined;
+  const telephone = String(formData.get("telephone") || "").trim() || undefined;
+  const instance = String(formData.get("instance") || "").trim() || undefined;
+
+  if (!email || !name) return { ok: false, error: "Email et nom obligatoires" };
+
+  try {
+    const result = await AuthAPI.createUser(token, {
+      email, name, role, password, fonction, zone, telephone, instance,
+    });
+    revalidatePath("/equipe");
+    return { ok: true, generatedPassword: result.generatedPassword ?? null };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erreur de création" };
+  }
+}
+
+async function patchUserAction(
+  userId: string,
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  "use server";
+  const session = await auth();
+  if (!session?.user) return { ok: false, error: "Non authentifié" };
+  if (session.user.role !== "ADMIN" && session.user.role !== "DIRECTEUR") {
+    return { ok: false, error: "Vous n'avez pas le droit de modifier un membre" };
+  }
+  const token = (session as { authServiceToken?: string }).authServiceToken;
+  if (!token) return { ok: false, error: "Token de session manquant" };
+
+  const body: Record<string, unknown> = {};
+  if (formData.has("role")) body.role = String(formData.get("role"));
+  if (formData.has("name")) body.name = String(formData.get("name"));
+  if (formData.has("isActive")) body.isActive = formData.get("isActive") === "true";
+
+  try {
+    await AuthAPI.patchUser(userId, token, body);
+    revalidatePath("/equipe");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erreur de modification" };
+  }
+}
+
+async function deleteUserAction(userId: string): Promise<{ ok: boolean; error?: string }> {
+  "use server";
+  const session = await auth();
+  if (!session?.user) return { ok: false, error: "Non authentifié" };
+  // Seul le DIRECTEUR peut supprimer (cf. politique auth-service)
+  if (session.user.role !== "DIRECTEUR") {
+    return { ok: false, error: "Seul le directeur peut supprimer un membre" };
+  }
+  const token = (session as { authServiceToken?: string }).authServiceToken;
+  if (!token) return { ok: false, error: "Token de session manquant" };
+
+  try {
+    await AuthAPI.deleteUser(userId, token);
+    revalidatePath("/equipe");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erreur de suppression" };
+  }
+}
 
 interface DbUser {
   id: string;
@@ -77,6 +164,12 @@ export default async function EquipePage({
   const params: Record<string, string> = { active: "true" };
   if (instance) params.instance = instance;
 
+  // Pour gérer les membres on inclut les inactifs (sinon impossible de les
+  // réactiver depuis l'UI) — sauf si un filtre instance est posé.
+  const role = session.user.role as "ADMIN" | "DIRECTEUR" | "FINANCIER" | "MEMBRE";
+  const canManage = role === "ADMIN" || role === "DIRECTEUR";
+  if (canManage) delete (params as Record<string, string>).active;
+
   let users: DbUser[] = [];
   let errorMsg: string | null = null;
   try {
@@ -107,9 +200,13 @@ export default async function EquipePage({
           </p>
         </div>
         <div className="pg-actions">
-          <button className="btn btn--ghost btn--sm"><i className="ph ph-export"></i> Exporter</button>
-          <button className="btn btn--secondary btn--sm"><i className="ph ph-shield-check"></i> Rôles &amp; permissions</button>
-          <button className="btn btn--accent btn--sm"><i className="ph ph-user-plus"></i> Inviter un membre</button>
+          <button className="btn btn--ghost btn--sm" disabled aria-disabled="true">
+            <i className="ph ph-export" aria-hidden="true"></i> Exporter
+          </button>
+          <button className="btn btn--secondary btn--sm" disabled aria-disabled="true">
+            <i className="ph ph-shield-check" aria-hidden="true"></i> Rôles &amp; permissions
+          </button>
+          {canManage ? <InviteUserButton createAction={createUserAction} /> : null}
         </div>
       </header>
 
@@ -206,9 +303,17 @@ export default async function EquipePage({
                         </td>
                         <td><span className="last-seen">{fmtDate(m.createdAt)}</span></td>
                         <td style={{ textAlign: "right" }}>
-                          <button style={{ background: "transparent", border: "none", color: "var(--color-stone)", cursor: "pointer", padding: 4, fontSize: 16 }}>
-                            <i className="ph ph-dots-three"></i>
-                          </button>
+                          <UserRowActions
+                            userId={m.id}
+                            userName={m.name}
+                            userEmail={m.email}
+                            currentRole={m.role}
+                            isActive={m.isActive}
+                            currentUserRole={role}
+                            isSelf={m.id === (session.user as { id?: string }).id}
+                            patchAction={patchUserAction}
+                            deleteAction={deleteUserAction}
+                          />
                         </td>
                       </tr>
                     );

@@ -9,239 +9,50 @@ datasource db {
 }
 
 // ============================================================
-// FOURNISSEURS
-// ============================================================
-
-enum FournisseurStatut {
-  EN_ATTENTE
-  VERIFIE
-  REJETE
-  SUSPENDU
-  BLACKLISTE
-}
-
-enum FournisseurCategorie {
-  ENTREPRISE_INDIVIDUELLE
-  SARL
-  SA
-  ONG_NATIONALE
-  ONG_INTERNATIONALE
-  COOPERATIVE
-  CONSORTIUM
-  AUTRE
-}
-
-model Fournisseur {
-  id                String              @id @default(cuid())
-  raisonSociale     String
-  sigle             String?
-  categorie         FournisseurCategorie @default(ENTREPRISE_INDIVIDUELLE)
-  numeroRccm        String?             @unique
-  numeroNif         String?             @unique
-  email             String              @unique
-  telephone         String?
-  adresse           String?
-  ville             String?
-  pays              String              @default("Tchad")
-  siteWeb           String?
-  representantNom   String?
-  representantTitre String?
-  domainesExpertise String[]
-  certifications    String[]
-  anneesExperience  Int?
-  effectif          Int?
-  chiffreAffaires   Float?
-  logoUrl           String?
-  statut            FournisseurStatut   @default(EN_ATTENTE)
-  verifiePar        String?
-  verifieAt         DateTime?
-
-  soumissions       Soumission[]
-  evaluations       EvaluationFournisseur[]
-  documents         Document[]
-
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-
-  @@index([statut])
-  @@index([categorie])
-  @@map("fournisseurs")
-}
-
-// ============================================================
 // BAILLEURS
 // ============================================================
+// CHADIA est CANDIDATE auprès de ces bailleurs internationaux.
+// Sources potentielles d'opportunités (à venir : modèle Opportunite).
 
 model Bailleur {
-  id            String   @id @default(cuid())
+  id            String        @id @default(cuid())
   nom           String
-  sigle         String   @unique
+  sigle         String        @unique
   logoUrl       String?
   siteWeb       String?
   rulesJson     Json?
   promptHints   String?
 
-  appelsOffre   AppelOffre[]
+  opportunites  Opportunite[]
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   @@map("bailleurs")
 }
 
 // ============================================================
-// APPELS D'OFFRES
+// DOCUMENTS
 // ============================================================
-
-enum AppelOffreStatut {
-  BROUILLON
-  PUBLIE
-  EN_COURS
-  CLOTURE
-  EN_EVALUATION
-  ATTRIBUE
-  ANNULE
-  ARCHIVE
-}
-
-enum AppelOffreType {
-  APPEL_OFFRES_OUVERT
-  APPEL_OFFRES_RESTREINT
-  MARCHE_NEGOCIE
-  CONSULTATION
-  GRE_A_GRE
-}
-
-enum AppelOffreCategorie {
-  TRAVAUX
-  FOURNITURES
-  SERVICES
-  MIXTE
-}
-
-model AppelOffre {
-  id                String              @id @default(cuid())
-  reference         String              @unique
-  titre             String
-  description       String
-  type              AppelOffreType      @default(APPEL_OFFRES_OUVERT)
-  categorie         AppelOffreCategorie @default(SERVICES)
-  secteur           String?
-
-  bailleurId        String
-  bailleur          Bailleur            @relation(fields: [bailleurId], references: [id])
-
-  budgetEstime      Float?
-  devise            String              @default("FCFA")
-
-  datePublication   DateTime            @default(now())
-  dateLimiteDepot   DateTime
-  dateOuverture     DateTime?
-  dateAttribution   DateTime?
-  dureeMarche       Int?
-
-  pays              String              @default("Tchad")
-  region            String?
-  lieuExecution     String?
-
-  criteresEligibilite Json?
-  criteresEvaluation  Json?
-
-  statut            AppelOffreStatut    @default(BROUILLON)
-  estPublic         Boolean             @default(true)
-  createdBy         String
-
-  soumissions       Soumission[]
-  documents         Document[]
-  resultats         AppelOffreResultat?
-
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-
-  @@index([statut])
-  @@index([type])
-  @@index([categorie])
-  @@index([bailleurId])
-  @@index([dateLimiteDepot])
-  @@map("appels_offres")
-}
-
-// ============================================================
-// SOUMISSIONS
-// ============================================================
-
-enum SoumissionStatut {
-  BROUILLON
-  DEPOSEE
-  RECEVABLE
-  NON_RECEVABLE
-  EN_EVALUATION
-  RETENUE
-  REJETEE
-  DESISTEE
-}
-
-model Soumission {
-  id                String              @id @default(cuid())
-  numeroSoumission  String              @unique
-
-  appelOffreId      String
-  appelOffre        AppelOffre          @relation(fields: [appelOffreId], references: [id], onDelete: Cascade)
-  fournisseurId     String
-  fournisseur       Fournisseur         @relation(fields: [fournisseurId], references: [id])
-
-  offreTechnique    String?
-  offreFinanciere   Float?
-  devise            String              @default("FCFA")
-  detailFinancier   Json?
-  delaiExecution    Int?
-  validiteOffre     Int?
-
-  statut            SoumissionStatut    @default(BROUILLON)
-
-  noteTechnique     Float?
-  noteFinanciere    Float?
-  noteGlobale       Float?
-  classement        Int?
-  commentairesEvaluation String?
-
-  documents         Document[]
-
-  deposeAt          DateTime?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-
-  @@unique([appelOffreId, fournisseurId])
-  @@index([appelOffreId])
-  @@index([fournisseurId])
-  @@index([statut])
-  @@map("soumissions")
-}
-
-// ============================================================
-// DOCUMENTS (gestion fluide - attaches aux AO et soumissions)
-// ============================================================
+// Pièces jointes attachées soit à un projet, soit à la bibliothèque
+// libre (lib). Les futurs modèles Opportunite/Candidature pourront
+// référencer des documents via leur propre FK quand ils existeront.
 
 enum DocumentType {
-  TDR              // Termes de reference
+  TDR
   SOUMISSION_TECHNIQUE
   SOUMISSION_FINANCIERE
-  ATTESTATION_FISCALE
-  RCCM
-  CNPS
-  PROCES_VERBAL
-  AVIS_ATTRIBUTION
   CONTRAT
   RAPPORT_ACTIVITE
   BUDGET
   STATUT
   MANUEL
+  PROCES_VERBAL
   PHOTO_TERRAIN
   TEMPLATE
   AUTRE
 }
 
-// Catégorie de classement bibliothèque (différente du type métier)
 enum DocumentCategory {
   MODELES_AO
   STATUTS_JURIDIQUE
@@ -254,46 +65,47 @@ enum DocumentCategory {
 }
 
 enum DocumentVisibility {
-  PUBLIC          // Affiché sur le site public (registre / résultats)
-  INTERNE         // Visible par tous les membres connectés
-  CONFIDENTIEL    // Visible par ADMIN/DIRECTEUR uniquement
+  PUBLIC
+  INTERNE
+  CONFIDENTIEL
 }
 
 model Document {
   id              String             @id @default(cuid())
-  nom             String                                 // Nom affiché
-  originalName    String?                                // Nom du fichier d'origine côté client
+  nom             String
+  originalName    String?
   type            DocumentType       @default(AUTRE)
   category        DocumentCategory   @default(AUTRE)
   visibility      DocumentVisibility @default(INTERNE)
   mimeType        String?
   taille          Int?
-  url             String                                 // URL publique ou chemin relatif
-  cheminLocal     String?                                // chemin disque dans le volume uploads
-  hash            String?                                // Hash SHA-256 pour dédoublonnage
+  url             String
+  cheminLocal     String?
+  hash            String?
   version         String?            @default("1.0")
   tags            String[]           @default([])
   isPinned        Boolean            @default(false)
   description     String?
 
-  // Relations optionnelles
-  appelOffreId    String?
-  appelOffre      AppelOffre?  @relation(fields: [appelOffreId], references: [id], onDelete: Cascade)
-  soumissionId    String?
-  soumission      Soumission?  @relation(fields: [soumissionId], references: [id], onDelete: Cascade)
-  fournisseurId   String?
-  fournisseur     Fournisseur? @relation(fields: [fournisseurId], references: [id], onDelete: Cascade)
-  projetId        String?                                // pas de FK explicite — relation simple
-  // (Projet est défini plus bas, on évite la circularité en gardant juste l'ID)
+  // Rattachements optionnels (au moins l'un des trois sur les nouvelles entités)
+  projetId        String?
+  opportuniteId   String?
+  opportunite     Opportunite?  @relation(fields: [opportuniteId], references: [id], onDelete: SetNull)
+  candidatureId   String?
+  candidature     Candidature?  @relation(fields: [candidatureId], references: [id], onDelete: Cascade)
+  // Rattachement direct à une pièce de l'arborescence (cf piecesRequises +
+  // piecesOverrides). Le matching est ainsi explicite — pas de fragile
+  // recherche par tags comme avant (audit P0-3).
+  pieceId         String?
 
   uploadedBy      String?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
-  @@index([appelOffreId])
-  @@index([soumissionId])
-  @@index([fournisseurId])
   @@index([projetId])
+  @@index([opportuniteId])
+  @@index([candidatureId])
+  @@index([pieceId])
   @@index([category])
   @@index([visibility])
   @@index([isPinned])
@@ -302,56 +114,178 @@ model Document {
 }
 
 // ============================================================
-// EVALUATIONS
+// OPPORTUNITÉS — appels à propositions ramenés par la veille
 // ============================================================
+// Une Opportunite est un snapshot immutable d'un appel à propositions
+// repéré chez un bailleur (UE, ONU, BAD, USAID…) concernant le Tchad
+// ou son aire géographique. Le couple (sourceConnector, sourceId)
+// garantit l'unicité côté source pour la déduplication.
+// Les statuts sont propres à CHADIA — ils tracent où on en est
+// dans la décision : faut-il candidater ou pas ?
 
-model EvaluationFournisseur {
-  id                String    @id @default(cuid())
-  fournisseurId     String
-  fournisseur       Fournisseur @relation(fields: [fournisseurId], references: [id], onDelete: Cascade)
-  soumissionId      String?
+enum OpportuniteSource {
+  TED            // Tenders Electronic Daily (UE)
+  SAM_GOV        // System for Award Management (USA)
+  WORLDBANK      // Banque Mondiale Procurement
+  UNDP           // PNUD - Programme des Nations Unies pour le Développement
+  RELIEFWEB      // OCHA — humanitaire
+  UNGM           // UN Global Marketplace
+  BAD            // Banque africaine de développement
+  AFD            // Agence française de développement
+  ECHO           // DG ECHO (Commission européenne)
+  USAID
+  MANUEL         // saisie à la main par un membre CHADIA
+  AUTRE
+}
 
-  noteQualite       Int?
-  noteDelai         Int?
-  noteCommunication Int?
-  noteGlobale       Float?
-  commentaires      String?
-  recommande        Boolean   @default(true)
-  evaluePar         String?
-  evalueAt          DateTime  @default(now())
+enum OpportuniteStatut {
+  NOUVELLE       // vient d'être collectée
+  A_ETUDIER      // CHADIA s'y intéresse, analyse en cours
+  IGNOREE        // décision : on ne candidate pas
+  CANDIDATEE     // une Candidature a été créée pour répondre
+  EXPIREE        // deadline passée sans décision
+}
 
-  createdAt         DateTime  @default(now())
+enum OpportuniteTypeFinancement {
+  SUBVENTION                 // appel à propositions (grant)
+  MARCHE_SERVICE
+  MARCHE_TRAVAUX
+  MARCHE_FOURNITURES
+  CONSULTATION
+  ASSISTANCE_TECHNIQUE
+  AUTRE
+}
 
-  @@index([fournisseurId])
-  @@map("evaluations_fournisseurs")
+model Opportunite {
+  id                String                     @id @default(cuid())
+
+  // Provenance (source externe)
+  sourceConnector   OpportuniteSource          @default(MANUEL)
+  sourceId          String?                    // identifiant natif chez la source (ex: TED notice number)
+  sourceUrl         String?                    // URL de l'annonce d'origine
+  rawPayload        Json?                      // snapshot brut pour debug
+
+  // Bailleur (FK quand on a su mapper, sinon texte libre)
+  bailleurId        String?
+  bailleur          Bailleur?                  @relation(fields: [bailleurId], references: [id])
+  bailleurNom       String?
+
+  // Métadonnées de l'appel
+  titre             String
+  description       String?
+  secteur           String?                    // libre : "Eau", "Santé maternelle", etc.
+  typeFinancement   OpportuniteTypeFinancement @default(SUBVENTION)
+  paysCible         String[]                   @default([])   // ISO ou noms : ["TCD"], ["Sahel"]
+  region            String?
+  montantEstime     Float?
+  devise            String                     @default("EUR")
+
+  datePublication   DateTime?
+  dateLimiteDepot   DateTime?
+
+  // Mots-clés extraits/saisis pour la recherche et le matching
+  tags              String[]                   @default([])
+
+  // Décision CHADIA
+  statut            OpportuniteStatut          @default(NOUVELLE)
+  decideePar        String?                    // userId qui a tranché
+  decideeAt         DateTime?
+
+  // Lien vers la candidature montée pour cette opportunité (1-1 optionnel)
+  candidature       Candidature?
+
+  documents         Document[]
+
+  collecteAt        DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+
+  @@unique([sourceConnector, sourceId])
+  @@index([statut])
+  @@index([dateLimiteDepot])
+  @@index([bailleurId])
+  @@index([sourceConnector])
+  @@map("opportunites")
 }
 
 // ============================================================
-// RESULTATS PUBLICS
+// CANDIDATURES — dossiers que CHADIA monte pour répondre
 // ============================================================
 
-model AppelOffreResultat {
-  id                  String      @id @default(cuid())
-  appelOffreId        String      @unique
-  appelOffre          AppelOffre  @relation(fields: [appelOffreId], references: [id], onDelete: Cascade)
+enum CandidatureStatut {
+  BROUILLON       // initialisée, peu de contenu
+  EN_REDACTION    // équipe en train de monter le dossier
+  EN_VALIDATION   // relecture interne avant envoi
+  SOUMISE         // envoyée au bailleur
+  ATTRIBUEE       // CHADIA a gagné
+  NON_RETENUE     // CHADIA a perdu
+  ABANDONNEE      // décision de ne plus continuer
+}
 
-  soumissionRetenueId String?
-  fournisseurRetenuNom String?
-  montantAttribue     Float?
-  devise              String      @default("FCFA")
+model Candidature {
+  id                String              @id @default(cuid())
+  reference         String              @unique          // CAND-2026-001
 
-  nombreSoumissions   Int         @default(0)
-  nombreRecevables    Int         @default(0)
-  motifAttribution    String?
+  opportuniteId     String?             @unique          // 1-1 optionnel (candidature spontanée possible)
+  opportunite       Opportunite?        @relation(fields: [opportuniteId], references: [id], onDelete: SetNull)
 
-  publieAt            DateTime?
-  publiePar           String?
-  estPublic           Boolean     @default(true)
+  titre             String
+  description       String?
 
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  statut            CandidatureStatut   @default(BROUILLON)
 
-  @@map("appels_offres_resultats")
+  // Pilotage interne
+  coordinateurId    String?                              // userId responsable
+  equipe            String[]            @default([])     // userIds ou initiales
+
+  // Contenu du dossier (notes longues — chaque section éditable)
+  noteConcept       String?                              // note conceptuelle
+  methodologie     String?
+  partenaires       String[]            @default([])
+
+  // Surcouche locale par-dessus l'analyse Mistral de l'opportunité liée.
+  // Permet à chaque candidature d'ajouter / modifier / retirer des pièces
+  // SANS toucher à l'analyse partagée (qui vit sur Opportunite.rawPayload).
+  // Forme attendue : { added: Piece[], updated: Record<id, Partial<Piece>>, removed: string[] }
+  // La fusion se fait côté gateway dans buildPieces().
+  piecesOverrides   Json?
+
+  // Contenu rédigé par CHADIA pour chaque pièce de l'arborescence.
+  // Map { pieceId: { html: string, updatedAt: ISO, savedBy: userId } }
+  // Le pieceId correspond à l'id de la pièce (Mistral ou custom).
+  // Sauvegardé en autosave côté client (debounce 1.5s).
+  pieceContents     Json?
+
+  // Q&A bailleur (V15 / P2-35). Tableau de questions posées au bailleur
+  // (par CHADIA) ou par le bailleur (clarifications). Forme attendue :
+  // Array<{ id, sens: "vers_bailleur"|"vers_chadia", question, reponse?,
+  //         statut: "brouillon"|"pose"|"repondu", auteurId?, dateCreation,
+  //         dateReponse?, source?: "officiel"|"informel" }>.
+  qaThread          Json?
+
+  // Volet financier
+  budgetDemande     Float?
+  coFinancement     Float?
+  devise            String              @default("EUR")
+  dureeMois         Int?
+
+  // Calendrier
+  dateDepotPrevu    DateTime?
+  dateDepotEffectif DateTime?
+  dateResultat      DateTime?
+
+  // Retour du bailleur
+  commentairesBailleur String?
+
+  documents         Document[]
+
+  createdBy         String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([statut])
+  @@index([opportuniteId])
+  @@index([coordinateurId])
+  @@map("candidatures")
 }
 
 // ============================================================
@@ -359,11 +293,11 @@ model AppelOffreResultat {
 // ============================================================
 
 enum ProjetStatut {
-  MONTAGE      // En montage / recherche de financement
-  ACTIF        // En exécution
-  ACHEVE       // Clôturé / rapport déposé
-  SUSPENDU     // Suspendu temporairement
-  ANNULE       // Annulé
+  MONTAGE
+  ACTIF
+  ACHEVE
+  SUSPENDU
+  ANNULE
 }
 
 enum ProjetDomaine {
@@ -382,38 +316,31 @@ enum ProjetDomaine {
 
 model Projet {
   id              String        @id @default(cuid())
-  reference       String        @unique             // PRJ-2026-08
+  reference       String        @unique
   titre           String
   description     String?
-  zone            String?                            // N'Djamena, Mongo, Guéra, Batha…
+  zone            String?
   domaine         ProjetDomaine @default(AUTRE)
   statut          ProjetStatut  @default(MONTAGE)
   urgent          Boolean       @default(false)
 
-  // Partenaires financiers (tableau de sigles ex: ["PNUD", "UE", "CF"])
   bailleurs       String[]      @default([])
-  // Liste des équipiers affectés (initiales ou IDs utilisateurs)
   team            String[]      @default([])
 
-  // Calendrier
   dateDebut       DateTime?
   dateFin         DateTime?
-  dateCloture     DateTime?     // date effective d'achèvement
-  echeance        String?       // libellé libre : "Clôture 30 sept.", "Échéance dans 18j"
+  dateCloture     DateTime?
+  echeance        String?
 
-  // Avancement (0-100)
   avancement      Int           @default(0)
-  // Étiquette libre pour les projets en montage : "Note conceptuelle déposée", "Recherche bailleur"
   etapeLabel      String?
 
-  // Métriques agrégées (optionnelles)
   budgetEstime    Float?
   budgetRealise   Float?
   devise          String        @default("FCFA")
   beneficiaires   Int?
 
-  // Métadonnées
-  createdBy       String?       // userId
+  createdBy       String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -424,27 +351,27 @@ model Projet {
 }
 
 // ============================================================
-// SETTINGS (paramètres clé-valeur)
+// SETTINGS
 // ============================================================
 
 enum SettingCategory {
-  ORGANIZATION   // Identité juridique, dénomination, NIF, mission statutaire
-  BRANDING       // Logo, couleurs, mention bas de page
-  CONTACT        // Email, téléphone, adresse, mécanisme de plainte
-  WORKFLOW       // Toggles workflow AO (publication auto, double validation…)
-  NUMEROTATION   // Formats référence AO/Soumission/Projet, année comptable
-  INTEGRATION    // Bsic, Gmail, Cal.com, Hetzner Storage…
+  ORGANIZATION
+  BRANDING
+  CONTACT
+  WORKFLOW
+  NUMEROTATION
+  INTEGRATION
   OTHER
 }
 
 model Setting {
   id          String          @id @default(cuid())
-  key         String          @unique         // org.denomination, workflow.publication_auto…
-  value       Json                             // peut être string, bool, objet
+  key         String          @unique
+  value       Json
   category    SettingCategory @default(OTHER)
-  label       String?                          // libellé humain pour les listes
-  description String?                          // aide affichée sous le champ
-  updatedBy   String?                          // userId de la dernière modif
+  label       String?
+  description String?
+  updatedBy   String?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
@@ -458,7 +385,7 @@ model Setting {
 
 model OutboxEvent {
   id          String   @id @default(cuid())
-  eventType   String   // "tender.created", "tender.attributed", "submission.received"
+  eventType   String
   payload     Json
   processed   Boolean  @default(false)
   createdAt   DateTime @default(now())

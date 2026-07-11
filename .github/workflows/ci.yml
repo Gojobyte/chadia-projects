@@ -1,0 +1,111 @@
+# CI — vérifications sur chaque push & PR
+# Lance type-check (gateway), lint, syntaxe Node (services), et un smoke-test
+# build Docker pour s'assurer que les images se construisent sans erreur.
+# Pas de tests Playwright pour l'instant (Sprint 4).
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Annule les runs précédents quand on pousse plus récent sur la même branche
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # -------------------------------------------------------------------
+  # 1. TypeScript + lint côté gateway (Next.js)
+  # -------------------------------------------------------------------
+  gateway-check:
+    name: Gateway · type-check & lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/gateway
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/gateway/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        run: npx eslint . --max-warnings=999 || true
+        # Volontairement non-bloquant tant qu'on a beaucoup de warnings
+        # legacy. À durcir une fois le code nettoyé.
+
+  # -------------------------------------------------------------------
+  # 2. Smoke syntax check sur les microservices Node (tender, auth, notif)
+  # -------------------------------------------------------------------
+  services-syntax:
+    name: Services · node syntax
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [tender, auth, notification]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies (${{ matrix.service }})
+        working-directory: services/${{ matrix.service }}
+        run: npm ci --prefer-offline --no-audit || npm install
+
+      - name: Syntax check tous les fichiers JS
+        working-directory: services/${{ matrix.service }}
+        run: |
+          find src -name "*.js" -type f -print0 | \
+            xargs -0 -n1 node --check
+          echo "Tous les fichiers JS de ${{ matrix.service }} ont une syntaxe valide."
+
+      - name: Prisma schema check (tender uniquement)
+        if: matrix.service == 'tender'
+        working-directory: services/${{ matrix.service }}
+        run: npx prisma validate
+
+  # -------------------------------------------------------------------
+  # 3. Build Docker smoke test — s'assure que les images se construisent.
+  # On utilise buildx avec cache GitHub Actions pour aller vite.
+  # -------------------------------------------------------------------
+  docker-build:
+    name: Docker · build smoke
+    runs-on: ubuntu-latest
+    needs: [gateway-check, services-syntax]
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [gateway, tender, auth, notification]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.service }} image (no push)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/${{ matrix.service }}
+          push: false
+          tags: chadia-${{ matrix.service }}:ci-${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,scope=${{ matrix.service }},mode=max

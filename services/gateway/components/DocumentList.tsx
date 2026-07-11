@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DocumentPreview } from "@/components/DocumentPreview";
 
 interface Document {
   id: string;
@@ -105,7 +106,22 @@ export function DocumentList({ documents, emptyMessage = "Aucun document.", comp
                 <td><span className="stamp">{formatSize(d.taille)}</span></td>
                 <td><span className="stamp">{timeAgo(d.createdAt)}</span></td>
                 {!compact && (
-                  <td style={{ textAlign: "right" }}>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                    <DocumentPreview
+                      id={d.id}
+                      nom={d.nom}
+                      mimeType={d.mimeType}
+                      size={d.taille}
+                      trigger={
+                        <button
+                          type="button"
+                          style={{ background: "transparent", border: "none", color: "var(--color-shale)", padding: "4px 8px", fontSize: 13, cursor: "pointer" }}
+                          title="Aperçu"
+                        >
+                          <i className="ph ph-eye"></i>
+                        </button>
+                      }
+                    />
                     <Link
                       href={`/api/tender/documents/${d.id}/file`}
                       target="_blank"

@@ -1,0 +1,109 @@
+# Déploiement automatique sur le serveur Hetzner (188.245.42.63)
+#
+# Déclenché sur push de main OU manuellement via workflow_dispatch.
+# Le job se connecte en SSH au serveur, git pull, rebuild les images Docker
+# modifiées, restart les conteneurs, applique les migrations Prisma.
+#
+# Prérequis côté GitHub (Settings → Secrets and variables → Actions) :
+#   HETZNER_HOST           — IP ou nom DNS du serveur (ex: ong-chadia.com)
+#   HETZNER_USER           — utilisateur SSH (ex: hermes)
+#   HETZNER_SSH_KEY        — clé privée SSH (PEM) qui a accès au serveur
+#   HETZNER_SSH_PORT       — (optionnel) port SSH custom, 22 par défaut
+#
+# Prérequis côté serveur Hetzner :
+#   - /home/hermes/chadia-projects existe (git clone fait à la main une fois)
+#   - L'utilisateur SSH est dans sudoers avec NOPASSWD pour docker compose :
+#       hermes ALL=(ALL) NOPASSWD: /usr/bin/docker compose, /usr/bin/docker
+#   - scripts/deploy.sh est exécutable
+#
+# Stratégie : on n'utilise PAS de registry intermédiaire (GHCR/Docker Hub).
+# Le code est git pull directement sur le serveur, qui build localement.
+# Avantages : pas de secret de registry, pas de push d'images.
+# Inconvénient : le serveur fait le build (CPU pendant 2-5 min).
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Service à redéployer (laisser vide pour tout)"
+        required: false
+        default: ""
+        type: choice
+        options: ["", "gateway", "tender", "auth", "notification"]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false # ne pas annuler un déploiement en cours
+
+jobs:
+  # ------------------------------------------------------------
+  # 1. On attend que la CI ait passé (sur le même SHA)
+  # ------------------------------------------------------------
+  wait-for-ci:
+    name: Wait for CI to pass
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - name: Wait for CI workflow
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.sha }}
+          check-name: "Docker · build smoke (gateway)"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 15
+          allowed-conclusions: success,skipped
+
+  # ------------------------------------------------------------
+  # 2. Déploiement SSH
+  # ------------------------------------------------------------
+  deploy:
+    name: Deploy on Hetzner
+    runs-on: ubuntu-latest
+    needs: [wait-for-ci]
+    if: |
+      always() &&
+      (needs.wait-for-ci.result == 'success' || github.event_name == 'workflow_dispatch')
+    environment: production
+
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
+
+      - name: Add Hetzner host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "${{ secrets.HETZNER_SSH_PORT || '22' }}" \
+            -H "${{ secrets.HETZNER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Trigger deploy script on server
+        env:
+          SERVICE: ${{ github.event.inputs.service }}
+          SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          ssh -p "${{ secrets.HETZNER_SSH_PORT || '22' }}" \
+              "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}" \
+              "cd /home/hermes/chadia-projects && \
+               SERVICE='$SERVICE' DEPLOY_SHA='$SHA' DEPLOY_ACTOR='$ACTOR' \
+               bash scripts/deploy.sh"
+
+      - name: Smoke test — la prod répond ?
+        run: |
+          for i in 1 2 3 4 5; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" \
+              "https://${{ secrets.HETZNER_HOST }}" || echo "000")
+            if [ "$code" = "200" ] || [ "$code" = "307" ] || [ "$code" = "302" ]; then
+              echo "Production répond (HTTP $code) — déploiement OK."
+              exit 0
+            fi
+            echo "Tentative $i : HTTP $code — on retry dans 5s..."
+            sleep 5
+          done
+          echo "::error::La production ne répond pas après 5 tentatives"
+          exit 1

@@ -202,16 +202,13 @@ const SETTINGS = [
   { key: "contact.adresse", value: "Quartier Kabalaye, en face stade Idriss MHT OUYA, N'Djamena", category: "CONTACT", label: "Adresse postale" },
   { key: "contact.bp", value: "BP 6118 N'Djamena", category: "CONTACT", label: "Boîte postale" },
 
-  // Workflow AO
-  { key: "workflow.publication_auto", value: true, category: "WORKFLOW", label: "Publication automatique sur le registre public", description: "Les appels d'offres validés sont publiés dans l'heure sur /marches" },
-  { key: "workflow.notification_fournisseurs", value: true, category: "WORKFLOW", label: "Notification automatique des fournisseurs ciblés", description: "Envoi par e-mail aux fournisseurs catégorisés par lot" },
-  { key: "workflow.verrouillage_plis", value: true, category: "WORKFLOW", label: "Verrouillage des plis avant ouverture", description: "Soumissions chiffrées jusqu'à la séance d'ouverture officielle" },
-  { key: "workflow.double_validation", value: true, category: "WORKFLOW", label: "Double validation avant attribution", description: "Signature électronique du DG et du Président du comité de dépouillement" },
-  { key: "workflow.pv_auto", value: false, category: "WORKFLOW", label: "Génération automatique du PV de séance", description: "Bêta — à valider manuellement avant signature" },
+  // Workflow candidature aux bailleurs
+  { key: "workflow.veille_active", value: true, category: "WORKFLOW", label: "Veille automatique des opportunités bailleurs", description: "Collecte périodique des appels à propositions concernant le Tchad" },
+  { key: "workflow.alerte_deadline", value: true, category: "WORKFLOW", label: "Alerte échéances de candidature", description: "Notification J-30, J-15, J-7 avant la clôture d'une opportunité retenue" },
+  { key: "workflow.double_validation", value: true, category: "WORKFLOW", label: "Double validation avant soumission de candidature", description: "Le dossier final doit être validé par le DG et le responsable de programme avant envoi au bailleur" },
 
   // Numérotation
-  { key: "numerotation.format_ao", value: "AO-{ANNEE}-{NUM:3}", category: "NUMEROTATION", label: "Format référence Appel d'Offres" },
-  { key: "numerotation.format_soumission", value: "SOUM-{NUM_AO}-{NUM:2}", category: "NUMEROTATION", label: "Format référence Soumission" },
+  { key: "numerotation.format_candidature", value: "CAND-{ANNEE}-{NUM:3}", category: "NUMEROTATION", label: "Format référence Candidature" },
   { key: "numerotation.format_projet", value: "PRJ-{ANNEE}-{NUM:2}", category: "NUMEROTATION", label: "Format référence Projet" },
   { key: "numerotation.annee_comptable", value: "01-01_31-12", category: "NUMEROTATION", label: "Année comptable" },
 
@@ -251,6 +248,10 @@ async function main() {
     });
   }
   console.log(`Projets seedés: ${PROJETS.length}`);
+}
+
+function daysAgo(d) {
+  return new Date(Date.now() - d * 24 * 60 * 60 * 1000);
 }
 
 main().catch(e => { console.error(e); process.exit(1); }).finally(() => prisma.$disconnect());

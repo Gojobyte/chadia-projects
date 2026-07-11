@@ -46,51 +46,32 @@ export const AuthAPI = {
     const qs = params ? "?" + new URLSearchParams(params).toString() : "";
     return apiFetch(AUTH_URL, `/auth/users${qs}`, { token });
   },
+  // CRUD admin
+  createUser: (
+    token: string,
+    body: {
+      email: string;
+      name: string;
+      role?: "ADMIN" | "DIRECTEUR" | "FINANCIER" | "MEMBRE";
+      password?: string;
+      fonction?: string;
+      zone?: string;
+      telephone?: string;
+      instance?: string;
+    },
+  ) => apiFetch(AUTH_URL, "/auth/users", { method: "POST", body, token }),
+  patchUser: (id: string, token: string, body: Record<string, unknown>) =>
+    apiFetch(AUTH_URL, `/auth/users/${id}`, { method: "PATCH", body, token }),
+  deleteUser: (id: string, token: string) =>
+    apiFetch(AUTH_URL, `/auth/users/${id}`, { method: "DELETE", token }),
   // Service-to-service: upsert/link Google account, returns { user, token }
   googleUpsert: (body: { email: string; name?: string; image?: string; providerAccountId: string }) =>
     apiFetch(AUTH_URL, "/auth/oauth/google", { method: "POST", body }),
 };
 
-// Tender API
+// Tender API — TODO renommer en ProspectionAPI quand le pivot vers
+// la candidature aux bailleurs sera complet (Opportunite + Candidature).
 export const TenderAPI = {
-  // Fournisseurs
-  listFournisseurs: (params?: Record<string, string>, token?: string) => {
-    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
-    return apiFetch(TENDER_URL, `/fournisseurs${qs}`, { token });
-  },
-  getFournisseur: (id: string, token?: string) =>
-    apiFetch(TENDER_URL, `/fournisseurs/${id}`, { token }),
-  createFournisseur: (body: Record<string, unknown>, token?: string) =>
-    apiFetch(TENDER_URL, "/fournisseurs", { method: "POST", body, token }),
-  verifyFournisseur: (id: string, token?: string) =>
-    apiFetch(TENDER_URL, `/fournisseurs/${id}/verify`, { method: "PATCH", token }),
-
-  // Appels d'offres
-  listAppelsOffres: (params?: Record<string, string>, token?: string) => {
-    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
-    return apiFetch(TENDER_URL, `/appels-offres${qs}`, { token });
-  },
-  getAppelOffre: (id: string) =>
-    apiFetch(TENDER_URL, `/appels-offres/${id}`),
-  createAppelOffre: (body: Record<string, unknown>, token?: string) =>
-    apiFetch(TENDER_URL, "/appels-offres", { method: "POST", body, token }),
-  publishAppelOffre: (id: string, token: string) =>
-    apiFetch(TENDER_URL, `/appels-offres/${id}/publish`, { method: "PATCH", token }),
-
-  // Soumissions
-  listSoumissions: (params?: Record<string, string>, token?: string) => {
-    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
-    return apiFetch(TENDER_URL, `/soumissions${qs}`, { token });
-  },
-  getSoumission: (id: string, token?: string) =>
-    apiFetch(TENDER_URL, `/soumissions/${id}`, { token }),
-  createSoumission: (body: Record<string, unknown>, token?: string) =>
-    apiFetch(TENDER_URL, "/soumissions", { method: "POST", body, token }),
-  evaluateSoumission: (id: string, body: Record<string, unknown>, token?: string) =>
-    apiFetch(TENDER_URL, `/soumissions/${id}/evaluate`, { method: "PUT", body, token }),
-  retainSoumission: (id: string, token?: string) =>
-    apiFetch(TENDER_URL, `/soumissions/${id}/retain`, { method: "PATCH", token }),
-
   // Documents
   listDocuments: (params?: Record<string, string>, token?: string) => {
     const qs = params ? "?" + new URLSearchParams(params).toString() : "";
@@ -108,20 +89,56 @@ export const TenderAPI = {
   // forward le FormData au tender avec le token JWT.
   documentFileUrl: (id: string) => `/api/tender/documents/${id}/file`,
 
-  // Analytics
-  getAnalytics: (token?: string) =>
-    apiFetch(TENDER_URL, "/analytics", { token }),
-
-  // Résultats publics (marchés attribués)
-  listResultats: (params?: Record<string, string>) => {
-    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
-    return apiFetch(TENDER_URL, `/resultats${qs}`);
-  },
-
   // Bailleurs
   listBailleurs: () => apiFetch(TENDER_URL, "/bailleurs"),
   createBailleur: (body: Record<string, unknown>, token?: string) =>
     apiFetch(TENDER_URL, "/bailleurs", { method: "POST", body, token }),
+
+  // Opportunités (veille des bailleurs)
+  listOpportunites: (params?: Record<string, string>, token?: string) => {
+    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
+    return apiFetch(TENDER_URL, `/opportunites${qs}`, { token });
+  },
+  getOpportunite: (id: string, token?: string) =>
+    apiFetch(TENDER_URL, `/opportunites/${id}`, { token }),
+  createOpportunite: (body: Record<string, unknown>, token?: string) =>
+    apiFetch(TENDER_URL, "/opportunites", { method: "POST", body, token }),
+  patchOpportunite: (id: string, body: Record<string, unknown>, token?: string) =>
+    apiFetch(TENDER_URL, `/opportunites/${id}`, { method: "PATCH", body, token }),
+  syncOpportunites: (source: string, token: string) =>
+    apiFetch(TENDER_URL, `/opportunites/sync/${source}`, { method: "POST", token }),
+  analyzeOpportunite: (id: string, token: string, force = false) =>
+    apiFetch(TENDER_URL, `/opportunites/${id}/analyze`, { method: "POST", body: { force }, token }),
+
+  // Candidatures (dossiers de réponse CHADIA)
+  listCandidatures: (params?: Record<string, string>, token?: string) => {
+    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
+    return apiFetch(TENDER_URL, `/candidatures${qs}`, { token });
+  },
+  getCandidature: (id: string, token?: string) =>
+    apiFetch(TENDER_URL, `/candidatures/${id}`, { token }),
+  createCandidature: (body: Record<string, unknown>, token?: string) =>
+    apiFetch(TENDER_URL, "/candidatures", { method: "POST", body, token }),
+  patchCandidature: (id: string, body: Record<string, unknown>, token?: string) =>
+    apiFetch(TENDER_URL, `/candidatures/${id}`, { method: "PATCH", body, token }),
+  patchCandidaturePieces: (
+    id: string,
+    body: { action: "add" | "update" | "remove"; id?: string; piece?: unknown; patch?: unknown },
+    token?: string,
+  ) => apiFetch(TENDER_URL, `/candidatures/${id}/pieces`, { method: "PATCH", body, token }),
+  savePieceContent: (
+    candidatureId: string,
+    pieceId: string,
+    html: string,
+    token?: string,
+  ) =>
+    apiFetch(TENDER_URL, `/candidatures/${candidatureId}/pieces/${encodeURIComponent(pieceId)}/content`, {
+      method: "PUT",
+      body: { html },
+      token,
+    }),
+  deleteCandidature: (id: string, token?: string) =>
+    apiFetch(TENDER_URL, `/candidatures/${id}`, { method: "DELETE", token }),
 
   // Projets
   listProjets: (params?: Record<string, string>, token?: string) => {

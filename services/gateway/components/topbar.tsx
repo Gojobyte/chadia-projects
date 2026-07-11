@@ -6,14 +6,12 @@ import { NotificationBell } from "./NotificationBell";
 
 const ROUTE_NAMES: Record<string, string> = {
   "/dashboard": "Tableau de bord",
-  "/appels-offres": "Appels d'offres",
-  "/soumissions": "Soumissions",
-  "/fournisseurs": "Fournisseurs",
+  "/opportunites": "Opportunités",
+  "/candidatures": "Candidatures",
   "/projets": "Projets",
   "/bibliotheque": "Bibliothèque",
   "/analyses": "Analyses",
   "/equipe": "Équipe",
-  "/marches": "Registre public",
   "/parametres": "Paramètres",
 };
 
@@ -36,6 +34,14 @@ export function Topbar() {
 
   return (
     <header className="topbar">
+      <button
+        type="button"
+        className="topbar-burger"
+        aria-label="Ouvrir le menu"
+        onClick={() => window.dispatchEvent(new Event("chadia:sidebar-toggle"))}
+      >
+        <i className="ph ph-list" aria-hidden="true"></i>
+      </button>
       <nav className="crumbs" aria-label="Fil d'ariane">
         {crumbs.map((c, i) => (
           <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
@@ -51,7 +57,7 @@ export function Topbar() {
 
       <label className="search">
         <i className="ph ph-magnifying-glass" aria-hidden="true"></i>
-        <input placeholder="Rechercher un AO, fournisseur, projet…" />
+        <input placeholder="Rechercher une opportunité, candidature, projet…" />
         <kbd>⌘K</kbd>
       </label>
 

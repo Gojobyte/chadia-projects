@@ -4,7 +4,8 @@ import { redirect, notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { DocumentUploader } from "@/components/DocumentUploader";
-import { DocumentList } from "@/components/DocumentList";
+import { EditProjetButton } from "./EditProjetButton";
+import { DeleteProjetButton } from "./DeleteProjetButton";
 
 interface Projet {
   id: string;
@@ -31,6 +32,22 @@ interface Projet {
   updatedAt: string;
 }
 
+interface DocSummary {
+  id: string;
+  nom: string;
+  type: string;
+  category: string;
+  visibility: "PUBLIC" | "INTERNE" | "CONFIDENTIEL";
+  mimeType?: string | null;
+  taille?: number | null;
+  url: string;
+  version?: string | null;
+  tags: string[];
+  isPinned: boolean;
+  description?: string | null;
+  createdAt: string;
+}
+
 const DOMAINE_LABEL: Record<string, string> = {
   URGENCE: "Urgence",
   JEUNESSE: "Jeunesse",
@@ -53,18 +70,39 @@ const STATUT_LABEL: Record<string, string> = {
   ANNULE: "Annulé",
 };
 
-function donorTone(b: string): "pnud" | "ue" | "cf" | "uni" | "fonds" {
+const STATUT_BADGE: Record<string, string> = {
+  MONTAGE: "badge--draft",
+  ACTIF: "badge--review",
+  ACHEVE: "badge--published",
+  SUSPENDU: "badge--warning",
+  ANNULE: "badge--canceled",
+};
+
+function donorTone(b: string): "ue" | "pnud" | "cf" | "afd" | "bm" | "echo" | "usaid" | "" {
   const k = b.toUpperCase();
-  if (k.startsWith("PNUD") || k.startsWith("UN")) return "pnud";
-  if (k.startsWith("UE") || k.includes("EUROP")) return "ue";
-  if (k.startsWith("CF") || k.includes("FRAN")) return "cf";
-  if (k.includes("ONU") || k.includes("UNICEF")) return "uni";
-  return "fonds";
+  if (k.startsWith("UE") || k.includes("EUROP") || k.includes("UNION")) return "ue";
+  if (k.startsWith("PNUD") || k.startsWith("UNDP") || k.includes("PROGRAMME")) return "pnud";
+  if (k.includes("FRANC") || k.includes("FRANC.") || k.startsWith("CF")) return "cf";
+  if (k.startsWith("AFD")) return "afd";
+  if (k.startsWith("BM") || k.includes("MONDIAL") || k.includes("WORLDBANK")) return "bm";
+  if (k.startsWith("ECHO")) return "echo";
+  if (k.startsWith("USAID")) return "usaid";
+  return "";
 }
 
 function fmtDate(d: string | null | undefined): string {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function fmtMoneyCompact(n: number | null | undefined, cur: string): string {
+  if (n == null) return "—";
+  return `${new Intl.NumberFormat("fr-FR", { notation: "compact", maximumFractionDigits: 1 }).format(n)} ${cur}`;
+}
+
+function daysUntil(d: string | null | undefined): number | null {
+  if (!d) return null;
+  return Math.ceil((new Date(d).getTime() - Date.now()) / (24 * 3600 * 1000));
 }
 
 async function updateAvancementAction(id: string, formData: FormData) {
@@ -77,6 +115,115 @@ async function updateAvancementAction(id: string, formData: FormData) {
   await TenderAPI.updateProjetAvancement(id, { avancement: av, etapeLabel: etapeLabel ?? undefined }, token);
   revalidatePath(`/projets/${id}`);
   revalidatePath("/projets");
+}
+
+// Édition complète du projet (titre, description, zone, statut, budgets…).
+// Réservé ADMIN/DIRECTEUR — c'est plus large que la simple maj d'avancement.
+async function updateProjetAction(id: string, formData: FormData): Promise<{ ok: boolean; error?: string }> {
+  "use server";
+  const session = await auth();
+  if (!session?.user) return { ok: false, error: "Non authentifié" };
+  const role = session.user.role;
+  if (role !== "ADMIN" && role !== "DIRECTEUR") {
+    return { ok: false, error: "Seuls l'admin et le directeur peuvent modifier un projet" };
+  }
+  const token = (session as { authServiceToken?: string }).authServiceToken;
+  if (!token) return { ok: false, error: "Token de session manquant" };
+
+  const body: Record<string, unknown> = {};
+  const str = (k: string) => {
+    if (!formData.has(k)) return undefined;
+    const v = String(formData.get(k) ?? "").trim();
+    return v || null;
+  };
+  const num = (k: string) => {
+    if (!formData.has(k)) return undefined;
+    const v = String(formData.get(k) ?? "").trim();
+    return v ? Number(v) : null;
+  };
+
+  const fields: Array<[string, "string" | "number" | "bool" | "list" | "date"]> = [
+    ["titre", "string"],
+    ["description", "string"],
+    ["zone", "string"],
+    ["domaine", "string"],
+    ["statut", "string"],
+    ["urgent", "bool"],
+    ["echeance", "string"],
+    ["etapeLabel", "string"],
+    ["budgetEstime", "number"],
+    ["budgetRealise", "number"],
+    ["devise", "string"],
+    ["beneficiaires", "number"],
+    ["bailleurs", "list"],
+    ["team", "list"],
+    ["dateDebut", "date"],
+    ["dateFin", "date"],
+  ];
+  for (const [k, kind] of fields) {
+    if (!formData.has(k)) continue;
+    if (kind === "string") body[k] = str(k);
+    else if (kind === "number") body[k] = num(k);
+    else if (kind === "bool") body[k] = formData.get(k) === "on" || formData.get(k) === "true";
+    else if (kind === "list") {
+      body[k] = String(formData.get(k) ?? "").split(/[,;]/).map((s) => s.trim()).filter(Boolean);
+    } else if (kind === "date") {
+      const v = String(formData.get(k) ?? "").trim();
+      body[k] = v ? new Date(v).toISOString() : null;
+    }
+  }
+
+  try {
+    await TenderAPI.updateProjet(id, body, token);
+    revalidatePath(`/projets/${id}`);
+    revalidatePath("/projets");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erreur de modification" };
+  }
+}
+
+// Suppression définitive du projet (DIRECTEUR uniquement côté tender-service).
+async function deleteProjetAction(id: string) {
+  "use server";
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+  if (session.user.role !== "DIRECTEUR") {
+    throw new Error("Seul le directeur peut supprimer un projet.");
+  }
+  const token = (session as { authServiceToken?: string }).authServiceToken;
+  if (!token) redirect("/login");
+
+  await TenderAPI.deleteProjet(id, token);
+  revalidatePath("/projets");
+  redirect("/projets");
+}
+
+/**
+ * Phases-types pour un projet ONG. Comme le data model n'a pas de phases
+ * explicites, on les dérive du pourcentage d'avancement global :
+ *   chaque phase = 100/N. La phase courante est celle qui contient le %.
+ */
+function buildPhases(projet: Projet): Array<{ n: number; t: string; s: string; pct: number; state: "done" | "now" | "todo" }> {
+  const allPhases = [
+    { t: "Diagnostic terrain & ciblage", s: "Enquêtes, liste bénéficiaires, validation comité" },
+    { t: "Mobilisation équipe & logistique", s: "Recrutements, bureaux terrain, fournisseurs" },
+    { t: "Mise en œuvre · vague 1", s: "Premiers livrables, distributions, attestations" },
+    { t: "Suivi intermédiaire", s: "Reporting bailleur T1/T2, contrôle qualité" },
+    { t: "Mise en œuvre · vague 2", s: "Suite des activités, ajustements terrain" },
+    { t: "Formation des bénéficiaires", s: "Comités gestion, sessions transfert de compétences" },
+    { t: "Évaluation finale", s: "Étude d'impact, rapport au bailleur, capitalisation" },
+  ];
+  const step = 100 / allPhases.length;
+  return allPhases.map((p, i) => {
+    const lower = i * step;
+    const upper = (i + 1) * step;
+    const pct = projet.avancement >= upper ? 100 : projet.avancement <= lower ? 0 : Math.round(((projet.avancement - lower) / step) * 100);
+    let state: "done" | "now" | "todo" = "todo";
+    if (projet.avancement >= upper) state = "done";
+    else if (projet.avancement > lower) state = "now";
+    return { n: i + 1, ...p, pct, state };
+  });
 }
 
 export default async function ProjetDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -96,239 +243,444 @@ export default async function ProjetDetailPage({ params }: { params: Promise<{ i
   if (!projet) notFound();
 
   // Documents attachés au projet
-  let documents: Array<{
-    id: string;
-    nom: string;
-    originalName?: string | null;
-    type: string;
-    category: string;
-    visibility: "PUBLIC" | "INTERNE" | "CONFIDENTIEL";
-    mimeType?: string | null;
-    taille?: number | null;
-    url: string;
-    version?: string | null;
-    tags: string[];
-    isPinned: boolean;
-    description?: string | null;
-    createdAt: string;
-    uploadedBy?: string | null;
-  }> = [];
+  let documents: DocSummary[] = [];
   try {
     const docs = await TenderAPI.listDocuments({ projetId: projet.id }, token);
     documents = docs.documents ?? [];
-  } catch { /* silencieux */ }
+  } catch {
+    /* silencieux */
+  }
 
   const updateAction = updateAvancementAction.bind(null, projet.id);
+  const editAction = updateProjetAction.bind(null, projet.id);
+  const deleteAction = deleteProjetAction.bind(null, projet.id);
+  const phases = buildPhases(projet);
+  const phasesDoneCount = phases.filter((p) => p.state === "done").length;
+  const j = daysUntil(projet.dateFin);
+
+  const totalShare = projet.bailleurs.length > 0 ? Math.round(100 / projet.bailleurs.length) : 0;
+
+  const userRole = session.user.role;
+  const canEdit = userRole === "ADMIN" || userRole === "DIRECTEUR";
+  const canDelete = userRole === "DIRECTEUR";
 
   return (
     <div className="pg">
-      <header className="pg-h">
-        <div>
-          <div className="pg-eyebrow">
-            {projet.reference}
-            {projet.zone && <> · {projet.zone}</>}
-            {projet.domaine !== "AUTRE" && <> · {DOMAINE_LABEL[projet.domaine]}</>}
+      {/* === Toolbar admin (édition / suppression) === */}
+      {canEdit ? (
+        <div
+          style={{
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            marginBottom: 14, padding: "10px 14px",
+            background: "var(--color-surface)", border: "1px solid var(--color-line)",
+            borderRadius: 8,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Link href="/projets" className="btn btn--ghost btn--sm" style={{ padding: "4px 8px" }}>
+              <i className="ph ph-arrow-left" aria-hidden="true"></i> Tous les projets
+            </Link>
+            <span style={{ fontSize: 11, color: "var(--color-stone)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              Édition · {userRole === "DIRECTEUR" ? "directeur" : "admin"}
+            </span>
           </div>
-          <h1 className="pg-title">{projet.titre}</h1>
-          {projet.description && <p className="pg-sub" style={{ maxWidth: "70ch" }}>{projet.description}</p>}
+          <div style={{ display: "flex", gap: 8 }}>
+            <EditProjetButton projet={projet} updateAction={editAction} />
+            {canDelete ? (
+              <DeleteProjetButton
+                projetRef={projet.reference}
+                projetTitre={projet.titre}
+                deleteAction={deleteAction}
+              />
+            ) : null}
+          </div>
         </div>
-        <div className="pg-actions">
-          <Link href="/projets" className="btn btn--ghost btn--sm">
-            <i className="ph ph-arrow-left"></i> Retour
-          </Link>
-          <button className="btn btn--secondary btn--sm">
-            <i className="ph ph-pencil-simple"></i> Modifier
-          </button>
-        </div>
-      </header>
+      ) : null}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 24, marginTop: 28 }}>
-        {/* Colonne principale */}
-        <div style={{ display: "grid", gap: 24 }}>
-          {/* Bloc avancement */}
-          <div className="group-card">
-            <div className="sec-head">
-              <div>
-                <h2>Avancement <em>en temps réel</em></h2>
-                <p>Mettre à jour le pourcentage et l&apos;étape courante.</p>
-              </div>
-              <span className={`badge ${
-                projet.statut === "ACTIF" ? "badge--review" :
-                projet.statut === "ACHEVE" ? "badge--won" :
-                projet.statut === "MONTAGE" ? "badge--draft" :
-                "badge--lost"
-              }`}>{STATUT_LABEL[projet.statut]}</span>
+      {/* === Hero === */}
+      <section className="proj-hero">
+        <div className="ref">
+          <span>{projet.reference}</span>
+          {projet.zone ? (
+            <>
+              <span style={{ color: "var(--color-mineral)" }}>·</span>
+              <span>{projet.zone}</span>
+            </>
+          ) : null}
+          {projet.domaine !== "AUTRE" ? (
+            <>
+              <span style={{ color: "var(--color-mineral)" }}>·</span>
+              <span>{DOMAINE_LABEL[projet.domaine]}</span>
+            </>
+          ) : null}
+          <span className={`badge ${STATUT_BADGE[projet.statut] ?? "badge--draft"}`} style={{ marginLeft: 8 }}>
+            <span className="dot"></span>
+            {STATUT_LABEL[projet.statut]}
+            {j != null && j > 0 && j < 90 && projet.statut === "ACTIF" ? ` · J‑${j}` : null}
+          </span>
+        </div>
+        <h1>{projet.titre}</h1>
+        {projet.description ? <p className="lead">{projet.description}</p> : null}
+        <div className="proj-hero-meta">
+          <div>
+            <div className="l">Avancement</div>
+            <div className="v">{projet.avancement} %</div>
+            <div className="d">
+              {phasesDoneCount} phase{phasesDoneCount > 1 ? "s" : ""} sur {phases.length}
             </div>
+          </div>
+          <div>
+            <div className="l">Budget engagé</div>
+            <div className="v">
+              {fmtMoneyCompact(projet.budgetRealise, projet.devise)} / {fmtMoneyCompact(projet.budgetEstime, projet.devise)}
+            </div>
+            <div className="d">
+              {projet.budgetEstime
+                ? `${Math.round(((projet.budgetRealise ?? 0) / projet.budgetEstime) * 100)} % engagé`
+                : "—"}
+            </div>
+          </div>
+          <div>
+            <div className="l">Bénéficiaires</div>
+            <div className="v">
+              {projet.beneficiaires
+                ? new Intl.NumberFormat("fr-FR").format(projet.beneficiaires)
+                : "—"}
+            </div>
+            <div className="d">{projet.zone ?? "tous sites"}</div>
+          </div>
+          <div>
+            <div className="l">Équipe</div>
+            <div className="v">{projet.team.length} personne{projet.team.length > 1 ? "s" : ""}</div>
+            <div className="d">{projet.bailleurs.length} bailleur{projet.bailleurs.length > 1 ? "s" : ""}</div>
+          </div>
+        </div>
+      </section>
 
-            <form action={updateAction} style={{ display: "grid", gap: 16 }}>
-              <div className="field-grid" style={{ gridTemplateColumns: "1fr 2fr" }}>
-                <div className="field">
-                  <label>Pourcentage</label>
-                  <input
-                    name="avancement"
-                    type="number"
-                    min={0}
-                    max={100}
-                    defaultValue={projet.avancement}
-                  />
+      <div className="proj-grid">
+        {/* === Colonne principale === */}
+        <div>
+          {/* Tabs (visuels — Server Component) */}
+          <div className="priv-tabs" role="tablist">
+            <button type="button" className="priv-tab on" role="tab" aria-selected="true">
+              Aperçu
+            </button>
+            <button type="button" className="priv-tab" role="tab" disabled aria-disabled="true">
+              Phases & livrables
+            </button>
+            <Link href={`/projets/${projet.id}/budget`} className="priv-tab" role="tab">
+              Budget
+            </Link>
+            <Link href={`/projets/${projet.id}/docs`} className="priv-tab" role="tab">
+              Documents
+            </Link>
+            <button type="button" className="priv-tab" role="tab" disabled aria-disabled="true">
+              Rapports bailleur
+            </button>
+          </div>
+
+          {/* Avancement form */}
+          <div className="card" style={{ padding: 0, marginBottom: 18 }}>
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid var(--color-line)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <h3 style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 400, margin: 0, color: "var(--color-ink)" }}>
+                Avancement <em style={{ color: "var(--color-terracotta)", fontStyle: "italic" }}>en temps réel</em>
+              </h3>
+              <span style={{ fontSize: 11, color: "var(--color-stone)", fontFamily: "var(--font-mono)" }}>
+                {projet.etapeLabel ?? STATUT_LABEL[projet.statut]}
+              </span>
+            </div>
+            <form action={updateAction} style={{ padding: "18px 20px", display: "grid", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "120px 1fr auto", gap: 14, alignItems: "end" }}>
+                <div className="field-uc">
+                  <span className="label">Pourcentage</span>
+                  <input className="input mono" name="avancement" type="number" min={0} max={100} defaultValue={projet.avancement} />
                 </div>
-                <div className="field">
-                  <label>Étape (libellé libre)</label>
-                  <input
-                    name="etapeLabel"
-                    defaultValue={projet.etapeLabel ?? ""}
-                    placeholder="Ex : Note conceptuelle déposée"
-                  />
+                <div className="field-uc">
+                  <span className="label">Étape courante</span>
+                  <input className="input" name="etapeLabel" defaultValue={projet.etapeLabel ?? ""} placeholder="Ex. Note conceptuelle déposée" />
                 </div>
-              </div>
-              <div style={{ height: 4, background: "var(--color-canvas)", borderRadius: 2, overflow: "hidden" }}>
-                <span style={{ display: "block", height: "100%", width: `${projet.avancement}%`, background: projet.statut === "ACHEVE" ? "var(--color-success)" : "var(--color-terracotta)" }}></span>
-              </div>
-              <div>
                 <button type="submit" className="btn btn--accent btn--sm">
-                  <i className="ph ph-arrow-clockwise"></i> Mettre à jour
+                  <i className="ph ph-arrow-clockwise" aria-hidden="true"></i> Mettre à jour
                 </button>
+              </div>
+              <div className="bar">
+                <span
+                  style={{
+                    width: `${projet.avancement}%`,
+                    background: projet.statut === "ACHEVE" ? "var(--color-success)" : "var(--color-terracotta)",
+                  }}
+                ></span>
               </div>
             </form>
           </div>
 
-          {/* Bloc partenaires */}
-          <div className="group-card">
-            <div className="sec-head">
-              <div>
-                <h2>Partenaires <em>& équipe</em></h2>
-                <p>Bailleurs financiers et équipiers affectés au projet.</p>
-              </div>
+          {/* Phases */}
+          <div className="card" style={{ padding: 0, marginBottom: 18 }}>
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid var(--color-line)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <h3 style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 400, margin: 0, color: "var(--color-ink)" }}>
+                Phases & <em style={{ color: "var(--color-terracotta)", fontStyle: "italic" }}>livrables</em>
+              </h3>
+              <span style={{ fontSize: 11, color: "var(--color-stone)", fontFamily: "var(--font-mono)" }}>
+                {phasesDoneCount} / {phases.length} terminées
+              </span>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-              <div>
-                <div className="eyebrow" style={{ marginBottom: 8 }}>Bailleurs</div>
-                {projet.bailleurs.length > 0 ? (
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {projet.bailleurs.map((b) => (
-                      <span key={b} className={`donor ${donorTone(b)}`} style={{ padding: "4px 10px", borderRadius: 3, fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600 }}>{b}</span>
-                    ))}
+            <div className="phase-list" style={{ border: 0, borderRadius: 0 }}>
+              {phases.map((p) => (
+                <div key={p.n} className={`phase-row ${p.state === "done" ? "done" : p.state === "now" ? "now" : ""}`}>
+                  <div className="n">
+                    {p.state === "done" ? <i className="ph ph-check" aria-hidden="true"></i> : String(p.n).padStart(2, "0")}
                   </div>
-                ) : (
-                  <p style={{ color: "var(--color-shale)", fontSize: 13, margin: 0 }}>Aucun bailleur assigné</p>
-                )}
-              </div>
-              <div>
-                <div className="eyebrow" style={{ marginBottom: 8 }}>Équipe affectée</div>
-                {projet.team.length > 0 ? (
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {projet.team.map((t) => (
-                      <span key={t} className="avatar avatar--sm avatar--terracotta">{t}</span>
-                    ))}
+                  <div>
+                    <div className="t">{p.t}</div>
+                    <div className="s">{p.s}</div>
                   </div>
-                ) : (
-                  <p style={{ color: "var(--color-shale)", fontSize: 13, margin: 0 }}>Aucun équipier assigné</p>
-                )}
-              </div>
+                  <div className="pct">{p.state === "done" ? "100 %" : `${p.pct} %`}</div>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Bloc documents du projet */}
-          <div className="group-card">
-            <div className="sec-head">
-              <div>
-                <h2>Documents <em>du projet</em></h2>
-                <p>
-                  {documents.length === 0
-                    ? "Aucun document attaché pour l'instant."
-                    : `${documents.length} document${documents.length > 1 ? "s" : ""} attaché${documents.length > 1 ? "s" : ""}.`}
-                </p>
-              </div>
+          {/* Documents */}
+          <div className="card" style={{ padding: 0 }}>
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid var(--color-line)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <h3 style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 400, margin: 0, color: "var(--color-ink)" }}>
+                Documents <em style={{ color: "var(--color-terracotta)", fontStyle: "italic" }}>liés</em>
+              </h3>
               <DocumentUploader
                 projetId={projet.id}
                 defaultCategory="PROJETS"
                 defaultType="RAPPORT_ACTIVITE"
-                buttonLabel="Téléverser"
+                buttonLabel="Ajouter"
                 compact
               />
             </div>
-            <DocumentList documents={documents} emptyMessage="Aucun document attaché. Utilisez le bouton ci-dessus pour téléverser le premier." />
-          </div>
-
-          {/* Sous-modules futurs */}
-          <div className="group-card" style={{ background: "var(--color-canvas)" }}>
-            <div className="sec-head">
-              <div>
-                <h2>Autres sous-modules <em>à venir</em></h2>
-                <p>Budget détaillé et jalons / kanban dans les prochains chantiers.</p>
+            {documents.length === 0 ? (
+              <div style={{ padding: "32px 20px", textAlign: "center" }}>
+                <i className="ph ph-files" style={{ fontSize: 28, color: "var(--color-mineral)" }} aria-hidden="true"></i>
+                <p style={{ fontSize: 13, color: "var(--color-stone)", marginTop: 12 }}>
+                  Aucun document attaché. Téléversez la convention, le plan d&apos;action ou les rapports trimestriels.
+                </p>
               </div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
-              <Link href={`/projets/${projet.id}/budget`} className="doc-card">
-                <span className="ic"><i className="ph ph-coins"></i></span>
-                <span className="nm">Budget<em> détaillé</em><small>À implémenter (P1)</small></span>
-                <i className="ph ph-arrow-up-right arrow"></i>
-              </Link>
-              <a className="doc-card">
-                <span className="ic"><i className="ph ph-flag"></i></span>
-                <span className="nm">Jalons<em> et tâches</em><small>Kanban à implémenter (P2)</small></span>
-                <i className="ph ph-arrow-up-right arrow"></i>
-              </a>
-            </div>
+            ) : (
+              <div style={{ padding: "14px 20px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {documents.slice(0, 8).map((d) => {
+                  const m = (d.mimeType ?? "").toLowerCase();
+                  const ft = m.includes("pdf")
+                    ? { k: "pdf", l: "PDF" }
+                    : m.includes("word")
+                    ? { k: "doc", l: "DOCX" }
+                    : m.includes("excel") || m.includes("sheet")
+                    ? { k: "xls", l: "XLSX" }
+                    : { k: "txt", l: "FICHIER" };
+                  return (
+                    <a
+                      key={d.id}
+                      href={d.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: 10,
+                        border: "1px solid var(--color-line)",
+                        borderRadius: 6,
+                        textDecoration: "none",
+                        color: "inherit",
+                      }}
+                    >
+                      <span className={`ftype ${ft.k}`}>{ft.l}</span>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 13, color: "var(--color-ink)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {d.nom}
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--color-stone)" }}>
+                          {fmtDate(d.createdAt)}
+                          {d.version ? ` · v${d.version}` : ""}
+                        </div>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Colonne latérale : métadonnées */}
-        <aside style={{ display: "grid", gap: 16, alignContent: "start" }}>
-          <div className="group-card">
-            <h4 style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--color-stone)", fontWeight: 600, margin: "0 0 12px" }}>
-              Référence & calendrier
+        {/* === Side rail === */}
+        <aside>
+          {/* Partenaires financiers */}
+          <div className="side-w">
+            <h4>
+              Partenaires <span className="sub">financiers</span>
             </h4>
-            <dl style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "8px 12px", margin: 0, fontSize: 13 }}>
-              <dt style={{ color: "var(--color-sepia)" }}>Référence</dt>
-              <dd style={{ margin: 0, fontFamily: "var(--font-mono)", fontWeight: 600 }}>{projet.reference}</dd>
-              <dt style={{ color: "var(--color-sepia)" }}>Statut</dt>
-              <dd style={{ margin: 0 }}>{STATUT_LABEL[projet.statut]}</dd>
-              <dt style={{ color: "var(--color-sepia)" }}>Échéance</dt>
-              <dd style={{ margin: 0 }}>{projet.echeance ?? "—"}</dd>
-              <dt style={{ color: "var(--color-sepia)" }}>Début</dt>
-              <dd style={{ margin: 0 }}>{fmtDate(projet.dateDebut)}</dd>
-              <dt style={{ color: "var(--color-sepia)" }}>Fin prévue</dt>
-              <dd style={{ margin: 0 }}>{fmtDate(projet.dateFin)}</dd>
-              {projet.dateCloture && (
-                <>
-                  <dt style={{ color: "var(--color-sepia)" }}>Clôturé le</dt>
-                  <dd style={{ margin: 0 }}>{fmtDate(projet.dateCloture)}</dd>
-                </>
-              )}
-            </dl>
+            {projet.bailleurs.length > 0 ? (
+              <>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                  {projet.bailleurs.map((b) => {
+                    const tone = donorTone(b);
+                    return (
+                      <span key={b} className={`donor ${tone}`}>
+                        {b} · {totalShare} %
+                      </span>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--color-shale)", lineHeight: 1.5 }}>
+                  Cofinancement signé{" "}
+                  {projet.dateDebut ? <>le {fmtDate(projet.dateDebut)}</> : null} · plafond global{" "}
+                  {projet.budgetEstime
+                    ? `${new Intl.NumberFormat("fr-FR").format(projet.budgetEstime)} ${projet.devise}`
+                    : "—"}{" "}
+                  · décaissement par tranches.
+                </div>
+              </>
+            ) : (
+              <p style={{ fontSize: 12, color: "var(--color-stone)", margin: 0 }}>Aucun bailleur assigné pour ce projet.</p>
+            )}
           </div>
 
-          <div className="group-card">
-            <h4 style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--color-stone)", fontWeight: 600, margin: "0 0 12px" }}>
-              Budget
+          {/* Équipe projet */}
+          <div className="side-w">
+            <h4>
+              Équipe <span className="sub">projet</span>
             </h4>
-            <dl style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "8px 12px", margin: 0, fontSize: 13 }}>
-              <dt style={{ color: "var(--color-sepia)" }}>Estimé</dt>
-              <dd style={{ margin: 0, fontFamily: "var(--font-mono)" }}>
-                {projet.budgetEstime ? `${new Intl.NumberFormat("fr-FR").format(projet.budgetEstime)} ${projet.devise}` : "—"}
-              </dd>
-              <dt style={{ color: "var(--color-sepia)" }}>Réalisé</dt>
-              <dd style={{ margin: 0, fontFamily: "var(--font-mono)" }}>
-                {projet.budgetRealise ? `${new Intl.NumberFormat("fr-FR").format(projet.budgetRealise)} ${projet.devise}` : "—"}
-              </dd>
-              <dt style={{ color: "var(--color-sepia)" }}>Bénéficiaires</dt>
-              <dd style={{ margin: 0, fontFamily: "var(--font-mono)" }}>
-                {projet.beneficiaires ?? "—"}
-              </dd>
-            </dl>
+            {projet.team.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {projet.team.map((t, idx) => {
+                  const tones = ["terracotta", "ink", "success", "info"] as const;
+                  return (
+                    <div key={`${t}-${idx}`} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div className={`avatar avatar--sm avatar--${tones[idx % tones.length]}`}>
+                        {t.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, color: "var(--color-ink)" }}>{t}</div>
+                        <div style={{ fontSize: 11, color: "var(--color-stone)" }}>Équipier</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p style={{ fontSize: 12, color: "var(--color-stone)", margin: 0 }}>Aucun équipier affecté.</p>
+            )}
           </div>
 
-          <div className="group-card">
-            <h4 style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--color-stone)", fontWeight: 600, margin: "0 0 12px" }}>
-              Historique
+          {/* Prochains jalons */}
+          <div className="side-w">
+            <h4>
+              Prochains <span className="sub">jalons</span>
             </h4>
-            <dl style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "8px 12px", margin: 0, fontSize: 13 }}>
-              <dt style={{ color: "var(--color-sepia)" }}>Créé le</dt>
-              <dd style={{ margin: 0, fontFamily: "var(--font-mono)", fontSize: 11 }}>{fmtDate(projet.createdAt)}</dd>
-              <dt style={{ color: "var(--color-sepia)" }}>Modifié</dt>
-              <dd style={{ margin: 0, fontFamily: "var(--font-mono)", fontSize: 11 }}>{fmtDate(projet.updatedAt)}</dd>
-            </dl>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 12 }}>
+              {projet.dateFin ? (
+                <div style={{ display: "flex", gap: 10 }}>
+                  <span className="mono" style={{ color: "var(--color-terracotta)", minWidth: 60 }}>
+                    {new Date(projet.dateFin).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
+                  </span>
+                  <span style={{ color: "var(--color-sepia)" }}>Clôture prévue du projet</span>
+                </div>
+              ) : null}
+              {projet.echeance ? (
+                <div style={{ display: "flex", gap: 10 }}>
+                  <span className="mono" style={{ color: "var(--color-shale)", minWidth: 60 }}>
+                    Échéance
+                  </span>
+                  <span style={{ color: "var(--color-sepia)" }}>{projet.echeance}</span>
+                </div>
+              ) : null}
+              {!projet.dateFin && !projet.echeance ? (
+                <p style={{ color: "var(--color-stone)", margin: 0 }}>Aucun jalon planifié.</p>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Risques (mockup statique — pas dans le data model) */}
+          {projet.urgent || projet.statut === "ACTIF" ? (
+            <div className="side-w">
+              <h4>
+                Risques <span className="sub">identifiés</span>
+              </h4>
+              <div style={{ fontSize: 12, color: "var(--color-sepia)", lineHeight: 1.5 }}>
+                {projet.urgent ? (
+                  <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                    <i className="ph ph-warning" style={{ color: "var(--color-danger)" }} aria-hidden="true"></i>
+                    <span>
+                      <strong style={{ color: "var(--color-ink)" }}>Urgence opérationnelle</strong> · arbitrage à
+                      prévoir cette semaine.
+                    </span>
+                  </div>
+                ) : null}
+                {projet.zone?.toLowerCase().includes("guéra") || projet.zone?.toLowerCase().includes("mongo") ? (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <i className="ph ph-warning" style={{ color: "var(--color-warning)" }} aria-hidden="true"></i>
+                    <span>
+                      <strong style={{ color: "var(--color-ink)" }}>Saison des pluies</strong> · accès villages
+                      restreint juillet-septembre.
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Historique */}
+          <div className="side-w">
+            <h4>
+              Historique <span className="sub">administratif</span>
+            </h4>
+            <div style={{ display: "grid", gap: 6, fontSize: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                <span style={{ color: "var(--color-stone)" }}>Créé le</span>
+                <span style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink)" }}>
+                  {fmtDate(projet.createdAt)}
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                <span style={{ color: "var(--color-stone)" }}>Modifié</span>
+                <span style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink)" }}>
+                  {fmtDate(projet.updatedAt)}
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                <span style={{ color: "var(--color-stone)" }}>Début</span>
+                <span style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink)" }}>{fmtDate(projet.dateDebut)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                <span style={{ color: "var(--color-stone)" }}>Fin prévue</span>
+                <span style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink)" }}>{fmtDate(projet.dateFin)}</span>
+              </div>
+              {projet.dateCloture ? (
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                  <span style={{ color: "var(--color-stone)" }}>Clôturé</span>
+                  <span style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink)" }}>{fmtDate(projet.dateCloture)}</span>
+                </div>
+              ) : null}
+            </div>
           </div>
         </aside>
       </div>

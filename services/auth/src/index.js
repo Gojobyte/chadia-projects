@@ -133,6 +133,60 @@ app.get("/auth/users", async (req, res) => {
   });
 });
 
+// POST /auth/users — crée un utilisateur depuis l'admin (admin/directeur)
+// Différent de /auth/register : ce dernier permet l'auto-inscription
+// publique (cas légacy). Ici on crée pour un autre user en tant qu'admin.
+// Si le mot de passe n'est pas fourni, on en génère un aléatoire et on le
+// renvoie dans la réponse (l'admin a la responsabilité de le transmettre
+// au nouveau membre — l'envoi par email viendra avec resend).
+app.post("/auth/users", auth, async (req, res) => {
+  if (req.user.role !== "ADMIN" && req.user.role !== "DIRECTEUR") {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  try {
+    const { email, name, role = "MEMBRE", password, fonction, zone, telephone, instance } = req.body;
+    if (!email || !name) return res.status(400).json({ error: "email et name requis" });
+
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) return res.status(409).json({ error: "Email déjà utilisé" });
+
+    // Mot de passe : fourni par l'admin, sinon généré (8 octets b64url ~= 11 chars)
+    const generated = !password;
+    const finalPassword = password || require("crypto").randomBytes(9).toString("base64url");
+    const passwordHash = await bcrypt.hash(finalPassword, 12);
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name,
+        passwordHash,
+        role,
+        fonction: fonction || null,
+        zone: zone || null,
+        telephone: telephone || null,
+        instance: instance || null,
+      },
+      select: {
+        id: true, email: true, name: true, role: true, isActive: true,
+        fonction: true, zone: true, telephone: true, instance: true, createdAt: true,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: { userId: req.user.id, action: "USER_CREATE", resource: user.id, details: { email, role } },
+    });
+
+    res.status(201).json({
+      user,
+      // Si on a généré le mot de passe, on le renvoie UNE SEULE FOIS pour
+      // que l'admin puisse le communiquer au nouveau membre.
+      generatedPassword: generated ? finalPassword : null,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // PATCH /auth/users/:id — update (admin/directeur)
 app.patch("/auth/users/:id", auth, async (req, res) => {
   if (req.user.role !== "ADMIN" && req.user.role !== "DIRECTEUR") return res.status(403).json({ error: "Forbidden" });

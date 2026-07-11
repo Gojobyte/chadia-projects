@@ -22,7 +22,10 @@ ENV PORT=3000
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
-# public/ optionnel — créé vide si absent (favicon, images statiques).
+# public/ — fichiers statiques (favicon, images, documents PDF officiels
+# servis depuis /docs/*). On copie systématiquement, et on garantit
+# l'existence du dossier au cas où il serait vide en CI.
+COPY --from=builder /app/public ./public
 RUN mkdir -p /app/public
 
 EXPOSE 3000

@@ -78,6 +78,9 @@ services:
       AUTH_SERVICE_URL: http://auth-service:3001
       NOTIFICATION_SERVICE_URL: http://notification-service:3003
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      DEEPL_API_KEY: ${DEEPL_API_KEY}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+      MISTRAL_MODEL: ${MISTRAL_MODEL:-mistral-small-latest}
       UPLOAD_DIR: /app/uploads
       MAX_UPLOAD_SIZE: 10485760
       PORT: 3002
